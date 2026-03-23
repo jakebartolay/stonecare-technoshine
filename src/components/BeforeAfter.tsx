@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const projects = [
   {
+    title: "Okada Manila",
     label: "Marble Floor Polish",
     before: "before-1.jpeg",
     after: "after-1.jpeg",
@@ -14,13 +15,22 @@ const projects = [
   //   after: "after-2.png",
   // },
   {
+    title: "Edsa Shangrila",
     label: "Floor Restoration",
     before: "before-3.jpg",
     after: "after-3.jpg",
   },
 ];
 
-function Slider({ before, after }: { before: string; after: string }) {
+function Slider({
+  before,
+  after,
+  title,
+}: {
+  before: string;
+  after: string;
+  title: string;
+}) {
   const [position, setPosition] = useState(50);
   const [dragging, setDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,8 +68,8 @@ function Slider({ before, after }: { before: string; after: string }) {
   return (
     <div
       ref={containerRef}
-      className="relative select-none overflow-hidden cursor-col-resize border border-border"
-      style={{ aspectRatio: "1 / 1" }}
+      className="relative w-full max-w-4xl mx-auto select-none overflow-hidden cursor-col-resize border border-border"
+      style={{ aspectRatio: "4 / 3" }}
       onMouseDown={onMouseDown}
       onTouchMove={(e) => onTouchMove(e.nativeEvent)}
     >
@@ -107,6 +117,10 @@ function Slider({ before, after }: { before: string; after: string }) {
       <div className="absolute bottom-3 right-3 z-10 px-2 py-0.5 bg-primary/90 text-white text-[10px] font-mono uppercase tracking-widest">
         After
       </div>
+
+      <div className="absolute top-4 left-1/2 z-10 -translate-x-1/2 px-4 py-2 bg-white/85 text-black text-sm font-display uppercase tracking-[0.18em]">
+        {title}
+      </div>
     </div>
   );
 }
@@ -143,6 +157,7 @@ export function BeforeAfter() {
             <Slider
               before={projects[active].before}
               after={projects[active].after}
+              title={projects[active].title}
             />
             <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
               {projects[active].label}
@@ -175,6 +190,9 @@ export function BeforeAfter() {
                   )}
                 </div>
                 <div>
+                  <p className="text-black text-xs font-mono uppercase tracking-[0.18em]">
+                    {p.title}
+                  </p>
                   <p
                     className={`font-display text-sm uppercase tracking-wide ${
                       i === active ? "text-primary" : "text-foreground"

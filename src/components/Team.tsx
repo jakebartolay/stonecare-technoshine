@@ -5,7 +5,7 @@ const team = [
   {
     name: "ERWIN TORREFIEL",
     role: "MANAGING DIRECTOR",
-    // image: "team-1.png",
+    image: "/team/managing-director.png",
   },
   // {
   //   name: "MARK DELA CRUZ",
@@ -25,6 +25,8 @@ const team = [
 ];
 
 export function Team() {
+  const base = import.meta.env.BASE_URL;
+
   return (
     <section
       id="team"
@@ -61,7 +63,11 @@ export function Team() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent z-10" />
 
                 <img
-                  src={`${import.meta.env.BASE_URL}images/${member.image}`}
+                  src={
+                    member.image.startsWith("/")
+                      ? `${base}${member.image.slice(1)}`
+                      : `${base}images/${member.image}`
+                  }
                   alt={member.name}
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                 />
