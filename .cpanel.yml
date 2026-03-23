@@ -1,11 +1,8 @@
 deployment:
   tasks:
     - export NODE_ENV=production
-    - export DEPLOYMENT_DIR=/home/technosh/dev.technoshineph.com
-
     - npm install
     - npm run build
-
-    - /bin/rm -rf $DEPLOYMENT_DIR/*
-    - /bin/cp -r dist/* $DEPLOYMENT_DIR
-    - /bin/cp .htaccess $DEPLOYMENT_DIR || true
+    - /bin/rm -rf /home/technosh/dev.technoshineph.com/*
+    - /bin/cp -r dist/* /home/technosh/dev.technoshineph.com/
+    - /bin/cp .htaccess /home/technosh/dev.technoshineph.com/ || true
