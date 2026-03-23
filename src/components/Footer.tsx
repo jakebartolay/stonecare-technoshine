@@ -8,21 +8,10 @@ export function Footer() {
       <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-          <div className="md:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4 group inline-flex">
-              <img
-                src="/logo/companylogo1.png"
-                alt="TechnoShine"
-                className="h-10 w-auto"
-              />
-            </Link>
-            <p className="text-white/50 text-sm max-w-sm font-light">
-              Premium marble and natural stone restoration specialists. Bringing your surfaces back to life with precision, care, and lasting results.
-            </p>
-          </div>
-
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 justify-items-center">
+          
+          {/* DESKTOP VIEW */}
+          <div className="hidden md:block">
             <h4 className="text-white font-display uppercase tracking-widest mb-4">
               Navigation
             </h4>
@@ -40,7 +29,17 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="hidden md:block">
+            <Link href="/" className="flex items-center justify-center gap-2 mb-4 group inline-flex">
+              <img
+                src="/logo/companylogo3.png"
+                alt="TechnoShine"
+                className="h-20 md:h-60 w-auto"
+              />
+            </Link>
+          </div>
+
+          <div className="hidden md:block">
             <h4 className="text-white font-display uppercase tracking-widest mb-4">
               Legal
             </h4>
@@ -54,17 +53,60 @@ export function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* PHONE VIEW */}
+          <div className="block md:hidden text-center">
+            <Link href="/" className="flex items-center justify-center mb-4 group">
+              <img
+                src="/logo/companylogo3.png"
+                alt="TechnoShine"
+                className="h-28 w-auto mx-auto"
+              />
+            </Link>
+            <p className="text-white/50 text-sm max-w-sm font-light mx-auto">
+              Premium marble and natural stone restoration specialists. Bringing your surfaces back to life with precision, care, and lasting results.
+            </p>
+          </div>
+
+          <div className="block md:hidden text-center">
+            <h4 className="text-white font-display uppercase tracking-widest mb-4">
+              Navigation
+            </h4>
+            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {["Home", "Services", "About", "Gallery", "Team", "Contact"].map((item) => (
+                <li key={item}>
+                  <a
+                    href={item === "Home" ? "#" : `#${item.toLowerCase()}`}
+                    className="text-white/50 hover:text-primary text-sm font-mono transition-colors"
+                  >
+                    / {item}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="block md:hidden text-center">
+            <h4 className="text-white font-display uppercase tracking-widest mb-4">
+              Legal
+            </h4>
+            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
+                <li key={item}>
+                  <a href="#" className="text-white/50 hover:text-primary text-sm font-mono transition-colors">
+                    {item}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </div>
 
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-white/40 text-xs font-mono">
+        <div className="pt-8 border-t border-white/10 flex w-full justify-center items-center">
+          <p className="text-white/40 text-xs font-mono text-center w-full">
             &copy; {year} TECHNOSHINE. ALL RIGHTS RESERVED.
           </p>
-          <div className="flex gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <div className="w-2 h-2 rounded-full bg-primary/50" />
-            <div className="w-2 h-2 rounded-full bg-primary/20" />
-          </div>
         </div>
       </div>
     </footer>

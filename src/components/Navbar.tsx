@@ -14,12 +14,12 @@ export function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Home", href: "#" },
-    { name: "Services", href: "#services" },
-    { name: "About", href: "#about" },
-    { name: "Gallery", href: "#gallery" },
-    { name: "Team", href: "#team" },
-    { name: "Contact", href: "#contact" },
+    { name: "Home", href: "/" },
+    { name: "Services", href: "#Services" },
+    { name: "About", href: "#About" },
+    { name: "Gallery", href: "#Gallery" },
+    { name: "Team", href: "#Team" },
+    { name: "Contact", href: "#Contact" },
   ];
 
   const handleNavClick = (
@@ -46,7 +46,7 @@ export function Navbar() {
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
           ? "bg-background/90 backdrop-blur-md border-b border-border py-3 shadow-sm"
-          : "bg-black/30 backdrop-blur-sm py-5"
+          : "backdrop-blur-sm py-5"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

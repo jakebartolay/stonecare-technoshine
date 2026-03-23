@@ -125,7 +125,7 @@ export function About() {
 
             <div className="space-y-6 text-muted-foreground font-light text-lg">
               <p>
-                <b>Founded in 1993,</b> Technoshine had its humble beginning doing stone restoration in Rizal. For more than <b>30 years of passion and dedication</b>, we had been restoring natural stones to homes, hotels, malls and the like. Servicing to clients who value their natural stones and need not to replace.
+                <b class="font-bold">Founded in 1993,</b> Technoshine had its humble beginning doing stone restoration in Rizal. For more than <b class="font-bold">30 years of passion and dedication</b>, we had been restoring natural stones to homes, hotels, malls and the like. Servicing to clients who value their natural stones and need not to replace.
               </p>
 
               <p>
