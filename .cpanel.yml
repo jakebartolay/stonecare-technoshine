@@ -1,20 +1,9 @@
 ---
 deployment:
   tasks:
-    # 1️⃣ Set production mode
     - export NODE_ENV=production
-
-    # 2️⃣ Install dependencies
     - npm install
-
-    # 3️⃣ Build Vite React app
     - npm run build
-
-    # 4️⃣ Clean previous deployment (delete everything in root)
-    - /bin/rm -rf $DEPLOYMENT_DIR/*
-
-    # 5️⃣ Copy build output (dist/) to root of subdomain
-    - /bin/cp -r dist/* $DEPLOYMENT_DIR
-
-    # 6️⃣ Optional: Copy .htaccess for React routing
+    - /bin/rm -rf $DEPLOYMENT_DIR/*       # delete all old files
+    - /bin/cp -r dist/* $DEPLOYMENT_DIR   # copy build only
     - /bin/cp .htaccess $DEPLOYMENT_DIR || true
