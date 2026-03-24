@@ -3,20 +3,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { Send, MapPin, Phone, Mail } from "lucide-react";
+import { useState } from "react";
 // import { useSubmitContact } from "@/lib/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
 const contactSchema = z.object({
-  name: z.string().min(2, "Name is required"),
+  name: z.string().trim().min(2, "Name is required"),
   email: z.string().email("Invalid email address"),
   company: z.string().optional(),
-  message: z.string().min(10, "Message must be at least 10 characters"),
+  message: z.string().trim().min(10, "Message must be at least 10 characters"),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
 
 export function Contact() {
   const { toast } = useToast();
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [shakeForm, setShakeForm] = useState(false);
   const submitMutation = {
     mutate: (data: any, callbacks?: any) => {
       console.log("Form submitted", data);
@@ -32,29 +35,37 @@ export function Contact() {
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
+    shouldFocusError: false,
   });
 
-    const onSubmit = (data: ContactFormValues) => {
-      submitMutation.mutate(
-        { data },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Request Received",
-              description: "We'll be in touch shortly to arrange your free assessment.",
-            });
-            reset();
-          },
-          onError: () => {
-            toast({
-              variant: "destructive",
-              title: "Submission Failed",
-              description: "Something went wrong. Please try again.",
-            });
-          },
-        }
-      );
-    };
+  const onSubmit = (data: ContactFormValues) => {
+    submitMutation.mutate(
+      { data },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Request Received",
+            description: "We'll be in touch shortly to arrange your free assessment.",
+          });
+          reset();
+        },
+        onError: () => {
+          toast({
+            variant: "destructive",
+            title: "Submission Failed",
+            description: "Something went wrong. Please try again.",
+          });
+        },
+      }
+    );
+  };
+
+  const onInvalid = () => {
+    setShakeForm(false);
+    window.requestAnimationFrame(() => setShakeForm(true));
+    window.setTimeout(() => setShakeForm(false), 420);
+  };
+
   return (
     <section id="contact" className="py-24 relative overflow-hidden bg-background">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
@@ -115,31 +126,44 @@ export function Contact() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
+            animate={shakeForm ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : undefined}
             className="lg:col-span-2 bg-card border border-border p-8 relative"
           >
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/50" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/50" />
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-muted-foreground uppercase">Your Name</label>
+                  <label className={`text-xs font-mono uppercase ${errors.name ? "text-red-500" : "text-muted-foreground"}`}>Your Name</label>
                   <input
                     {...register("name")}
-                    className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm"
+                    onFocus={() => setFocusedField("name")}
+                    onBlur={() => setFocusedField(null)}
+                    className={`w-full bg-background border px-4 py-3 text-foreground focus:outline-none transition-all font-mono text-sm ${
+                      errors.name
+                        ? "border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        : "border-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                    }`}
                     placeholder="Jane Smith"
                   />
-                  {errors.name && <p className="text-destructive text-xs font-mono">{errors.name.message}</p>}
+                  {errors.name && focusedField !== "name" && <p className="text-red-500 text-xs font-mono">{errors.name.message}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-mono text-muted-foreground uppercase">Email Address</label>
+                  <label className={`text-xs font-mono uppercase ${errors.email ? "text-red-500" : "text-muted-foreground"}`}>Email Address</label>
                   <input
                     {...register("email")}
-                    className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm"
+                    onFocus={() => setFocusedField("email")}
+                    onBlur={() => setFocusedField(null)}
+                    className={`w-full bg-background border px-4 py-3 text-foreground focus:outline-none transition-all font-mono text-sm ${
+                      errors.email
+                        ? "border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        : "border-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                    }`}
                     placeholder="jane@example.com"
                   />
-                  {errors.email && <p className="text-destructive text-xs font-mono">{errors.email.message}</p>}
+                  {errors.email && focusedField !== "email" && <p className="text-red-500 text-xs font-mono">{errors.email.message}</p>}
                 </div>
               </div>
 
@@ -147,20 +171,28 @@ export function Contact() {
                 <label className="text-xs font-mono text-muted-foreground uppercase">Property / Company (Optional)</label>
                 <input
                   {...register("company")}
-                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm"
+                  onFocus={() => setFocusedField("company")}
+                  onBlur={() => setFocusedField(null)}
+                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm"
                   placeholder="Hotel Grand, Private Residence..."
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-mono text-muted-foreground uppercase">Describe Your Stone & Requirements</label>
+                <label className={`text-xs font-mono uppercase ${errors.message ? "text-red-500" : "text-muted-foreground"}`}>Describe Your Stone & Requirements</label>
                 <textarea
                   {...register("message")}
                   rows={5}
-                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm resize-none"
+                  onFocus={() => setFocusedField("message")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`w-full bg-background border px-4 py-3 text-foreground focus:outline-none transition-all font-mono text-sm resize-none ${
+                    errors.message
+                      ? "border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      : "border-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
+                  }`}
                   placeholder="E.g. Carrara marble kitchen floor, heavy etching and scratches, approx 40m²..."
                 />
-                {errors.message && <p className="text-destructive text-xs font-mono">{errors.message.message}</p>}
+                {errors.message && focusedField !== "message" && <p className="text-red-500 text-xs font-mono">{errors.message.message}</p>}
               </div>
 
               <button
