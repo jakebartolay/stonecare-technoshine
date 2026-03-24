@@ -30,7 +30,7 @@ export function Services() {
       <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-16">
+        <div id="services-heading" className="text-center mb-16">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">What We Do</h2>
           <h3 className="text-3xl md:text-5xl font-display text-foreground">OUR SERVICES</h3>
         </div>

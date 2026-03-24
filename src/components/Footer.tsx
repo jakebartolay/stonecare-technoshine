@@ -22,7 +22,7 @@ export function Footer() {
                     href={item === "Home" ? "#" : `#${item.toLowerCase()}`}
                     className="text-white/50 hover:text-primary text-sm font-mono transition-colors"
                   >
-                    / {item}
+                    | {item}
                   </a>
                 </li>
               ))}
@@ -60,7 +60,7 @@ export function Footer() {
               <img
                 src="/logo/companylogo3.png"
                 alt="TechnoShine"
-                className="h-28 w-auto mx-auto"
+                className="h-60 w-auto mx-auto"
               />
             </Link>
             <p className="text-white/50 text-sm max-w-sm font-light mx-auto">
@@ -79,7 +79,7 @@ export function Footer() {
                     href={item === "Home" ? "#" : `#${item.toLowerCase()}`}
                     className="text-white/50 hover:text-primary text-sm font-mono transition-colors"
                   >
-                    / {item}
+                    | {item}
                   </a>
                 </li>
               ))}

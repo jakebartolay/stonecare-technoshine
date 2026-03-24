@@ -67,12 +67,12 @@ export function Contact() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
-          {/* Contact Info */}
+          {/* Contact Info Desktop */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="lg:col-span-1 space-y-8"
+            className="hidden lg:block lg:col-span-1 space-y-8"
           >
             <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
               <div className="flex items-center gap-4 text-primary mb-4">
@@ -178,6 +178,48 @@ export function Contact() {
               </button>
             </form>
           </motion.div>
+
+          {/* Contact Info Phoneview */}
+          <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-10 space-y-6 lg:hidden"
+        >
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <MapPin className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Location</h4>
+            </div>
+            <p className="text-muted-foreground font-mono text-sm">
+              Unit 110 Union Square Condominium,<br />
+              15th Avenue, Cubao, Quezon City,<br />
+              Philippines.
+            </p>
+          </div>
+
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <Mail className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Email Us</h4>
+            </div>
+            <p className="text-muted-foreground font-mono text-sm">
+              contactus@technoshineph.com<br />
+              quotes@technoshine.co.uk
+            </p>
+          </div>
+
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <Phone className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Call Us</h4>
+            </div>
+            <p className="text-muted-foreground font-mono text-sm">
+              +44 (0)20 7946 0321<br />
+              Mon – Sat, 9am – 6pm
+            </p>
+          </div>
+        </motion.div>
         </div>
       </div>
     </section>

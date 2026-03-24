@@ -20,9 +20,17 @@ export function BackToTop() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.5 }}
           transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onClick={() => {
+            setHovered(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          onPointerEnter={(event) => {
+            if (event.pointerType === "mouse") {
+              setHovered(true);
+            }
+          }}
+          onPointerLeave={() => setHovered(false)}
+          onBlur={() => setHovered(false)}
           className="fixed bottom-8 right-8 z-50"
           aria-label="Back to top"
         >

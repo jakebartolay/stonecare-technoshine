@@ -3,7 +3,18 @@ import { ChevronDown } from "lucide-react";
 
 export function Hero() {
   const scrollToServices = () => {
-    document.querySelector("#services")?.scrollIntoView({ behavior: "smooth" });
+    const element = document.querySelector("#services-heading");
+    if (!element) return;
+
+    const section = element as HTMLElement;
+    const rect = section.getBoundingClientRect();
+    const absoluteTop = rect.top + window.scrollY;
+    const top = Math.max(
+      absoluteTop - window.innerHeight / 2 + rect.height / 2,
+      0,
+    );
+
+    window.scrollTo({ top, behavior: "smooth" });
   };
 
   return (
@@ -56,6 +67,7 @@ export function Hero() {
           className="flex flex-col sm:flex-row gap-4"
         >
           <button
+            type="button"
             onClick={() =>
               document
                 .querySelector("#contact")
@@ -70,6 +82,7 @@ export function Hero() {
             </span>
           </button>
           <button
+            type="button"
             onClick={scrollToServices}
             className="px-8 py-4 font-display font-bold text-white bg-transparent border border-white/40 hover:border-white transition-all duration-300 uppercase tracking-widest"
           >
@@ -79,11 +92,12 @@ export function Hero() {
       </div>
 
       <motion.button
+        type="button"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 1 }}
         onClick={scrollToServices}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-primary/70 hover:text-primary transition-colors z-20 animate-bounce"
+        className="absolute bottom-5 left-0 right-0 mx-auto flex w-fit items-center justify-center text-primary/70 hover:text-primary transition-colors z-20 animate-bounce sm:bottom-8"
       >
         <ChevronDown className="w-10 h-10" />
       </motion.button>
