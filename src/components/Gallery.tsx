@@ -4,37 +4,37 @@ import { X, ZoomIn } from "lucide-react";
 
 const items = [
   {
-    src: "gallery-1.png",
-    title: "Carrara Marble Floor",
+    src: "client-images/gallery-1.jpg",
+    title: "Marble Floor",
     category: "Polishing",
     description: "Mirror-finish restoration of white Carrara marble with natural veining preserved.",
   },
   {
-    src: "gallery-2.png",
-    title: "Spa Travertine Suite",
+    src: "client-images/gallery-2.jpg",
+    title: "Hallway Restoration",
     category: "Restoration",
-    description: "Full travertine wall and floor restoration in a luxury spa environment.",
+    description: "Full travertine wall and floor restoration in a hallway environment.",
   },
   {
-    src: "gallery-3.png",
-    title: "Hotel Lobby Columns",
+    src: "client-images/gallery-3.jpg",
+    title: "Hotel Lobby",
     category: "Polishing",
     description: "Italian marble columns and grand lobby floor brought back to showroom condition.",
   },
   {
-    src: "gallery-4.png",
+    src: "client-images/gallery-4.png",
     title: "Floor Transformation",
     category: "Repair",
     description: "Cracked, heavily etched stone surface restored to a flawless mirror polish.",
   },
   {
-    src: "gallery-5.png",
+    src: "client-images/gallery-5.png",
     title: "Black Marble Countertop",
     category: "Sealing",
     description: "Deep black marble countertop sealed and polished to reveal gold veining.",
   },
   {
-    src: "gallery-6.png",
+    src: "client-images/gallery-6.png",
     title: "Marble Staircase",
     category: "Restoration",
     description: "Antique marble staircase honed and re-polished to its original elegance.",

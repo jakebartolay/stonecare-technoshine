@@ -6,8 +6,8 @@ const projects = [
   {
     title: "Okada Manila",
     label: "Marble Floor Polish",
-    before: "before-1.jpeg",
-    after: "after-1.jpeg",
+    before: "before-after/before-1.jpeg",
+    after: "before-after/after-1.jpeg",
   },
   // {
   //   label: "Countertop Restoration",
@@ -17,8 +17,8 @@ const projects = [
   {
     title: "Edsa Shangrila",
     label: "Floor Restoration",
-    before: "before-3.jpg",
-    after: "after-3.jpg",
+    before: "before-after/before-3.jpg",
+    after: "before-after/after-3.jpg",
   },
 ];
 

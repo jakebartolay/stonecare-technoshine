@@ -78,7 +78,7 @@ export function About() {
   const statsRef = useRef<HTMLDivElement>(null);
   const inView = useInView(statsRef, { once: true, margin: "-80px" });
   return (
-    <section id="about" className="py-24 relative bg-background">
+    <section id="about" className="py-24 relative bg-background border-y border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div
@@ -91,7 +91,7 @@ export function About() {
             <div className="absolute -inset-4 bg-primary/10 blur-2xl rounded-full opacity-40" />
             <div className="relative border border-primary/30 bg-card p-2">
               <img
-                src={`${import.meta.env.BASE_URL}images/marble-hall.png`}
+                src={`${import.meta.env.BASE_URL}images/marble-hall.jpg`}
                 alt="Grand marble hall"
                 className="w-full h-auto object-cover contrast-110"
               />
@@ -153,8 +153,13 @@ export function About() {
           </motion.div>
         </div>
 
+        <div className="mt-16 mb-8 flex items-center gap-4">
+          <span className="h-px w-16 bg-primary" />
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
         {/* Mission & Vision */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-20">
+        <div className="grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr] gap-6 mt-20">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -221,6 +226,11 @@ export function About() {
               Excellence Across Southeast Asia.
             </div>
           </motion.div>
+        </div>
+
+        <div className="mt-8 flex w-full items-center gap-4">
+          <span className="h-px min-w-0 flex-1 bg-border" />
+          <span className="h-px w-24 shrink-0 bg-primary" />
         </div>
       </div>
     </section>

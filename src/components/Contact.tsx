@@ -93,7 +93,7 @@ export function Contact() {
               </div>
               <p className="text-muted-foreground font-mono text-sm">
                 contactus@technoshineph.com<br />
-                quotes@technoshine.co.uk
+                erwin.torrefiel@technoshineph.com
               </p>
             </div>
 
@@ -205,7 +205,7 @@ export function Contact() {
             </div>
             <p className="text-muted-foreground font-mono text-sm">
               contactus@technoshineph.com<br />
-              quotes@technoshine.co.uk
+              erwin.torrefiel@technoshineph.com
             </p>
           </div>
 
