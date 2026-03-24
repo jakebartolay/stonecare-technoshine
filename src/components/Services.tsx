@@ -21,7 +21,7 @@ const services = [
     details:
       "Our repair process is designed to blend with the original stone while improving structural stability and preserving the visual finish.",
     category: "Repair",
-    image: "/images/client-images/gallery-2.jpg",
+    image: "/images/client-images/gallery-8.png",
   },
   {
     icon: Layers,
@@ -41,7 +41,7 @@ const services = [
     details:
       "This treatment helps preserve the stone after restoration and reduces the impact of daily wear, spills, and environmental exposure.",
     category: "Protection",
-    image: "/images/client-images/gallery-4.png",
+    image: "/images/client-images/gallery-7.png",
   },
 ];
 
