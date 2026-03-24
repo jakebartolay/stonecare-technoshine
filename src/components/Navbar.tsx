@@ -104,6 +104,11 @@ export function Navbar() {
     scrollToTarget();
   };
 
+  const handleFreeQuoteClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    window.dispatchEvent(new Event("open-free-quote"));
+    handleNavClick(e, "#contact", "contact");
+  };
+
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
@@ -176,7 +181,7 @@ export function Navbar() {
             ))}
             <a
               href="#contact"
-              onClick={(e) => handleNavClick(e, "#contact", "contact")}
+              onClick={handleFreeQuoteClick}
               className="px-5 py-2 font-display text-sm font-bold text-white bg-primary border border-primary hover:bg-transparent hover:text-primary transition-all duration-300 shadow-[0_0_15px_rgba(255,107,0,0.3)] hover:shadow-[0_0_25px_rgba(255,107,0,0.6)]"
             >
               FREE QUOTE
@@ -223,7 +228,7 @@ export function Navbar() {
               ))}
               <a
                 href="#contact"
-                onClick={(e) => handleNavClick(e, "#contact", "contact")}
+                onClick={handleFreeQuoteClick}
                 className="mt-2 inline-flex items-center justify-center px-5 py-3 font-display text-sm font-bold text-white bg-primary border border-primary hover:bg-transparent hover:text-primary transition-all duration-300"
               >
                 FREE QUOTE

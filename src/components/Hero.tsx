@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 export function Hero() {
+  const openFreeQuote = () => {
+    window.dispatchEvent(new Event("open-free-quote"));
+    document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const scrollToServices = () => {
     const element = document.querySelector("#services-heading");
     if (!element) return;
@@ -68,11 +73,7 @@ export function Hero() {
         >
           <button
             type="button"
-            onClick={() =>
-              document
-                .querySelector("#contact")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={openFreeQuote}
             className="relative overflow-hidden px-8 py-4 font-display font-bold text-white bg-transparent border border-primary uppercase tracking-widest flex items-center justify-center gap-2 group shadow-[0_0_15px_rgba(255,107,0,0.2)] hover:shadow-[0_0_25px_rgba(255,107,0,0.5)] transition-shadow duration-300"
           >
             <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />

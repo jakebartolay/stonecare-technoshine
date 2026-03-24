@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { Send, MapPin, Phone, Mail } from "lucide-react";
+import { useState } from "react";
+// import { useSubmitContact } from "@/lib/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
 const contactSchema = z.object({
@@ -19,10 +20,8 @@ export function Contact() {
   const { toast } = useToast();
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [shakeForm, setShakeForm] = useState(false);
-  const [isQuoteMode, setIsQuoteMode] = useState(false);
-
   const submitMutation = {
-    mutate: (data: unknown, callbacks?: { onSuccess?: () => void; onError?: () => void }) => {
+    mutate: (data: any, callbacks?: any) => {
       console.log("Form submitted", data);
       if (callbacks?.onSuccess) callbacks.onSuccess();
     },
@@ -33,41 +32,22 @@ export function Contact() {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
     shouldFocusError: false,
   });
 
-  useEffect(() => {
-    const handleQuoteMode = () => {
-      setIsQuoteMode(true);
-      setValue(
-        "message",
-        "I'd like to request a free quote for stone restoration.",
-        { shouldDirty: true },
-      );
-    };
-
-    window.addEventListener("open-free-quote", handleQuoteMode);
-    return () => window.removeEventListener("open-free-quote", handleQuoteMode);
-  }, [setValue]);
-
   const onSubmit = (data: ContactFormValues) => {
     submitMutation.mutate(
-      { data, inquiryType: isQuoteMode ? "free-quote" : "assessment" },
+      { data },
       {
         onSuccess: () => {
           toast({
-            title: isQuoteMode ? "Quote Request Received" : "Request Received",
-            description: isQuoteMode
-              ? "We'll be in touch shortly with your free quote details."
-              : "We'll be in touch shortly to arrange your free assessment.",
+            title: "Request Received",
+            description: "We'll be in touch shortly to arrange your free assessment.",
           });
           reset();
-          setIsQuoteMode(false);
-          setFocusedField(null);
         },
         onError: () => {
           toast({
@@ -76,17 +56,11 @@ export function Contact() {
             description: "Something went wrong. Please try again.",
           });
         },
-      },
+      }
     );
   };
 
   const onInvalid = () => {
-    setShakeForm(false);
-    window.requestAnimationFrame(() => setShakeForm(true));
-    window.setTimeout(() => setShakeForm(false), 420);
-  };
-
-  const triggerShake = () => {
     setShakeForm(false);
     window.requestAnimationFrame(() => setShakeForm(true));
     window.setTimeout(() => setShakeForm(false), 420);
@@ -98,28 +72,13 @@ export function Contact() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
-            {isQuoteMode ? "Free Quote Request" : "Get In Touch"}
-          </h2>
-          <h3 className="text-3xl md:text-5xl font-display text-foreground">
-            {isQuoteMode ? (
-              <>
-                REQUEST YOUR <span className="text-primary">FREE QUOTE</span>
-              </>
-            ) : (
-              <>
-                BOOK A FREE <span className="text-primary">ASSESSMENT</span>
-              </>
-            )}
-          </h3>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm mt-4">
-            {isQuoteMode
-              ? "Tell us about your stone surface and project scope, and we'll recommend the right treatment with a free quote."
-              : "Tell us about your stone surface and we'll help arrange the right restoration assessment."}
-          </p>
+          <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">Get In Touch</h2>
+          <h3 className="text-3xl md:text-5xl font-display text-foreground">BOOK A FREE <span className="text-primary">ASSESSMENT</span></h3>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+
+          {/* Contact Info Desktop */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -156,26 +115,19 @@ export function Contact() {
               </div>
               <p className="text-muted-foreground font-mono text-sm">
                 +44 (0)20 7946 0321<br />
-                Mon - Sat, 9am - 6pm
+                Mon – Sat, 9am – 6pm
               </p>
             </div>
           </motion.div>
 
+          {/* Contact Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={
-              shakeForm
-                ? { duration: 0.22, ease: "easeInOut" }
-                : { delay: 0.2 }
-            }
+            transition={{ delay: 0.2 }}
             animate={shakeForm ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : undefined}
-            className={`lg:col-span-2 bg-card border p-8 relative transition-all duration-300 ${
-              isQuoteMode
-                ? "border-primary shadow-[0_0_24px_rgba(255,107,0,0.12)]"
-                : "border-border"
-            }`}
+            className="lg:col-span-2 bg-card border border-border p-8 relative"
           >
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/50" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/50" />
@@ -183,9 +135,7 @@ export function Contact() {
             <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className={`text-xs font-mono uppercase ${errors.name ? "text-red-500" : "text-muted-foreground"}`}>
-                    Your Name
-                  </label>
+                  <label className={`text-xs font-mono uppercase ${errors.name ? "text-red-500" : "text-muted-foreground"}`}>Your Name</label>
                   <input
                     {...register("name")}
                     onFocus={() => setFocusedField("name")}
@@ -197,15 +147,11 @@ export function Contact() {
                     }`}
                     placeholder="Jane Smith"
                   />
-                  {errors.name && focusedField !== "name" && (
-                    <p className="text-red-500 text-xs font-mono">{errors.name.message}</p>
-                  )}
+                  {errors.name && focusedField !== "name" && <p className="text-red-500 text-xs font-mono">{errors.name.message}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <label className={`text-xs font-mono uppercase ${errors.email ? "text-red-500" : "text-muted-foreground"}`}>
-                    Email Address
-                  </label>
+                  <label className={`text-xs font-mono uppercase ${errors.email ? "text-red-500" : "text-muted-foreground"}`}>Email Address</label>
                   <input
                     {...register("email")}
                     onFocus={() => setFocusedField("email")}
@@ -217,16 +163,12 @@ export function Contact() {
                     }`}
                     placeholder="jane@example.com"
                   />
-                  {errors.email && focusedField !== "email" && (
-                    <p className="text-red-500 text-xs font-mono">{errors.email.message}</p>
-                  )}
+                  {errors.email && focusedField !== "email" && <p className="text-red-500 text-xs font-mono">{errors.email.message}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-mono text-muted-foreground uppercase">
-                  Property / Company (Optional)
-                </label>
+                <label className="text-xs font-mono text-muted-foreground uppercase">Property / Company (Optional)</label>
                 <input
                   {...register("company")}
                   onFocus={() => setFocusedField("company")}
@@ -237,9 +179,7 @@ export function Contact() {
               </div>
 
               <div className="space-y-2">
-                <label className={`text-xs font-mono uppercase ${errors.message ? "text-red-500" : "text-muted-foreground"}`}>
-                  Describe Your Stone & Requirements
-                </label>
+                <label className={`text-xs font-mono uppercase ${errors.message ? "text-red-500" : "text-muted-foreground"}`}>Describe Your Stone & Requirements</label>
                 <textarea
                   {...register("message")}
                   rows={5}
@@ -250,70 +190,68 @@ export function Contact() {
                       ? "border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                       : "border-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
                   }`}
-                  placeholder="E.g. Carrara marble kitchen floor, heavy etching and scratches, approx 40m2..."
+                  placeholder="E.g. Carrara marble kitchen floor, heavy etching and scratches, approx 40m²..."
                 />
-                {errors.message && focusedField !== "message" && (
-                  <p className="text-red-500 text-xs font-mono">{errors.message.message}</p>
-                )}
+                {errors.message && focusedField !== "message" && <p className="text-red-500 text-xs font-mono">{errors.message.message}</p>}
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting || submitMutation.isPending}
-                onClick={triggerShake}
                 className="w-full py-4 bg-primary text-white font-display font-bold text-lg uppercase tracking-widest hover:bg-foreground hover:text-background transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting || submitMutation.isPending ? (
                   <span className="animate-pulse">Sending...</span>
                 ) : (
                   <>
-                    {isQuoteMode ? "Request Quote" : "Send Enquiry"} <Send className="w-5 h-5" />
+                    Send Enquiry <Send className="w-5 h-5" />
                   </>
                 )}
               </button>
             </form>
           </motion.div>
 
+          {/* Contact Info Phoneview */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-10 space-y-6 lg:hidden"
-          >
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
-              <div className="flex items-center gap-4 text-primary mb-4">
-                <MapPin className="w-6 h-6" />
-                <h4 className="font-display text-lg text-foreground">Location</h4>
-              </div>
-              <p className="text-muted-foreground font-mono text-sm">
-                Unit 110 Union Square Condominium,<br />
-                15th Avenue, Cubao, Quezon City,<br />
-                Philippines.
-              </p>
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-10 space-y-6 lg:hidden"
+        >
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <MapPin className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Location</h4>
             </div>
+            <p className="text-muted-foreground font-mono text-sm">
+              Unit 110 Union Square Condominium,<br />
+              15th Avenue, Cubao, Quezon City,<br />
+              Philippines.
+            </p>
+          </div>
 
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
-              <div className="flex items-center gap-4 text-primary mb-4">
-                <Mail className="w-6 h-6" />
-                <h4 className="font-display text-lg text-foreground">Email Us</h4>
-              </div>
-              <p className="text-muted-foreground font-mono text-sm">
-                contactus@technoshineph.com<br />
-                erwin.torrefiel@technoshineph.com
-              </p>
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <Mail className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Email Us</h4>
             </div>
+            <p className="text-muted-foreground font-mono text-sm">
+              contactus@technoshineph.com<br />
+              erwin.torrefiel@technoshineph.com
+            </p>
+          </div>
 
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
-              <div className="flex items-center gap-4 text-primary mb-4">
-                <Phone className="w-6 h-6" />
-                <h4 className="font-display text-lg text-foreground">Call Us</h4>
-              </div>
-              <p className="text-muted-foreground font-mono text-sm">
-                +44 (0)20 7946 0321<br />
-                Mon - Sat, 9am - 6pm
-              </p>
+          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="flex items-center gap-4 text-primary mb-4">
+              <Phone className="w-6 h-6" />
+              <h4 className="font-display text-lg text-foreground">Call Us</h4>
             </div>
-          </motion.div>
+            <p className="text-muted-foreground font-mono text-sm">
+              +44 (0)20 7946 0321<br />
+              Mon – Sat, 9am – 6pm
+            </p>
+          </div>
+        </motion.div>
         </div>
       </div>
     </section>
