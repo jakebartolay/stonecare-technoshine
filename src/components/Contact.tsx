@@ -20,14 +20,7 @@ export function Contact() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [shakeForm, setShakeForm] = useState(false);
   const [isQuoteMode, setIsQuoteMode] = useState(false);
-
-  const submitMutation = {
-    mutate: (data: unknown, callbacks?: { onSuccess?: () => void; onError?: () => void }) => {
-      console.log("Form submitted", data);
-      if (callbacks?.onSuccess) callbacks.onSuccess();
-    },
-    isPending: false,
-  };
+  const [isSending, setIsSending] = useState(false);
 
   const {
     register,
@@ -55,38 +48,56 @@ export function Contact() {
   }, [setValue]);
 
   const onSubmit = (data: ContactFormValues) => {
-    submitMutation.mutate(
-      { data, inquiryType: isQuoteMode ? "free-quote" : "assessment" },
-      {
-        onSuccess: () => {
-          toast({
-            title: isQuoteMode ? "Quote Request Received" : "Request Received",
-            description: isQuoteMode
-              ? "We'll be in touch shortly with your free quote details."
-              : "We'll be in touch shortly to arrange your free assessment.",
-          });
-          reset();
-          setIsQuoteMode(false);
-          setFocusedField(null);
-        },
-        onError: () => {
-          toast({
-            variant: "destructive",
-            title: "Submission Failed",
-            description: "Something went wrong. Please try again.",
-          });
-        },
+    setIsSending(true);
+
+    fetch(`${import.meta.env.BASE_URL}contact-form.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        ...data,
+        inquiryType: isQuoteMode ? "free-quote" : "assessment",
+      }),
+    })
+      .then(async (response) => {
+        const result = (await response.json().catch(() => null)) as
+          | { ok?: boolean; message?: string; error?: string }
+          | null;
+
+        if (!response.ok || !result?.ok) {
+          throw new Error(
+            result?.error || result?.message || "Something went wrong. Please try again.",
+          );
+        }
+
+        toast({
+          variant: "success",
+          title: isQuoteMode ? "Quote Request Received" : "Request Received",
+          description: isQuoteMode
+            ? "We'll be in touch shortly with your free quote details."
+            : "We'll be in touch shortly to arrange your free assessment.",
+        });
+        reset();
+        setIsQuoteMode(false);
+        setFocusedField(null);
+      })
+      .catch((error: unknown) => {
+        toast({
+          variant: "destructive",
+          title: "Submission Failed",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Something went wrong. Please try again.",
+        });
+      })
+      .finally(() => {
+        setIsSending(false);
+      });
   };
 
   const onInvalid = () => {
-    setShakeForm(false);
-    window.requestAnimationFrame(() => setShakeForm(true));
-    window.setTimeout(() => setShakeForm(false), 420);
-  };
-
-  const triggerShake = () => {
     setShakeForm(false);
     window.requestAnimationFrame(() => setShakeForm(true));
     window.setTimeout(() => setShakeForm(false), 420);
@@ -225,7 +236,7 @@ export function Contact() {
 
               <div className="space-y-2">
                 <label className="text-xs font-mono text-muted-foreground uppercase">
-                  Property / Company (Optional)
+                  Property / Company 
                 </label>
                 <input
                   {...register("company")}
@@ -259,11 +270,10 @@ export function Contact() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || submitMutation.isPending}
-                onClick={triggerShake}
+                disabled={isSubmitting || isSending}
                 className="w-full py-4 bg-primary text-white font-display font-bold text-lg uppercase tracking-widest hover:bg-foreground hover:text-background transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting || submitMutation.isPending ? (
+                {isSubmitting || isSending ? (
                   <span className="animate-pulse">Sending...</span>
                 ) : (
                   <>
