@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ZoomIn } from "lucide-react";
 
@@ -46,6 +46,59 @@ const categories = ["All", "Polishing", "Restoration", "Repair", "Sealing"];
 export function Gallery() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [lightbox, setLightbox] = useState<typeof items[0] | null>(null);
+
+  useEffect(() => {
+    if (!lightbox) {
+      return;
+    }
+
+    const previousBodyStyle = {
+      overflow: document.body.style.overflow,
+      paddingRight: document.body.style.paddingRight,
+    };
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    const preventScroll = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setLightbox(null);
+        return;
+      }
+
+      if (
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "Spacebar"].includes(
+          event.key,
+        )
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("wheel", preventScroll, { passive: false });
+    window.addEventListener("touchmove", preventScroll, { passive: false });
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscrollBehavior;
+      document.body.style.overflow = previousBodyStyle.overflow;
+      document.body.style.paddingRight = previousBodyStyle.paddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("wheel", preventScroll);
+      window.removeEventListener("touchmove", preventScroll);
+    };
+  }, [lightbox]);
 
   const filtered =
     activeCategory === "All"
@@ -144,7 +197,7 @@ export function Gallery() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="relative max-w-4xl w-full"
+              className="relative w-full max-w-4xl"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -155,11 +208,13 @@ export function Gallery() {
               </button>
 
               <div className="border border-primary/30">
-                <img
-                  src={`${import.meta.env.BASE_URL}images/${lightbox.src}`}
-                  alt={lightbox.title}
-                  className="w-full h-auto object-cover"
-                />
+                <div className="aspect-[4/3] max-h-[75vh] w-full bg-black flex items-center justify-center overflow-hidden">
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/${lightbox.src}`}
+                    alt={lightbox.title}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <div className="bg-black p-5 border-t border-primary/20">
                   <span className="text-[10px] font-mono text-primary uppercase tracking-widest">
                     {lightbox.category}
