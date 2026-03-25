@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Gem, Layers, Wrench, ShieldCheck, X } from "lucide-react";
 
@@ -49,6 +49,59 @@ export function Services() {
   const [activeService, setActiveService] = useState<(typeof services)[number] | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!activeService) {
+      return;
+    }
+
+    const previousBodyStyle = {
+      overflow: document.body.style.overflow,
+      paddingRight: document.body.style.paddingRight,
+    };
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    const preventScroll = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveService(null);
+        return;
+      }
+
+      if (
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "Spacebar"].includes(
+          event.key,
+        )
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("wheel", preventScroll, { passive: false });
+    window.addEventListener("touchmove", preventScroll, { passive: false });
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscrollBehavior;
+      document.body.style.overflow = previousBodyStyle.overflow;
+      document.body.style.paddingRight = previousBodyStyle.paddingRight;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("wheel", preventScroll);
+      window.removeEventListener("touchmove", preventScroll);
+    };
+  }, [activeService]);
 
   return (
     <section
