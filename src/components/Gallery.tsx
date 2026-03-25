@@ -197,7 +197,7 @@ export function Gallery() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="relative w-full max-w-4xl"
+              className="relative w-full max-w-5xl"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -208,11 +208,11 @@ export function Gallery() {
               </button>
 
               <div className="border border-primary/30">
-                <div className="aspect-[4/3] max-h-[75vh] w-full bg-black flex items-center justify-center overflow-hidden">
+                <div className="aspect-[16/10] max-h-[78vh] w-full bg-black overflow-hidden">
                   <img
                     src={`${import.meta.env.BASE_URL}images/${lightbox.src}`}
                     alt={lightbox.title}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
                 </div>
                 <div className="bg-black p-5 border-t border-primary/20">

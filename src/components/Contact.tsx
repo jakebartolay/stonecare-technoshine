@@ -47,6 +47,17 @@ export function Contact() {
     return () => window.removeEventListener("open-free-quote", handleQuoteMode);
   }, [setValue]);
 
+  useEffect(() => {
+    reset({
+      name: "",
+      email: "",
+      company: "",
+      message: "",
+    });
+    setIsQuoteMode(false);
+    setFocusedField(null);
+  }, [reset]);
+
   const onSubmit = (data: ContactFormValues) => {
     setIsSending(true);
 
@@ -191,7 +202,11 @@ export function Contact() {
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/50" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/50" />
 
-            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+            <form
+              onSubmit={handleSubmit(onSubmit, onInvalid)}
+              autoComplete="off"
+              className="space-y-6"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className={`text-xs font-mono uppercase ${errors.name ? "text-red-500" : "text-muted-foreground"}`}>
@@ -199,6 +214,7 @@ export function Contact() {
                   </label>
                   <input
                     {...register("name")}
+                    autoComplete="off"
                     onFocus={() => setFocusedField("name")}
                     onBlur={() => setFocusedField(null)}
                     className={`w-full bg-background border px-4 py-3 text-foreground focus:outline-none transition-all font-mono text-sm ${
@@ -219,6 +235,7 @@ export function Contact() {
                   </label>
                   <input
                     {...register("email")}
+                    autoComplete="off"
                     onFocus={() => setFocusedField("email")}
                     onBlur={() => setFocusedField(null)}
                     className={`w-full bg-background border px-4 py-3 text-foreground focus:outline-none transition-all font-mono text-sm ${
@@ -240,6 +257,7 @@ export function Contact() {
                 </label>
                 <input
                   {...register("company")}
+                  autoComplete="off"
                   onFocus={() => setFocusedField("company")}
                   onBlur={() => setFocusedField(null)}
                   className="w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm"
@@ -253,6 +271,7 @@ export function Contact() {
                 </label>
                 <textarea
                   {...register("message")}
+                  autoComplete="off"
                   rows={5}
                   onFocus={() => setFocusedField("message")}
                   onBlur={() => setFocusedField(null)}
