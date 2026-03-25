@@ -159,25 +159,25 @@ export function About() {
         </div>
 
         {/* Mission & Vision */}
-        <div className="grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr] gap-6 mt-20">
+        <div className="grid grid-cols-1 md:grid-cols-[0.75fr_1.25fr] gap-6 mt-16 items-start">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="relative group border border-border hover:border-primary transition-colors duration-300 bg-card p-8 overflow-hidden"
+            className="relative group self-start border border-border hover:border-primary transition-colors duration-300 bg-card p-6 md:p-7 overflow-hidden"
           >
             {/* Corner accent */}
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
             <div className="absolute bottom-0 right-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
 
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-12 h-12 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
-                <Target className="w-5 h-5 text-primary group-hover:text-white transition-colors duration-300" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary transition-colors duration-300">
+                <Target className="w-4 h-4 text-primary group-hover:text-white transition-colors duration-300" />
               </div>
               <div>
                 <p className="text-[10px] font-mono text-primary uppercase tracking-[0.2em]">Who We Are</p>
-                <h4 className="text-2xl font-display text-foreground uppercase">Our Mission</h4>
+                <h4 className="text-xl md:text-2xl font-display text-foreground uppercase">Our Mission</h4>
               </div>
             </div>
 
@@ -185,7 +185,7 @@ export function About() {
               To remain the No. 1 and the only legitimate stone care and restoration in the country.
             </p>
 
-            <div className="mt-6 flex items-center gap-2 text-xs font-mono text-primary uppercase tracking-widest">
+            <div className="mt-5 flex items-center gap-2 text-[11px] font-mono text-primary uppercase tracking-widest">
               <span className="w-6 h-0.5 bg-primary" />
               Precision. Integrity. Craftsmanship.
             </div>

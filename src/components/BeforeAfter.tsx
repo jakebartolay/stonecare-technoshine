@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const projects = [
   {
-    title: "Okada Manila",
+    title: "Residential Home",
     label: "Marble Floor Polish",
     before: "before-after/before-1.jpeg",
     after: "before-after/after-1.jpeg",

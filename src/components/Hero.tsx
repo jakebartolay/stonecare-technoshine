@@ -60,7 +60,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="max-w-2xl text-lg sm:text-xl text-white/80 font-light mb-10"
+          className="max-w-3xl text-lg sm:text-xl text-white/80 font-light mb-10"
         >
           Restoring marble, granite, and natural stone surfaces to their original brilliance — with precision craftsmanship and decades of expertise.
         </motion.p>
