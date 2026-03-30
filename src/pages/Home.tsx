@@ -5,7 +5,7 @@ import { Services } from "@/components/Services";
 import { About } from "@/components/About";
 import { Gallery } from "@/components/Gallery";
 import { BeforeAfter } from "@/components/BeforeAfter";
-import { Team } from "@/components/Team";
+// import { Team } from "@/components/Team";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
@@ -21,7 +21,7 @@ export default function Home() {
         <About />
         <Gallery />
         <BeforeAfter />
-        <Team />
+        {/* <Team /> */}
         <Contact />
       </main>
       <Footer />

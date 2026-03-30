@@ -39,11 +39,11 @@ export function Footer() {
             </Link>
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden md:block text-center">
             <h4 className="text-white font-display uppercase tracking-widest mb-4">
               Legal
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-2 mb-6">
               {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
                 <li key={item}>
                   <a href="#" className="text-white/50 hover:text-primary text-sm font-mono transition-colors">
@@ -51,6 +51,28 @@ export function Footer() {
                   </a>
                 </li>
               ))}
+            </ul>
+
+            {/* 🔥 SUBDOMAINS */}
+            <h4 className="text-white font-display uppercase tracking-widest mb-4">
+              Our Websites
+            </h4>
+            <ul className="space-y-2">
+              <li>
+                <a href="https://construction.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                  Construction
+                </a>
+              </li>
+              <li>
+                <a href="https://trading.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                  Trading
+                </a>
+              </li>
+              <li>
+                <a href="https://stonecare.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                  Stonecare
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -64,7 +86,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-white/50 text-sm max-w-sm font-light mx-auto">
-              Premium marble and natural stone restoration specialists. Bringing your surfaces back to life with precision, care, and lasting results.
+              Premium marble and natural stone restoration specialists.
             </p>
           </div>
 
@@ -77,7 +99,7 @@ export function Footer() {
                 <li key={item}>
                   <a
                     href={item === "Home" ? "#" : `#${item.toLowerCase()}`}
-                    className="text-white/50 hover:text-primary text-sm font-mono transition-colors"
+                    className="text-white/50 hover:text-primary text-sm font-mono"
                   >
                     | {item}
                   </a>
@@ -90,15 +112,31 @@ export function Footer() {
             <h4 className="text-white font-display uppercase tracking-widest mb-4">
               Legal
             </h4>
-            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-4">
               {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-white/50 hover:text-primary text-sm font-mono transition-colors">
+                  <a href="#" className="text-white/50 hover:text-primary text-sm font-mono">
                     {item}
                   </a>
                 </li>
               ))}
             </ul>
+
+            {/* 🔥 SUBDOMAINS MOBILE */}
+            <h4 className="text-white font-display uppercase tracking-widest mb-3">
+              Our Websites
+            </h4>
+            <div className="flex flex-wrap justify-center gap-3">
+              <a href="https://construction.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                Construction
+              </a>
+              <a href="https://trading.technoshineph.com/index.php" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                Trading
+              </a>
+              <a href="https://stonecare.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                Stonecare
+              </a>
+            </div>
           </div>
 
         </div>
