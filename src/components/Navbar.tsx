@@ -134,14 +134,15 @@ export function Navbar() {
               <img
                 src={TOP_LOGO_SRC}
                 alt="TechnoShine"
-                className={`absolute inset-0 h-10 w-auto max-w-none transition-opacity duration-200 ${
+                className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 ${
                   isScrolled ? "opacity-0" : "opacity-100"
                 }`}
               />
+              {/* h-10 pinaka size */}
               <img
                 src={SCROLLED_LOGO_SRC}
                 alt="TechnoShine"
-                className={`absolute inset-0 h-10 w-auto max-w-none transition-opacity duration-200 ${
+                className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 ${
                   isScrolled ? "opacity-100" : "opacity-0"
                 }`}
               />

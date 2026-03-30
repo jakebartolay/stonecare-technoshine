@@ -69,8 +69,8 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="https://stonecare.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
-                  Stonecare
+                <a href="https://technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                  Technoshine
                 </a>
               </li>
             </ul>
@@ -133,8 +133,8 @@ export function Footer() {
               <a href="https://trading.technoshineph.com/index.php" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
                 Trading
               </a>
-              <a href="https://stonecare.technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
-                Stonecare
+              <a href="https://technoshineph.com" target="_blank" className="text-white/50 hover:text-primary text-sm font-mono">
+                Technoshine
               </a>
             </div>
           </div>
