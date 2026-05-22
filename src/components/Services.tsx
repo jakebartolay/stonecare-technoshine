@@ -106,7 +106,7 @@ export function Services() {
   return (
     <section
       id="services"
-      className="py-24 relative bg-card border-y border-border overflow-hidden"
+      className="min-h-screen py-24 relative bg-card border-y border-border overflow-hidden flex items-center"
     >
       <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
 

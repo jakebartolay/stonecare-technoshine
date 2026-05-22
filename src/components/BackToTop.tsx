@@ -1,16 +1,51 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronUp } from "lucide-react";
+import { ChevronUp, LoaderCircle } from "lucide-react";
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [spinning, setSpinning] = useState(false);
+  const spinTimeoutRef = useRef<number | null>(null);
+  const scrollAnimationRef = useRef<number | null>(null);
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 400);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (spinTimeoutRef.current) {
+        window.clearTimeout(spinTimeoutRef.current);
+      }
+      if (scrollAnimationRef.current) {
+        window.cancelAnimationFrame(scrollAnimationRef.current);
+      }
+    };
   }, []);
+
+  const scrollToTop = () => {
+    if (scrollAnimationRef.current) {
+      window.cancelAnimationFrame(scrollAnimationRef.current);
+    }
+
+    const startY = window.scrollY;
+    const duration = Math.min(1100, Math.max(650, startY * 0.45));
+    const startTime = window.performance.now();
+
+    const animateScroll = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+      window.scrollTo(0, startY * (1 - easedProgress));
+
+      if (progress < 1) {
+        scrollAnimationRef.current = window.requestAnimationFrame(animateScroll);
+      }
+    };
+
+    scrollAnimationRef.current = window.requestAnimationFrame(animateScroll);
+  };
 
   return (
     <AnimatePresence>
@@ -22,7 +57,14 @@ export function BackToTop() {
           transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
           onClick={() => {
             setHovered(false);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            setSpinning(true);
+            if (spinTimeoutRef.current) {
+              window.clearTimeout(spinTimeoutRef.current);
+            }
+            spinTimeoutRef.current = window.setTimeout(() => {
+              setSpinning(false);
+            }, 700);
+            scrollToTop();
           }}
           onPointerEnter={(event) => {
             if (event.pointerType === "mouse") {
@@ -81,12 +123,33 @@ export function BackToTop() {
             }}
             transition={{ duration: 0.25 }}
           >
-            <motion.div
-              animate={{ y: hovered ? -2 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronUp className="w-5 h-5 text-white" />
-            </motion.div>
+            <AnimatePresence mode="wait" initial={false}>
+              {spinning ? (
+                <motion.div
+                  key="spinner"
+                  initial={{ opacity: 0, scale: 0.65 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 360 }}
+                  exit={{ opacity: 0, scale: 0.65 }}
+                  transition={{
+                    opacity: { duration: 0.12 },
+                    scale: { duration: 0.12 },
+                    rotate: { duration: 0.65, ease: "linear" },
+                  }}
+                >
+                  <LoaderCircle className="w-5 h-5 text-white" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="arrow"
+                  initial={{ opacity: 0, scale: 0.75 }}
+                  animate={{ opacity: 1, scale: 1, y: hovered ? -2 : 0 }}
+                  exit={{ opacity: 0, scale: 0.75 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <ChevronUp className="w-5 h-5 text-white" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.button>
       )}

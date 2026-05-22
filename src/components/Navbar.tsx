@@ -1,23 +1,60 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, AlertTriangle } from "lucide-react";
 
 const TOP_LOGO_SRC = "/logo/companylogo1.png";
 const SCROLLED_LOGO_SRC = "/logo/companylogo2.png";
+const DESKTOP_NAV_HEIGHT = 64;
+const MOBILE_NAV_HEIGHT = 64;
+const WARNING_HEIGHT = 40;
+const MOBILE_MENU_CLOSE_DELAY = 260;
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const [isFooterVisible, setIsFooterVisible] = useState(false);
+  const [isWarningVisible, setIsWarningVisible] = useState(() => {
+    try {
+      return localStorage.getItem("siteWarningDismissed") !== "true";
+    } catch {
+      return true;
+    }
+  });
+  const lastScrollYRef = React.useRef(0);
 
   const navLinks = [
     { name: "Home", href: "#", section: "home" },
     { name: "Services", href: "#services", section: "services" },
-    { name: "About", href: "#about", section: "about" },
+    { name: "About Us", href: "#about", section: "about" },
     { name: "Gallery", href: "#gallery", section: "gallery" },
     // { name: "Team", href: "#team", section: "team" },
     { name: "Contact", href: "#contact", section: "contact" },
   ];
+
+  const isMobileViewport = () => window.matchMedia("(max-width: 767px)").matches;
+
+  const getScrollOffset = () => {
+    const base = isMobileViewport() ? MOBILE_NAV_HEIGHT : DESKTOP_NAV_HEIGHT;
+    return base + (isWarningVisible ? WARNING_HEIGHT : 0);
+  };
+
+  const scrollToSection = (href: string) => {
+    if (href === "#") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const element = document.querySelector(href);
+    if (!element) return;
+
+    const top =
+      (element as HTMLElement).getBoundingClientRect().top +
+      window.scrollY -
+      getScrollOffset();
+
+    window.scrollTo({ top, behavior: "smooth" });
+  };
 
   useEffect(() => {
     const preloadImages = [TOP_LOGO_SRC, SCROLLED_LOGO_SRC].map((src) => {
@@ -37,7 +74,7 @@ export function Navbar() {
 
   useEffect(() => {
     const handleSectionChange = () => {
-      const scrollPosition = window.scrollY + 140;
+      const scrollPosition = window.scrollY + getScrollOffset() + 1;
       const sections = navLinks
         .filter((link) => link.section !== "home")
         .map((link) => document.querySelector(link.href))
@@ -74,34 +111,57 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleSectionChange);
   }, []);
 
+  useEffect(() => {
+    const handleFooterVisibility = () => {
+      const footer = document.getElementById("footer");
+      if (!footer) return;
+
+      const currentScrollY = window.scrollY;
+      const isScrollingUp = currentScrollY < lastScrollYRef.current;
+      lastScrollYRef.current = currentScrollY;
+
+      if (isScrollingUp) {
+        setIsFooterVisible(false);
+        return;
+      }
+
+      const footerTop = footer.getBoundingClientRect().top + window.scrollY;
+      const hidePoint = footerTop + footer.offsetHeight * 0.45;
+      const viewportPoint = window.scrollY + window.innerHeight;
+      const shouldHide = viewportPoint >= hidePoint;
+
+      setIsFooterVisible(shouldHide);
+      if (shouldHide) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    handleFooterVisibility();
+    window.addEventListener("scroll", handleFooterVisibility);
+    window.addEventListener("resize", handleFooterVisibility);
+
+    return () => {
+      window.removeEventListener("scroll", handleFooterVisibility);
+      window.removeEventListener("resize", handleFooterVisibility);
+    };
+  }, []);
+
   const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string,
     section: string,
   ) => {
     e.preventDefault();
-    const wasMobileMenuOpen = isMobileMenuOpen;
+    const shouldUseMobileFlow = isMobileViewport();
     setIsMobileMenuOpen(false);
     setActiveSection(section);
 
-    const scrollToTarget = () => {
-      if (href === "#") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        const element = document.querySelector(href);
-        if (element) {
-          const top = (element as HTMLElement).offsetTop - 96;
-          window.scrollTo({ top, behavior: "smooth" });
-        }
-      }
-    };
-
-    if (wasMobileMenuOpen) {
-      window.setTimeout(scrollToTarget, 220);
+    if (shouldUseMobileFlow) {
+      window.setTimeout(() => scrollToSection(href), MOBILE_MENU_CLOSE_DELAY);
       return;
     }
 
-    scrollToTarget();
+    scrollToSection(href);
   };
 
   const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -112,16 +172,58 @@ export function Navbar() {
   };
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-background/90 backdrop-blur-md border-b border-border py-3 shadow-sm"
-          : "backdrop-blur-sm py-5"
-      }`}
-    >
+    <>
+      <AnimatePresence>
+        {isWarningVisible && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="fixed top-0 left-0 right-0 w-full"
+            style={{
+              zIndex: 9999,
+              backgroundColor: "#FEF3C7",
+              color: "#92400E",
+              borderBottom: "1px solid #FDE68A",
+              pointerEvents: "auto",
+            }}
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between text-sm py-2">
+                <div className="flex items-center gap-3 text-sm">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  <span>This site is still undergoing development.</span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Dismiss development warning"
+                  className="p-2 rounded-md"
+                  style={{ pointerEvents: "auto", background: "transparent" }}
+                  onClick={() => {
+                    setIsWarningVisible(false);
+                    try {
+                      localStorage.setItem("siteWarningDismissed", "true");
+                    } catch {}
+                  }}
+                >
+                  <X className="w-4 h-4" style={{ color: "#92400E" }} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.nav
+        initial={{ y: -100 }}
+        animate={{ y: isFooterVisible ? -120 : 0 }}
+        transition={{ duration: 0.5 }}
+        style={{ top: isWarningVisible ? WARNING_HEIGHT : 0 }}
+        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
+          isScrolled
+            ? "bg-background/90 backdrop-blur-md border-b border-border py-3 shadow-sm"
+            : "backdrop-blur-sm py-5"
+        }`}
+      >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -234,5 +336,6 @@ export function Navbar() {
         )}
       </AnimatePresence>
     </motion.nav>
+    </>
   );
 }
