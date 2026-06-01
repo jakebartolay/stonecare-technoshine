@@ -153,18 +153,15 @@ export function About() {
           </motion.div>
         </div>
 
-        <div className="mt-16 mb-8 flex items-center gap-4">
+        <div className="mt-16 mb-8 flex items-center gap-4" data-aos="fade-right">
           <span className="h-px w-16 bg-primary" />
           <span className="h-px flex-1 bg-border" />
         </div>
 
         {/* Mission & Vision */}
         <div className="grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr] gap-6 mt-20">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+          <div
+            data-aos="fade-up-right"
             className="relative group border border-border hover:border-primary transition-colors duration-300 bg-card p-8 overflow-hidden"
           >
             {/* Corner accent */}
@@ -189,13 +186,11 @@ export function About() {
               <span className="w-6 h-0.5 bg-primary" />
               Precision. Integrity. Craftsmanship.
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15 }}
+          <div
+            data-aos="fade-up-left"
+            data-aos-delay="120"
             className="relative group border border-border hover:border-primary transition-colors duration-300 bg-card p-8 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
@@ -225,10 +220,10 @@ export function About() {
               <span className="w-6 h-0.5 bg-primary" />
               Excellence Across Southeast Asia.
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        <div className="mt-8 flex w-full items-center gap-4">
+        <div className="mt-8 flex w-full items-center gap-4" data-aos="fade-left">
           <span className="h-px min-w-0 flex-1 bg-border" />
           <span className="h-px w-24 shrink-0 bg-primary" />
         </div>

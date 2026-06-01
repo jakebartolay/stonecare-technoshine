@@ -1,1 +1,3 @@
 node_modules
+public/company-profile/*.pdf
+dist/company-profile/*.pdf

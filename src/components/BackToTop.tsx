@@ -6,14 +6,35 @@ export function BackToTop() {
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [spinning, setSpinning] = useState(false);
+  const lastScrollYRef = useRef(0);
   const spinTimeoutRef = useRef<number | null>(null);
   const scrollAnimationRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 400);
-    window.addEventListener("scroll", onScroll);
+    const updateVisibility = () => {
+      const currentScrollY = window.scrollY;
+      const isScrollingUp = currentScrollY < lastScrollYRef.current;
+      lastScrollYRef.current = currentScrollY;
+
+      const footer = document.getElementById("footer");
+      let isFooterVisible = false;
+
+      if (footer && !isScrollingUp) {
+        const footerTop = footer.getBoundingClientRect().top + window.scrollY;
+        const hidePoint = footerTop + footer.offsetHeight * 0.45;
+        const viewportPoint = window.scrollY + window.innerHeight;
+        isFooterVisible = viewportPoint >= hidePoint;
+      }
+
+      setVisible(currentScrollY > 400 && !isFooterVisible);
+    };
+
+    updateVisibility();
+    window.addEventListener("scroll", updateVisibility);
+    window.addEventListener("resize", updateVisibility);
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", updateVisibility);
+      window.removeEventListener("resize", updateVisibility);
       if (spinTimeoutRef.current) {
         window.clearTimeout(spinTimeoutRef.current);
       }

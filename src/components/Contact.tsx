@@ -71,7 +71,7 @@ export function Contact() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-16" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">Get In Touch</h2>
           <h3 className="text-3xl md:text-5xl font-display text-foreground">BOOK A FREE <span className="text-primary">ASSESSMENT</span></h3>
         </div>
@@ -79,10 +79,8 @@ export function Contact() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           {/* Contact Info Desktop */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+          <div
+            data-aos="fade-right"
             className="hidden lg:block lg:col-span-1 space-y-8"
           >
             <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
@@ -118,14 +116,13 @@ export function Contact() {
                 Mon – Sat, 9am – 6pm
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Contact Form */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            data-aos="fade-in"
+            data-aos-delay="120"
+            data-aos-duration="800"
             animate={shakeForm ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : undefined}
             className="lg:col-span-2 bg-card border border-border p-8 relative"
           >
@@ -212,12 +209,10 @@ export function Contact() {
           </motion.div>
 
           {/* Contact Info Phoneview */}
-          <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-10 space-y-6 lg:hidden"
-        >
+          <div
+            data-aos="fade-up"
+            className="mt-10 space-y-6 lg:hidden"
+          >
           <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
             <div className="flex items-center gap-4 text-primary mb-4">
               <MapPin className="w-6 h-6" />
@@ -251,7 +246,7 @@ export function Contact() {
               Mon – Sat, 9am – 6pm
             </p>
           </div>
-        </motion.div>
+        </div>
         </div>
       </div>
     </section>

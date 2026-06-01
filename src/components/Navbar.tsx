@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Menu, X } from "lucide-react";
+import { Link } from "wouter";
 
 const TOP_LOGO_SRC = "/logo/companylogo1.png";
 const SCROLLED_LOGO_SRC = "/logo/companylogo2.png";
@@ -179,7 +180,7 @@ export function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="fixed top-0 left-0 right-0 w-full"
+            className="fixed left-0 right-0 top-0 w-full"
             style={{
               zIndex: 9999,
               backgroundColor: "#FEF3C7",
@@ -188,26 +189,28 @@ export function Navbar() {
               pointerEvents: "auto",
             }}
           >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between text-sm py-2">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between py-2 text-sm">
                 <div className="flex items-center gap-3 text-sm">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
                   <span>This site is still undergoing development.</span>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Dismiss development warning"
-                  className="p-2 rounded-md"
-                  style={{ pointerEvents: "auto", background: "transparent" }}
-                  onClick={() => {
-                    setIsWarningVisible(false);
-                    try {
-                      localStorage.setItem("siteWarningDismissed", "true");
-                    } catch {}
-                  }}
-                >
-                  <X className="w-4 h-4" style={{ color: "#92400E" }} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    aria-label="Dismiss development warning"
+                    className="rounded-md p-2"
+                    style={{ pointerEvents: "auto", background: "transparent" }}
+                    onClick={() => {
+                      setIsWarningVisible(false);
+                      try {
+                        localStorage.setItem("siteWarningDismissed", "true");
+                      } catch {}
+                    }}
+                  >
+                    <X className="h-4 w-4" style={{ color: "#92400E" }} />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -277,6 +280,17 @@ export function Navbar() {
                 />
               </a>
             ))}
+            <Link
+              href="/company-profile"
+              className={`text-sm font-medium transition-all duration-300 uppercase tracking-wider relative group ${
+                isScrolled
+                  ? "text-muted-foreground hover:text-primary"
+                  : "text-white/80 hover:text-primary"
+              }`}
+            >
+              Company Profile
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-full" />
+            </Link>
             <a
               href="#contact"
               onClick={(e) => handleNavClick(e, "#contact", "contact")}
@@ -324,6 +338,13 @@ export function Navbar() {
                   {link.name}
                 </a>
               ))}
+              <Link
+                href="/company-profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-lg font-display transition-colors uppercase tracking-wider text-muted-foreground hover:text-primary"
+              >
+                Company Profile
+              </Link>
               <a
                 href="#contact"
                 onClick={(e) => handleNavClick(e, "#contact", "contact")}

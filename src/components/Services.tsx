@@ -111,7 +111,7 @@ export function Services() {
       <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div id="services-heading" className="text-center mb-16">
+        <div id="services-heading" className="text-center mb-16" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             What We Do
           </h2>
@@ -122,13 +122,11 @@ export function Services() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => (
-            <motion.button
+            <button
               key={service.title}
               type="button"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              data-aos="zoom-in-up"
+              data-aos-delay={index * 80}
               onClick={() => setActiveService(service)}
               className="bg-background border border-border p-8 group hover:-translate-y-2 transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(255,107,0,0.15)] cursor-pointer relative overflow-hidden text-left"
             >
@@ -147,7 +145,7 @@ export function Services() {
               <div className="mt-6 flex items-center text-xs font-mono text-primary/60 group-hover:text-primary transition-colors">
                 <span className="mr-2">&gt;</span> Learn More
               </div>
-            </motion.button>
+            </button>
           ))}
         </div>
       </div>

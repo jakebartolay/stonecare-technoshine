@@ -19,7 +19,7 @@ export function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
-      {/* Background Image & Overlay — keep dark so hero text is readable */}
+      {/* Background image and overlays keep hero text readable. */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black/55 z-10" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black z-10" />
@@ -39,16 +39,16 @@ export function Hero() {
           className="inline-flex items-center gap-2 px-3 py-1 rounded-none border border-primary/50 bg-primary/10 text-primary text-xs font-mono mb-6 uppercase tracking-widest"
         >
           <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-          Premium Stone Restoration Specialists
+          Marble, Granite, Terrazzo, Tiles
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-hero font-black text-white leading-none tracking-tighter mb-6 glow-text"
+          className="max-w-5xl text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-hero font-black text-white leading-tight tracking-tighter mb-6 glow-text"
         >
-          TECHNO<span className="text-primary">SHINE</span>
+          Stone Restoration Experts in the Philippines
         </motion.h1>
 
         <motion.p
@@ -57,7 +57,7 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="max-w-2xl text-lg sm:text-xl text-white/80 font-light mb-10"
         >
-          Restoring marble, granite, and natural stone surfaces to their original brilliance — with precision craftsmanship and decades of expertise.
+          Marble, granite, terrazzo, and tile care for hotels, condominiums, and commercial spaces.
         </motion.p>
 
         <motion.div
@@ -77,7 +77,7 @@ export function Hero() {
           >
             <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
             <span className="relative z-10 flex items-center gap-2">
-              Book a Free Assessment
+              Request Quotation
               <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
             </span>
           </button>

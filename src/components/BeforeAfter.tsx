@@ -134,7 +134,7 @@ export function BeforeAfter() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             The Difference
           </h2>
@@ -148,24 +148,26 @@ export function BeforeAfter() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
           {/* Slider */}
-          <motion.div
-            key={active}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <Slider
-              before={projects[active].before}
-              after={projects[active].after}
-              title={projects[active].title}
-            />
-            <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
-              {projects[active].label}
-            </p>
-          </motion.div>
+          <div data-aos="zoom-in-right">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Slider
+                before={projects[active].before}
+                after={projects[active].after}
+                title={projects[active].title}
+              />
+              <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
+                {projects[active].label}
+              </p>
+            </motion.div>
+          </div>
 
           {/* Project selector */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" data-aos="fade-left" data-aos-delay="120">
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
               Select Project
             </p>

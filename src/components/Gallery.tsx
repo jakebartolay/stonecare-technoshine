@@ -111,7 +111,7 @@ export function Gallery() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             Our Work
           </h2>
@@ -125,9 +125,11 @@ export function Gallery() {
 
         {/* Filter Tabs */}
         <div className="flex flex-wrap justify-center gap-2 mb-10">
-          {categories.map((cat) => (
+          {categories.map((cat, index) => (
             <button
               key={cat}
+              data-aos="fade-up"
+              data-aos-delay={index * 60}
               onClick={() => setActiveCategory(cat)}
               className={`px-5 py-2 text-xs font-mono uppercase tracking-widest border transition-all duration-200 ${
                 activeCategory === cat
