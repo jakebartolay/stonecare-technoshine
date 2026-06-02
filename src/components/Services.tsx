@@ -106,9 +106,9 @@ export function Services() {
   return (
     <section
       id="services"
-      className="relative bg-background py-20"
+      className="relative flex min-h-screen items-center bg-background py-20"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div id="services-heading" className="mx-auto mb-14 max-w-3xl text-center" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             What We Do

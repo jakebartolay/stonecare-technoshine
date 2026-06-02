@@ -129,8 +129,8 @@ export function BeforeAfter() {
   const [active, setActive] = useState(0);
 
   return (
-    <section id="before-after" className="relative bg-background py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="before-after" className="relative flex min-h-screen items-center bg-background py-20">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[360px_1fr] lg:items-start">
         {/* Header */}
         <div className="lg:sticky lg:top-28" data-aos="fade-up">

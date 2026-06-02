@@ -106,8 +106,8 @@ export function Gallery() {
       : items.filter((i) => i.category === activeCategory);
 
   return (
-    <section id="gallery" className="relative bg-background py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="gallery" className="relative flex min-h-screen items-center bg-background py-20">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[320px_1fr] lg:items-start">
           <div className="lg:sticky lg:top-28">
         {/* Header */}

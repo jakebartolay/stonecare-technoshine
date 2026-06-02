@@ -67,8 +67,8 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="relative overflow-hidden bg-background py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contact" className="relative flex min-h-screen items-center overflow-hidden bg-background py-20">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-3xl text-center" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">Get In Touch</h2>
           <h3 className="text-3xl md:text-5xl font-display text-foreground">BOOK A FREE <span className="text-primary">ASSESSMENT</span></h3>
