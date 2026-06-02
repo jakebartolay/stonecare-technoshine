@@ -22,17 +22,19 @@ export function Hero() {
   };
 
   return (
-    <section className="relative flex min-h-screen items-center overflow-hidden border-b border-border bg-background px-4 pb-14 pt-28 text-foreground sm:px-6 lg:px-8">
-      <div className="relative z-20 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="order-2 overflow-hidden border border-border bg-card shadow-sm lg:order-1">
-          <img
-            src={`${import.meta.env.BASE_URL}images/hero-marble-floor.png`}
-            alt="Polished Marble Floor"
-            className="h-[42vh] min-h-[320px] w-full object-cover object-bottom sm:h-[56vh] lg:h-[72vh]"
-          />
-        </div>
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-20">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-10 bg-black/55" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/30 via-transparent to-black" />
+        <img
+          src={`${import.meta.env.BASE_URL}images/hero-marble-floor.png`}
+          alt="Polished Marble Floor"
+          className="h-full w-full object-cover object-bottom opacity-80"
+        />
+        <div className="absolute inset-0 z-10 tech-pattern opacity-10" />
+      </div>
 
-        <div className="order-1 flex flex-col items-start text-left lg:order-2">
+      <div className="relative z-20 mx-auto flex max-w-7xl flex-col items-center px-4 text-center sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -47,7 +49,7 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="mb-6 text-5xl font-hero font-black leading-none tracking-normal text-foreground sm:text-7xl md:text-8xl lg:text-9xl"
+          className="mb-6 text-5xl font-hero font-black leading-none tracking-tighter text-white glow-text sm:text-7xl md:text-8xl lg:text-9xl"
         >
           TECHNO<span className="text-primary">SHINE</span>
         </motion.h1>
@@ -56,7 +58,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mb-10 max-w-xl text-lg font-light leading-relaxed text-muted-foreground sm:text-xl"
+          className="mb-10 max-w-3xl text-lg font-light text-white/80 sm:text-xl"
         >
           Restoring marble, granite, and natural stone surfaces to their original brilliance with precision craftsmanship and decades of expertise.
         </motion.p>
@@ -65,14 +67,14 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="flex w-full flex-col gap-4 sm:w-auto sm:flex-row"
+          className="flex flex-col gap-4 sm:flex-row"
         >
           <button
             type="button"
             onClick={scrollToContact}
-            className="group relative flex items-center justify-center gap-2 overflow-hidden border border-primary bg-primary px-8 py-4 font-display font-bold uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,107,0,0.2)] transition-shadow duration-300 hover:shadow-[0_0_25px_rgba(255,107,0,0.35)]"
+            className="group relative flex items-center justify-center gap-2 overflow-hidden border border-primary bg-transparent px-8 py-4 font-display font-bold uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,107,0,0.2)] transition-shadow duration-300 hover:shadow-[0_0_25px_rgba(255,107,0,0.5)]"
           >
-            <span className="absolute inset-0 bg-foreground -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+            <span className="absolute inset-0 bg-primary -translate-x-full transition-transform duration-300 ease-out group-hover:translate-x-0" />
             <span className="relative z-10 flex items-center gap-2">
               Book a Free Assessment
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -81,12 +83,11 @@ export function Hero() {
           <button
             type="button"
             onClick={scrollToServices}
-            className="border border-border bg-transparent px-8 py-4 font-display font-bold uppercase tracking-widest text-foreground transition-all duration-300 hover:border-primary hover:text-primary"
+            className="border border-white/40 bg-transparent px-8 py-4 font-display font-bold uppercase tracking-widest text-white transition-all duration-300 hover:border-white"
           >
             Our Services
           </button>
         </motion.div>
-        </div>
       </div>
 
       <motion.button
