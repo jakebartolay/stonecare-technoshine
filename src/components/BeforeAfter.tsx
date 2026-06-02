@@ -129,45 +129,23 @@ export function BeforeAfter() {
   const [active, setActive] = useState(0);
 
   return (
-    <section id="before-after" className="py-24 bg-card relative">
-      <div className="absolute inset-0 tech-pattern opacity-[0.03]" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <section id="before-after" className="relative border-y border-border bg-background py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[360px_1fr] lg:items-start">
         {/* Header */}
-        <div className="text-center mb-12" data-aos="fade-up">
+        <div className="lg:sticky lg:top-28" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             The Difference
           </h2>
           <h3 className="text-3xl md:text-5xl font-display text-foreground mb-4">
             BEFORE <span className="text-primary">&</span> AFTER
           </h3>
-          <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+          <p className="text-muted-foreground max-w-xl text-sm">
             Drag the slider left or right to reveal the transformation. See exactly what our restoration process achieves.
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
-          {/* Slider */}
-          <div data-aos="zoom-in-right">
-            <motion.div
-              key={active}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Slider
-                before={projects[active].before}
-                after={projects[active].after}
-                title={projects[active].title}
-              />
-              <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
-                {projects[active].label}
-              </p>
-            </motion.div>
-          </div>
 
           {/* Project selector */}
-          <div className="flex flex-col gap-3" data-aos="fade-left" data-aos-delay="120">
+          <div className="mt-8 flex flex-col gap-3" data-aos="fade-left" data-aos-delay="120">
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
               Select Project
             </p>
@@ -211,14 +189,29 @@ export function BeforeAfter() {
                 )}
               </button>
             ))}
-
-            {/* Hint */}
-            {/* <div className="mt-4 p-4 border border-dashed border-primary/30 bg-primary/5">
-              <p className="text-xs text-muted-foreground font-mono leading-relaxed">
-                <span className="text-primary">TIP:</span> Drag the orange handle on the image to compare before &amp; after results. Works on mobile too.
-              </p>
-            </div> */}
           </div>
+        </div>
+
+        <div>
+          {/* Slider */}
+          <div data-aos="zoom-in-right">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Slider
+                before={projects[active].before}
+                after={projects[active].after}
+                title={projects[active].title}
+              />
+              <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
+                {projects[active].label}
+              </p>
+            </motion.div>
+          </div>
+        </div>
         </div>
       </div>
     </section>

@@ -106,25 +106,25 @@ export function Gallery() {
       : items.filter((i) => i.category === activeCategory);
 
   return (
-    <section id="gallery" className="min-h-screen py-24 bg-background relative flex items-center">
-      <div className="absolute inset-0 tech-pattern opacity-[0.03]" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <section id="gallery" className="relative bg-background py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-12 lg:grid-cols-[320px_1fr] lg:items-start">
+          <div className="lg:sticky lg:top-28">
         {/* Header */}
-        <div className="text-center mb-12" data-aos="fade-up">
+        <div className="mb-8 text-left" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             Our Work
           </h2>
           <h3 className="text-3xl md:text-5xl font-display text-foreground mb-4">
             PROJECT <span className="text-primary">GALLERY</span>
           </h3>
-          <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+          <p className="text-muted-foreground max-w-xl text-sm">
             A selection of marble and natural stone restoration projects across residential, hospitality, and commercial spaces.
           </p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
+        <div className="mb-10 flex flex-wrap gap-2">
           {categories.map((cat, index) => (
             <button
               key={cat}
@@ -141,9 +141,10 @@ export function Gallery() {
             </button>
           ))}
         </div>
+          </div>
 
         {/* Grid */}
-        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <motion.div layout className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <AnimatePresence>
             {filtered.map((item) => (
               <motion.div
@@ -182,6 +183,7 @@ export function Gallery() {
             ))}
           </AnimatePresence>
         </motion.div>
+      </div>
       </div>
 
       {/* Lightbox */}

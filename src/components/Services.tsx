@@ -106,12 +106,10 @@ export function Services() {
   return (
     <section
       id="services"
-      className="min-h-screen py-24 relative bg-card border-y border-border overflow-hidden flex items-center"
+      className="relative border-y border-border bg-background py-20"
     >
-      <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div id="services-heading" className="text-center mb-16" data-aos="fade-up">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div id="services-heading" className="mx-auto mb-14 max-w-3xl text-center" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             What We Do
           </h2>
@@ -120,7 +118,16 @@ export function Services() {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.05fr]">
+          <div className="overflow-hidden border border-border bg-card" data-aos="fade-right">
+            <img
+              src={`${import.meta.env.BASE_URL}images/client-images/gallery-1.jpg`}
+              alt="Marble Polishing"
+              className="h-[360px] w-full object-cover sm:h-[460px] lg:h-[620px]"
+            />
+          </div>
+
+          <div className="divide-y divide-border border-y border-border" data-aos="fade-left" data-aos-delay="120">
           {services.map((service, index) => (
             <button
               key={service.title}
@@ -128,12 +135,13 @@ export function Services() {
               data-aos="zoom-in-up"
               data-aos-delay={index * 80}
               onClick={() => setActiveService(service)}
-              className="bg-background border border-border p-8 group hover:-translate-y-2 transition-all duration-300 hover:border-primary hover:shadow-[0_0_20px_rgba(255,107,0,0.15)] cursor-pointer relative overflow-hidden text-left"
+              className="group relative grid w-full cursor-pointer grid-cols-[3.75rem_1fr] gap-5 bg-background py-7 text-left transition-colors duration-300 hover:bg-primary/5 sm:grid-cols-[4.5rem_1fr]"
             >
-              <div className="w-14 h-14 bg-card border border-border flex items-center justify-center mb-6 group-hover:border-primary group-hover:bg-primary/10 transition-colors">
+              <div className="flex h-14 w-14 items-center justify-center border border-border bg-card transition-colors group-hover:border-primary group-hover:bg-primary/10">
                 <service.icon className="w-6 h-6 text-primary" />
               </div>
 
+              <div className="min-w-0">
               <h4 className="text-xl font-display text-foreground mb-3 group-hover:text-primary transition-colors">
                 {service.title}
               </h4>
@@ -145,8 +153,10 @@ export function Services() {
               <div className="mt-6 flex items-center text-xs font-mono text-primary/60 group-hover:text-primary transition-colors">
                 <span className="mr-2">&gt;</span> Learn More
               </div>
+              </div>
             </button>
           ))}
+          </div>
         </div>
       </div>
 

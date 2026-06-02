@@ -78,18 +78,17 @@ export function About() {
   const statsRef = useRef<HTMLDivElement>(null);
   const inView = useInView(statsRef, { once: true, margin: "-80px" });
   return (
-    <section id="about" className="min-h-screen py-24 relative bg-background border-y border-border flex items-center">
+    <section id="about" className="relative border-y border-border bg-background py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative"
+            className="relative order-2 lg:order-2"
           >
-            <div className="absolute -inset-4 bg-primary/10 blur-2xl rounded-full opacity-40" />
-            <div className="relative border border-primary/30 bg-card p-2">
+            <div className="relative border border-border bg-card p-2">
               <img
                 src={`${import.meta.env.BASE_URL}images/marble-hall.jpg`}
                 alt="Grand marble hall"
@@ -114,6 +113,7 @@ export function About() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
+            className="order-1 lg:order-1"
           >
             <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
               Our Story
@@ -159,10 +159,10 @@ export function About() {
         </div>
 
         {/* Mission & Vision */}
-        <div className="grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr] gap-6 mt-20">
+        <div className="mt-16 grid grid-cols-1 gap-0 border-y border-border md:grid-cols-[0.85fr_1.15fr]">
           <div
             data-aos="fade-up-right"
-            className="relative group border border-border hover:border-primary transition-colors duration-300 bg-card p-8 overflow-hidden"
+            className="relative group border-b border-border bg-background p-8 transition-colors duration-300 hover:bg-primary/5 md:border-b-0 md:border-r"
           >
             {/* Corner accent */}
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
@@ -191,7 +191,7 @@ export function About() {
           <div
             data-aos="fade-up-left"
             data-aos-delay="120"
-            className="relative group border border-border hover:border-primary transition-colors duration-300 bg-card p-8 overflow-hidden"
+            className="relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
           >
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
             <div className="absolute bottom-0 right-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />

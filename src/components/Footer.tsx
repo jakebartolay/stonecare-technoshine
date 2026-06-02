@@ -234,7 +234,7 @@ export function Footer() {
   return (
     <footer
       id="footer"
-      className="site-footer relative overflow-hidden border-t border-border bg-background pt-16 pb-8 text-foreground md:min-h-screen md:py-8 lg:py-10"
+      className="site-footer relative overflow-hidden border-t border-border bg-background py-14 text-foreground"
     >
       <div className="site-footer-content relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* DESKTOP VIEW */}
@@ -254,7 +254,7 @@ export function Footer() {
             </div>
           </div>
 
-          <BrokenGlassWordmark className="my-6 lg:my-7" />
+          <BrokenGlassWordmark className="my-5 lg:my-6" />
 
           <div className="site-footer-columns grid gap-7 lg:grid-cols-[1.25fr_1.15fr_0.75fr_0.7fr_0.9fr]">
             <div data-aos="fade-up" data-aos-delay="80">
