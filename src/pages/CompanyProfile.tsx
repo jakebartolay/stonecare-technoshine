@@ -396,14 +396,12 @@ export default function CompanyProfile() {
   const safeStartPage = Math.min(activePage, pages.length + 1);
 
   return (
-    <main className="relative h-screen h-[100dvh] overflow-hidden bg-[#12100d] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,107,0,0.16),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_45%)]" />
-
+    <main className="relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         <header className="company-profile-header flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-white/70 transition-colors hover:text-primary"
+            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary"
           >
             <Home className="h-4 w-4" />
             Back to Home
@@ -414,7 +412,7 @@ export default function CompanyProfile() {
               type="button"
               onClick={goCover}
               disabled={!canGoPrev}
-              className="inline-flex h-10 w-10 items-center justify-center border border-white/15 bg-white/5 text-white transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/25 disabled:hover:border-white/10 disabled:hover:text-white/25"
+              className="inline-flex h-10 w-10 items-center justify-center border border-border bg-background text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
               aria-label="Back to cover"
             >
               <RotateCcw className="h-4 w-4" />
@@ -422,7 +420,7 @@ export default function CompanyProfile() {
             <a
               href={PDF_URL}
               download
-              className="inline-flex h-10 items-center gap-2 border border-primary/80 px-4 font-display text-xs font-bold uppercase tracking-wider text-white transition-colors hover:bg-primary"
+              className="inline-flex h-10 items-center gap-2 border border-primary/80 px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-primary hover:text-white"
             >
               <Download className="h-4 w-4" />
               PDF
@@ -435,7 +433,7 @@ export default function CompanyProfile() {
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">
               Interactive Company Profile
             </p>
-            <h1 className="mt-1 text-2xl leading-tight text-white sm:text-3xl">
+            <h1 className="mt-1 text-2xl leading-tight text-foreground sm:text-3xl">
               TechnoShine Profile
             </h1>
           </div>
@@ -455,11 +453,11 @@ export default function CompanyProfile() {
               <ChevronLeft className="h-6 w-6 transition-transform group-hover:-translate-x-0.5" />
             </button>
 
-            <div className="company-profile-book-shell w-full overflow-visible rounded-sm border border-white/10 bg-black/25 p-2 shadow-2xl sm:p-3">
+            <div className="company-profile-book-shell w-full overflow-visible rounded-sm border border-border bg-background p-2 shadow-2xl sm:p-3">
               {loading && (
                 <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4">
                   <div className="h-12 w-12 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/50">
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                     Loading company profile
                   </p>
                 </div>
@@ -467,7 +465,7 @@ export default function CompanyProfile() {
 
               {error && (
                 <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4 text-center">
-                  <p className="font-display text-2xl text-white">
+                  <p className="font-display text-2xl text-foreground">
                     Company profile could not be loaded.
                   </p>
                   <a href={PDF_URL} className="font-mono text-xs uppercase tracking-widest text-primary">
@@ -569,13 +567,13 @@ export default function CompanyProfile() {
               type="button"
               onClick={goPrev}
               disabled={!canGoPrev}
-              className="inline-flex h-11 items-center gap-2 border border-white/15 bg-white/[0.03] px-4 font-display text-xs font-bold uppercase tracking-wider text-white transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/25 disabled:hover:border-white/10 disabled:hover:bg-white/[0.03] disabled:hover:text-white/25 lg:hidden"
+              className="inline-flex h-11 items-center gap-2 border border-border bg-background px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-muted-foreground lg:hidden"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
             </button>
 
-            <p className="mx-auto font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+            <p className="mx-auto font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
               {currentLabel}
             </p>
 
@@ -583,7 +581,7 @@ export default function CompanyProfile() {
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="inline-flex h-11 items-center gap-2 border border-white/15 bg-white/[0.03] px-4 font-display text-xs font-bold uppercase tracking-wider text-white transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/25 disabled:hover:border-white/10 disabled:hover:bg-white/[0.03] disabled:hover:text-white/25 lg:hidden"
+              className="inline-flex h-11 items-center gap-2 border border-border bg-background px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-muted-foreground lg:hidden"
             >
               Next
               <ChevronRight className="h-4 w-4" />

@@ -156,7 +156,7 @@ export default function EmployeesList() {
         : "Not Verified";
 
   return (
-    <main className="min-h-screen bg-[#f3f4f6] text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
