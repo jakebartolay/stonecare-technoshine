@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 export function Hero() {
+  const scrollToContact = () => {
+    document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const scrollToServices = () => {
     const element = document.querySelector("#services-heading");
     if (!element) return;
@@ -39,25 +43,25 @@ export function Hero() {
           className="inline-flex items-center gap-2 px-3 py-1 rounded-none border border-primary/50 bg-primary/10 text-primary text-xs font-mono mb-6 uppercase tracking-widest"
         >
           <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-          Marble, Granite, Terrazzo, Tiles
+          Premium Stone Restoration Specialists
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="max-w-5xl text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-hero font-black text-white leading-tight tracking-tighter mb-6 glow-text"
+          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-hero font-black text-white leading-none tracking-tighter mb-6 glow-text"
         >
-          Stone Restoration Experts in the Philippines
+          TECHNO<span className="text-primary">SHINE</span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="max-w-2xl text-lg sm:text-xl text-white/80 font-light mb-10"
+          className="max-w-3xl text-lg sm:text-xl text-white/80 font-light mb-10"
         >
-          Marble, granite, terrazzo, and tile care for hotels, condominiums, and commercial spaces.
+          Restoring marble, granite, and natural stone surfaces to their original brilliance with precision craftsmanship and decades of expertise.
         </motion.p>
 
         <motion.div
@@ -68,17 +72,13 @@ export function Hero() {
         >
           <button
             type="button"
-            onClick={() =>
-              document
-                .querySelector("#contact")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={scrollToContact}
             className="relative overflow-hidden px-8 py-4 font-display font-bold text-white bg-transparent border border-primary uppercase tracking-widest flex items-center justify-center gap-2 group shadow-[0_0_15px_rgba(255,107,0,0.2)] hover:shadow-[0_0_25px_rgba(255,107,0,0.5)] transition-shadow duration-300"
           >
             <span className="absolute inset-0 bg-primary -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
             <span className="relative z-10 flex items-center gap-2">
-              Request Quotation
-              <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
+              Book a Free Assessment
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </span>
           </button>
           <button
