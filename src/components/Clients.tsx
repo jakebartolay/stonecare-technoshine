@@ -27,12 +27,10 @@ export function Clients() {
         data-aos="fade-in"
       >
         <div className="flex items-center justify-center gap-3">
-          <div className="hidden h-px flex-1 bg-white/10 sm:block" />
           <div className="flex max-w-[260px] items-center justify-center gap-2 text-center text-white/60 font-mono text-xs uppercase tracking-[0.18em] leading-relaxed sm:max-w-none sm:tracking-[0.25em]">
             <Building2 className="w-4 h-4 text-primary" />
             Trusted by Philippine Hotels
           </div>
-          <div className="hidden h-px flex-1 bg-white/10 sm:block" />
         </div>
       </div>
 

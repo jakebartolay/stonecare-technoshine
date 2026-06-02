@@ -78,7 +78,7 @@ export function About() {
   const statsRef = useRef<HTMLDivElement>(null);
   const inView = useInView(statsRef, { once: true, margin: "-80px" });
   return (
-    <section id="about" className="relative border-y border-border bg-background py-20">
+    <section id="about" className="relative bg-background py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <motion.div
@@ -153,16 +153,11 @@ export function About() {
           </motion.div>
         </div>
 
-        <div className="mt-16 mb-8 flex items-center gap-4" data-aos="fade-right">
-          <span className="h-px w-16 bg-primary" />
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
         {/* Mission & Vision */}
-        <div className="mt-16 grid grid-cols-1 gap-0 border-y border-border md:grid-cols-[0.85fr_1.15fr]">
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-[0.85fr_1.15fr]">
           <div
             data-aos="fade-up-right"
-            className="relative group border-b border-border bg-background p-8 transition-colors duration-300 hover:bg-primary/5 md:border-b-0 md:border-r"
+            className="relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
           >
             {/* Corner accent */}
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
@@ -221,11 +216,6 @@ export function About() {
               Excellence Across Southeast Asia.
             </div>
           </div>
-        </div>
-
-        <div className="mt-8 flex w-full items-center gap-4" data-aos="fade-left">
-          <span className="h-px min-w-0 flex-1 bg-border" />
-          <span className="h-px w-24 shrink-0 bg-primary" />
         </div>
       </div>
     </section>

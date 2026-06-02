@@ -106,7 +106,7 @@ export function Services() {
   return (
     <section
       id="services"
-      className="relative border-y border-border bg-background py-20"
+      className="relative bg-background py-20"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div id="services-heading" className="mx-auto mb-14 max-w-3xl text-center" data-aos="fade-up">
@@ -127,7 +127,7 @@ export function Services() {
             />
           </div>
 
-          <div className="divide-y divide-border border-y border-border" data-aos="fade-left" data-aos-delay="120">
+          <div className="space-y-4" data-aos="fade-left" data-aos-delay="120">
           {services.map((service, index) => (
             <button
               key={service.title}
@@ -135,7 +135,7 @@ export function Services() {
               data-aos="zoom-in-up"
               data-aos-delay={index * 80}
               onClick={() => setActiveService(service)}
-              className="group relative grid w-full cursor-pointer grid-cols-[3.75rem_1fr] gap-5 bg-background py-7 text-left transition-colors duration-300 hover:bg-primary/5 sm:grid-cols-[4.5rem_1fr]"
+              className="group relative grid w-full cursor-pointer grid-cols-[3.75rem_1fr] gap-5 bg-background py-4 text-left transition-colors duration-300 hover:bg-primary/5 sm:grid-cols-[4.5rem_1fr]"
             >
               <div className="flex h-14 w-14 items-center justify-center border border-border bg-card transition-colors group-hover:border-primary group-hover:bg-primary/10">
                 <service.icon className="w-6 h-6 text-primary" />

@@ -234,7 +234,7 @@ export function Footer() {
   return (
     <footer
       id="footer"
-      className="site-footer relative overflow-hidden border-t border-border bg-background py-14 text-foreground"
+      className="site-footer relative overflow-hidden bg-background py-14 text-foreground"
     >
       <div className="site-footer-content relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* DESKTOP VIEW */}
@@ -489,7 +489,7 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="border-t border-border pt-8">
+          <div className="pt-8">
             <p className="w-full text-center text-xs font-mono text-muted-foreground">
               &copy; {year} TECHNOSHINE. ALL RIGHTS RESERVED.
             </p>
