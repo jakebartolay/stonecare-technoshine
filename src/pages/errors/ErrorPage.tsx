@@ -15,9 +15,8 @@ export function ErrorPage({ code, eyebrow, title, message }: ErrorPageProps) {
   }, [code, eyebrow]);
 
   return (
-    <main className="min-h-screen bg-foreground text-white">
+    <main className="min-h-screen bg-background text-foreground">
       <section className="relative flex min-h-screen items-center overflow-hidden px-4 py-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
         <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
         <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1fr_420px] lg:items-center">
@@ -28,7 +27,7 @@ export function ErrorPage({ code, eyebrow, title, message }: ErrorPageProps) {
             <h1 className="mt-4 max-w-3xl text-4xl leading-tight sm:text-6xl">
               {title}
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               {message}
             </p>
 
@@ -43,7 +42,7 @@ export function ErrorPage({ code, eyebrow, title, message }: ErrorPageProps) {
               <button
                 type="button"
                 onClick={() => window.history.back()}
-                className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-primary hover:text-primary"
+                className="inline-flex items-center justify-center gap-2 border border-border px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
@@ -51,7 +50,7 @@ export function ErrorPage({ code, eyebrow, title, message }: ErrorPageProps) {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="inline-flex items-center justify-center gap-2 border border-white/15 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white/70 transition-colors hover:border-primary hover:text-primary"
+                className="inline-flex items-center justify-center gap-2 border border-border px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 <RotateCcw className="h-4 w-4" />
                 Retry
@@ -59,15 +58,15 @@ export function ErrorPage({ code, eyebrow, title, message }: ErrorPageProps) {
             </div>
           </div>
 
-          <div className="border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
+          <div className="border border-border bg-card p-6 shadow-2xl">
             <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <AlertTriangle className="h-7 w-7" />
             </div>
-            <p className="font-mono text-[7rem] font-bold leading-none tracking-tighter text-white sm:text-[8rem]">
+            <p className="font-mono text-[7rem] font-bold leading-none tracking-tighter text-foreground sm:text-[8rem]">
               {code}
             </p>
-            <div className="mt-6 h-px w-full bg-white/10" />
-            <p className="mt-5 font-mono text-xs uppercase tracking-[0.24em] text-white/45">
+            <div className="mt-6 h-px w-full bg-border" />
+            <p className="mt-5 font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
               HTTP Response Code
             </p>
           </div>

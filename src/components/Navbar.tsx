@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Menu, X } from "lucide-react";
 
-const TOP_LOGO_SRC = "/logo/companylogo1.png";
+const TOP_LOGO_SRC = "/logo/companylogo2.png";
 const SCROLLED_LOGO_SRC = "/logo/companylogo2.png";
 const DESKTOP_NAV_HEIGHT = 64;
 const MOBILE_NAV_HEIGHT = 64;
@@ -220,10 +220,8 @@ export function Navbar() {
         animate={{ y: isFooterVisible ? -120 : 0 }}
         transition={{ duration: 0.5 }}
         style={{ top: isWarningVisible ? WARNING_HEIGHT : 0 }}
-        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
-          isScrolled
-            ? "bg-background/90 backdrop-blur-md border-b border-border py-3 shadow-sm"
-            : "backdrop-blur-sm py-5"
+        className={`fixed left-0 right-0 z-40 border-b border-border bg-background/95 backdrop-blur-md shadow-sm transition-all duration-300 ${
+          isScrolled ? "py-3" : "py-4"
         }`}
       >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -264,9 +262,7 @@ export function Navbar() {
                 className={`text-sm font-medium transition-all duration-300 uppercase tracking-wider relative group ${
                   activeSection === link.section
                     ? "text-primary"
-                    : isScrolled
-                      ? "text-muted-foreground hover:text-primary"
-                      : "text-white/80 hover:text-primary"
+                    : "text-muted-foreground hover:text-primary"
                 }`}
               >
                 {link.name}
@@ -293,7 +289,7 @@ export function Navbar() {
             type="button"
             aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={isMobileMenuOpen}
-            className={`md:hidden relative z-[61] p-2 -mr-2 transition-colors hover:text-primary ${isScrolled ? "text-foreground" : "text-white"}`}
+            className="md:hidden relative z-[61] p-2 -mr-2 text-foreground transition-colors hover:text-primary"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

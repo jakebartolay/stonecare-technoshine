@@ -165,7 +165,7 @@ function BrokenGlassWordmark({
                       clipPath: shard.clip,
                       color:
                         shard.tint === "white"
-                          ? "rgb(255 255 255 / 0.92)"
+                          ? "rgb(8 8 8 / 0.88)"
                           : "hsl(var(--primary))",
                       opacity: 0.42 + easedProgress * 0.58,
                       transform: `
@@ -234,19 +234,19 @@ export function Footer() {
   return (
     <footer
       id="footer"
-      className="site-footer relative overflow-hidden bg-[#090f11] pt-16 pb-8 text-white md:min-h-screen md:py-8 lg:py-10"
+      className="site-footer relative overflow-hidden border-t border-border bg-background pt-16 pb-8 text-foreground md:min-h-screen md:py-8 lg:py-10"
     >
       <div className="site-footer-content relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* DESKTOP VIEW */}
         <div className="hidden md:block">
           <div className="text-center" data-aos="fade-up">
-            <h3 className="mx-auto max-w-2xl text-2xl leading-tight text-white lg:text-3xl">
+            <h3 className="mx-auto max-w-2xl text-2xl leading-tight text-foreground lg:text-3xl">
               Preserve premium spaces with professional TechnoShine stone care.
             </h3>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-white/45">
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
               Marble, granite, terrazzo, and natural stone restoration for hotels, commercial properties, and homes.
             </p>
-            <div className="mt-4 flex items-center justify-center gap-5 text-white/30">
+            <div className="mt-4 flex items-center justify-center gap-5 text-muted-foreground">
               <span className="font-display text-xs uppercase tracking-wider">Marble</span>
               <span className="font-display text-xs uppercase tracking-wider">Granite</span>
               <span className="font-display text-xs uppercase tracking-wider">Terrazzo</span>
@@ -265,13 +265,13 @@ export function Footer() {
                   className="h-11 w-auto"
                 />
               </Link>
-              <p className="max-w-sm text-sm leading-relaxed text-white/55">
+              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
                 TechnoShine provides comprehensive stone care services, from restoration and polishing to sealing and maintenance programs.
               </p>
             </div>
 
             <div data-aos="fade-up" data-aos-delay="140">
-              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Categories
               </p>
               <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5">
@@ -279,7 +279,7 @@ export function Footer() {
                   <li key={service.title}>
                     <a
                       href="#services"
-                      className="text-sm font-display text-white transition-colors hover:text-primary"
+                      className="text-sm font-display text-foreground transition-colors hover:text-primary"
                     >
                       {service.title}
                     </a>
@@ -288,7 +288,7 @@ export function Footer() {
                 <li>
                   <a
                     href="#before-after"
-                    className="text-sm font-display text-white transition-colors hover:text-primary"
+                    className="text-sm font-display text-foreground transition-colors hover:text-primary"
                   >
                     Before & After
                   </a>
@@ -297,14 +297,14 @@ export function Footer() {
             </div>
 
             <div data-aos="fade-up" data-aos-delay="140">
-              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Company
               </p>
               <ul className="space-y-3">
                 <li>
                   <Link
                     href="/company-profile"
-                    className="text-sm font-display text-white transition-colors hover:text-primary"
+                    className="text-sm font-display text-foreground transition-colors hover:text-primary"
                   >
                     Company Profile
                   </Link>
@@ -313,7 +313,7 @@ export function Footer() {
             </div>
 
             <div data-aos="fade-up" data-aos-delay="260">
-              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Pages
               </p>
               <ul className="space-y-2.5">
@@ -321,7 +321,7 @@ export function Footer() {
                   <li key={item}>
                     <a
                       href={sectionHref(item)}
-                      className="text-sm font-display text-white transition-colors hover:text-primary"
+                      className="text-sm font-display text-foreground transition-colors hover:text-primary"
                     >
                       {item}
                     </a>
@@ -331,30 +331,30 @@ export function Footer() {
             </div>
 
             <div data-aos="fade-up" data-aos-delay="320">
-              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="mb-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Quick Links
               </p>
               <a
                 href="#contact"
-                className="mb-4 inline-flex w-full items-center justify-center border border-primary/70 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-primary hover:text-white"
+                className="mb-4 inline-flex w-full items-center justify-center border border-primary/70 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-primary hover:text-white"
               >
                 Contact Us
               </a>
               <Link
                 href="/company-profile"
-                className="mb-4 inline-flex w-full items-center justify-center border border-white/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:border-primary hover:text-primary"
+                className="mb-4 inline-flex w-full items-center justify-center border border-border px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 Company Profile
               </Link>
               <a
                 href="tel:+63286522230"
-                className="mb-3 block text-lg font-display text-white transition-colors hover:text-primary"
+                className="mb-3 block text-lg font-display text-foreground transition-colors hover:text-primary"
               >
                 (02) 8652-2230
               </a>
               <a
                 href="mailto:contactus@technoshineph.com"
-                className="block text-sm font-mono text-white/50 transition-colors hover:text-primary"
+                className="block text-sm font-mono text-muted-foreground transition-colors hover:text-primary"
               >
                 contactus@technoshineph.com
               </a>
@@ -368,19 +368,19 @@ export function Footer() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="text-xs font-mono text-white transition-colors hover:text-primary"
+                    className="text-xs font-mono text-foreground transition-colors hover:text-primary"
                   >
                     {item.label}
                   </Link>
                 ))}
               </div>
-              <p className="text-xs font-mono text-white/35">
+              <p className="text-xs font-mono text-muted-foreground">
                 &copy; {year} TECHNOSHINE. ALL RIGHTS RESERVED.
               </p>
             </div>
 
             <div className="text-right">
-              <p className="mb-3 font-mono text-xs uppercase tracking-[0.18em] text-white/45">
+              <p className="mb-3 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Social Links
               </p>
               <div className="flex justify-end gap-3">
@@ -417,7 +417,7 @@ export function Footer() {
                 className="h-60 w-auto mx-auto"
               />
             </Link>
-            <p className="mx-auto max-w-sm text-sm font-light text-white/50">
+            <p className="mx-auto max-w-sm text-sm font-light text-muted-foreground">
               Premium marble and natural stone restoration specialists.
             </p>
           </div>
@@ -425,7 +425,7 @@ export function Footer() {
           <BrokenGlassWordmark className="-my-4" />
 
           <div className="text-center" data-aos="fade-up" data-aos-delay="100">
-            <h4 className="mb-4 text-white font-display uppercase tracking-widest">
+            <h4 className="mb-4 text-foreground font-display uppercase tracking-widest">
               Navigation
             </h4>
             <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
@@ -433,7 +433,7 @@ export function Footer() {
                 <li key={item}>
                   <a
                     href={item === "Home" ? "#" : `#${item.toLowerCase()}`}
-                    className="text-sm font-mono text-white/50 hover:text-primary"
+                    className="text-sm font-mono text-muted-foreground hover:text-primary"
                   >
                     | {item}
                   </a>
@@ -442,7 +442,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/company-profile"
-                  className="text-sm font-mono text-white/50 hover:text-primary"
+                  className="text-sm font-mono text-muted-foreground hover:text-primary"
                 >
                   | Company Profile
                 </Link>
@@ -451,20 +451,20 @@ export function Footer() {
           </div>
 
           <div className="text-center" data-aos="fade-up" data-aos-delay="180">
-            <h4 className="mb-4 text-white font-display uppercase tracking-widest">
+            <h4 className="mb-4 text-foreground font-display uppercase tracking-widest">
               Legal
             </h4>
             <ul className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
               {legalLinks.map((item) => (
                 <li key={item.label}>
-                  <Link href={item.href} className="text-sm font-mono text-white/50 hover:text-primary">
+                  <Link href={item.href} className="text-sm font-mono text-muted-foreground hover:text-primary">
                     {item.label}
                   </Link>
                 </li>
               ))}
             </ul>
 
-            <h4 className="mb-3 text-white font-display uppercase tracking-widest">
+            <h4 className="mb-3 text-foreground font-display uppercase tracking-widest">
               Our Social Links
             </h4>
             <div className="flex flex-wrap justify-center gap-3">
@@ -489,8 +489,8 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-8">
-            <p className="w-full text-center text-xs font-mono text-white/40">
+          <div className="border-t border-border pt-8">
+            <p className="w-full text-center text-xs font-mono text-muted-foreground">
               &copy; {year} TECHNOSHINE. ALL RIGHTS RESERVED.
             </p>
           </div>

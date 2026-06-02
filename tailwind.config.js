@@ -6,10 +6,11 @@ module.exports = {
       colors: {
         background: '#ffffff',
         foreground: '#080808',
-        card: '#f5f5f5',
+        card: '#ffffff',
+        'muted-foreground': '#525252',
         primary: '#ff6b00',
         'primary-foreground': '#ffffff',
-        border: '#d1d1d1',
+        border: '#e5e5e5',
       },
       fontFamily: {
         sans: ['Poppins', 'sans-serif'],

@@ -20,26 +20,25 @@ export function Clients() {
   const base = import.meta.env.BASE_URL;
 
   return (
-    <section id="clients" className="relative z-20 -mt-8 bg-foreground py-6 overflow-hidden md:py-8">
-      <div className="absolute inset-0 tech-pattern opacity-[0.04]" />
+    <section id="clients" className="relative z-20 overflow-hidden border-y border-border bg-background py-6 md:py-8">
 
       <div
         className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 md:mb-6 relative z-10"
         data-aos="fade-in"
       >
         <div className="flex items-center justify-center gap-3">
-          <div className="hidden h-px flex-1 bg-white/10 sm:block" />
-          <div className="flex max-w-[260px] items-center justify-center gap-2 text-center text-white/60 font-mono text-xs uppercase tracking-[0.18em] leading-relaxed sm:max-w-none sm:tracking-[0.25em]">
+          <div className="hidden h-px flex-1 bg-border sm:block" />
+          <div className="flex max-w-[260px] items-center justify-center gap-2 text-center text-muted-foreground font-mono text-xs uppercase tracking-[0.18em] leading-relaxed sm:max-w-none sm:tracking-[0.25em]">
             <Building2 className="w-4 h-4 text-primary" />
             Trusted by Philippine Hotels
           </div>
-          <div className="hidden h-px flex-1 bg-white/10 sm:block" />
+          <div className="hidden h-px flex-1 bg-border sm:block" />
         </div>
       </div>
 
       <div className="relative w-full" data-aos="fade-in" data-aos-delay="120">
-        <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-foreground to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-foreground to-transparent pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
 
         <motion.div
           className="flex w-max whitespace-nowrap items-center"
@@ -61,7 +60,7 @@ export function Clients() {
                     />
                   </div>
 
-                  <span className="hidden text-white/75 font-display uppercase tracking-widest text-sm group-hover:text-primary transition-colors duration-300 sm:inline">
+                  <span className="hidden text-muted-foreground font-display uppercase tracking-widest text-sm group-hover:text-primary transition-colors duration-300 sm:inline">
                     {name}
                   </span>
 
