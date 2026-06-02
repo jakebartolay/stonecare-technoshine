@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Menu, X } from "lucide-react";
-import { Link } from "wouter";
 
 const TOP_LOGO_SRC = "/logo/companylogo1.png";
 const SCROLLED_LOGO_SRC = "/logo/companylogo2.png";
@@ -280,17 +279,6 @@ export function Navbar() {
                 />
               </a>
             ))}
-            <Link
-              href="/company-profile"
-              className={`text-sm font-medium transition-all duration-300 uppercase tracking-wider relative group ${
-                isScrolled
-                  ? "text-muted-foreground hover:text-primary"
-                  : "text-white/80 hover:text-primary"
-              }`}
-            >
-              Company Profile
-              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-full" />
-            </Link>
             <a
               href="#contact"
               onClick={(e) => handleNavClick(e, "#contact", "contact")}
@@ -338,13 +326,6 @@ export function Navbar() {
                   {link.name}
                 </a>
               ))}
-              <Link
-                href="/company-profile"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-lg font-display transition-colors uppercase tracking-wider text-muted-foreground hover:text-primary"
-              >
-                Company Profile
-              </Link>
               <a
                 href="#contact"
                 onClick={(e) => handleNavClick(e, "#contact", "contact")}
