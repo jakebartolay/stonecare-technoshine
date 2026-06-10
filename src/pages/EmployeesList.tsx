@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { BadgeCheck, BriefcaseBusiness, IdCard, SearchX, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
 
@@ -8,12 +8,14 @@ type Employee = {
   position: string;
   department: string;
   status: string;
-  photo: string;
+  photoPaths: string[];
 };
 
 type LoadState = "loading" | "ready" | "error";
 
 const csvPath = `${import.meta.env.BASE_URL}employees/employees.csv`;
+const employeePhotoBasePath = `${import.meta.env.BASE_URL}employees/photos/`;
+const employeePhotoExtensions = ["jpg", "jpeg", "png", "webp"];
 
 function getEmployeeId() {
   if (typeof window === "undefined") return "";
@@ -65,12 +67,43 @@ function pickField(record: Record<string, string>, keys: string[]) {
   return keys.map((key) => record[key]).find(Boolean) ?? "";
 }
 
-function normalizePhotoPath(photo: string) {
+function getEmployeePhotoPaths(photo: string) {
   const value = photo.trim();
-  if (!value) return "";
-  if (value.startsWith("/") || value.startsWith("http")) return value;
-  if (/\.(jpg|jpeg|png|webp)$/i.test(value)) return `/employees/photos/${value}`;
-  return `/employees/photos/${value}.jpg`;
+  if (!value) return [];
+  if (value.startsWith("/") || value.startsWith("http")) return [value];
+  if (/\.(jpg|jpeg|png|webp)$/i.test(value)) return [`${employeePhotoBasePath}${value}`];
+  return employeePhotoExtensions.map((extension) => `${employeePhotoBasePath}${value}.${extension}`);
+}
+
+type EmployeePhotoProps = {
+  sources: string[];
+  alt: string;
+  className: string;
+  style: CSSProperties;
+};
+
+function EmployeePhoto({ sources, alt, className, style }: EmployeePhotoProps) {
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const sourceKey = sources.join("|");
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [sourceKey]);
+
+  const source = sources[sourceIndex];
+  if (!source) return null;
+
+  return (
+    <img
+      src={source}
+      alt={alt}
+      className={className}
+      style={style}
+      onError={() => {
+        setSourceIndex((currentIndex) => currentIndex + 1);
+      }}
+    />
+  );
 }
 
 function parseEmployees(csv: string) {
@@ -101,7 +134,7 @@ function parseEmployees(csv: string) {
         position: pickField(record, ["position", "job_title"]),
         department: pickField(record, ["department"]),
         status: pickField(record, ["status"]) || "active",
-        photo: normalizePhotoPath(photo || id),
+        photoPaths: getEmployeePhotoPaths(photo || id),
       };
     })
     .filter((employee) => employee.id);
@@ -193,15 +226,12 @@ export default function EmployeesList() {
                     className="absolute inset-0 h-full w-full object-cover"
                   />
 
-                  {employee.photo && (
-                    <img
-                      src={employee.photo}
+                  {employee.photoPaths.length > 0 && (
+                    <EmployeePhoto
+                      sources={employee.photoPaths}
                       alt={employee.name || employee.id}
                       className="absolute left-1/2 top-[31.5%] h-[34%] w-[54%] -translate-x-1/2 object-cover"
                       style={{ clipPath: "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)" }}
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
                     />
                   )}
 
