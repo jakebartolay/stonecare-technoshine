@@ -1,236 +1,203 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, ZoomIn } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-const items = [
+const slides = [
   {
     src: "client-images/gallery-1.jpg",
     title: "Marble Floor",
-    category: "Polishing",
-    description: "Mirror-finish restoration of white Carrara marble with natural veining preserved.",
+    location: "Polished stone surface",
   },
   {
     src: "client-images/gallery-2.jpg",
-    title: "Hallway Restoration",
-    category: "Restoration",
-    description: "Full travertine wall and floor restoration in a hallway environment.",
+    title: "Marble Floor",
+    location: "Commercial hallway finish",
   },
   {
     src: "client-images/gallery-3.jpg",
-    title: "Hotel Lobby",
-    category: "Polishing",
-    description: "Italian marble columns and grand lobby floor brought back to showroom condition.",
+    title: "Marble Floor",
+    location: "Hotel lobby restoration",
   },
   {
     src: "client-images/gallery-4.png",
-    title: "Floor Transformation",
-    category: "Repair",
-    description: "Cracked, heavily etched stone surface restored to a flawless mirror polish.",
+    title: "Marble Floor",
+    location: "Deep clean and polish",
   },
   {
     src: "client-images/gallery-5.png",
-    title: "Black Marble Countertop",
-    category: "Sealing",
-    description: "Deep black marble countertop sealed and polished to reveal gold veining.",
+    title: "Marble Floor",
+    location: "Stone surface sealing",
   },
   {
     src: "client-images/gallery-6.png",
-    title: "Marble Staircase",
-    category: "Restoration",
-    description: "Antique marble staircase honed and re-polished to its original elegance.",
+    title: "Marble Floor",
+    location: "Stair and floor detail",
+  },
+  {
+    src: "client-images/gallery-7.png",
+    title: "Marble Floor",
+    location: "Gloss restoration",
+  },
+  {
+    src: "client-images/gallery-8.png",
+    title: "Marble Floor",
+    location: "Large format finish",
+  },
+  {
+    src: "client-images/gallery-9.jpg",
+    title: "Marble Floor",
+    location: "Interior floor care",
+  },
+  {
+    src: "client-images/gallery-10.jpg",
+    title: "Marble Floor",
+    location: "Detail cleaning",
+  },
+  {
+    src: "client-images/gallery-11.jpg",
+    title: "Marble Floor",
+    location: "Natural stone polishing",
+  },
+  {
+    src: "client-images/gallery-12.jpg",
+    title: "Marble Floor",
+    location: "Premium floor finish",
+  },
+  {
+    src: "client-images/gallery-13.jpg",
+    title: "Marble Floor",
+    location: "Restored stone shine",
+  },
+  {
+    src: "client-images/gallery-14.jpg",
+    title: "Marble Floor",
+    location: "Surface refinishing",
+  },
+  {
+    src: "client-images/gallery-15.jpg",
+    title: "Marble Floor",
+    location: "Protected polished floor",
   },
 ];
 
-const categories = ["All", "Polishing", "Restoration", "Repair", "Sealing"];
-
 export function Gallery() {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [lightbox, setLightbox] = useState<typeof items[0] | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const base = import.meta.env.BASE_URL;
+
+  const activeSlide = slides[activeIndex];
+  const activeImageSrc = useMemo(
+    () => `${base}images/${activeSlide.src}`,
+    [activeSlide.src, base],
+  );
+
+  const goToSlide = (nextIndex: number, nextDirection: number) => {
+    setDirection(nextDirection);
+    setActiveIndex((nextIndex + slides.length) % slides.length);
+  };
+
+  const goPrevious = () => goToSlide(activeIndex - 1, -1);
+  const goNext = () => goToSlide(activeIndex + 1, 1);
 
   useEffect(() => {
-    if (!lightbox) {
-      return;
-    }
-
-    const previousBodyStyle = {
-      overflow: document.body.style.overflow,
-      paddingRight: document.body.style.paddingRight,
-    };
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousOverscrollBehavior = document.documentElement.style.overscrollBehavior;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-
-    const preventScroll = (event: Event) => {
-      event.preventDefault();
-    };
-
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setLightbox(null);
-        return;
+      if (event.key === "ArrowLeft") {
+        goPrevious();
       }
 
-      if (
-        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "Spacebar"].includes(
-          event.key,
-        )
-      ) {
-        event.preventDefault();
+      if (event.key === "ArrowRight") {
+        goNext();
       }
     };
 
-    document.documentElement.style.overflow = "hidden";
-    document.documentElement.style.overscrollBehavior = "none";
-    document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("wheel", preventScroll, { passive: false });
-    window.addEventListener("touchmove", preventScroll, { passive: false });
-
-    return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.documentElement.style.overscrollBehavior = previousOverscrollBehavior;
-      document.body.style.overflow = previousBodyStyle.overflow;
-      document.body.style.paddingRight = previousBodyStyle.paddingRight;
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("wheel", preventScroll);
-      window.removeEventListener("touchmove", preventScroll);
-    };
-  }, [lightbox]);
-
-  const filtered =
-    activeCategory === "All"
-      ? items
-      : items.filter((i) => i.category === activeCategory);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeIndex]);
 
   return (
-    <section id="gallery" className="relative flex min-h-screen items-center bg-background py-20">
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[320px_1fr] lg:items-start">
-          <div className="lg:sticky lg:top-28">
-        {/* Header */}
-        <div className="mb-8 text-left" data-aos="fade-up">
-          <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
-            Our Work
-          </h2>
-          <h3 className="text-3xl md:text-5xl font-display text-foreground mb-4">
-            PROJECT <span className="text-primary">GALLERY</span>
-          </h3>
-          <p className="text-muted-foreground max-w-xl text-sm">
-            A selection of marble and natural stone restoration projects across residential, hospitality, and commercial spaces.
-          </p>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="mb-10 flex flex-wrap gap-2">
-          {categories.map((cat, index) => (
-            <button
-              key={cat}
-              data-aos="fade-up"
-              data-aos-delay={index * 60}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2 text-xs font-mono uppercase tracking-widest border transition-all duration-200 ${
-                activeCategory === cat
-                  ? "bg-primary border-primary text-white shadow-[0_0_15px_rgba(255,107,0,0.3)]"
-                  : "border-border text-muted-foreground hover:border-primary hover:text-primary bg-transparent"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-          </div>
-
-        {/* Grid */}
-        <motion.div layout className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <AnimatePresence>
-            {filtered.map((item) => (
-              <motion.div
-                key={item.src}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.35 }}
-                className="group relative overflow-hidden border border-border hover:border-primary transition-colors duration-300 cursor-pointer"
-                onClick={() => setLightbox(item)}
-              >
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={`${import.meta.env.BASE_URL}images/${item.src}`}
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/55 transition-all duration-300 flex flex-col justify-end p-5">
-                  <div className="translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                    <span className="text-[10px] font-mono text-primary uppercase tracking-widest mb-1 block">
-                      {item.category}
-                    </span>
-                    <h4 className="font-display text-white text-lg mb-1">{item.title}</h4>
-                    <p className="text-white/70 text-xs leading-relaxed">{item.description}</p>
-                  </div>
-                  <ZoomIn className="absolute top-4 right-4 w-5 h-5 text-white/0 group-hover:text-white/80 transition-all duration-300" />
-                </div>
-
-                {/* Orange corner accent */}
-                <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      </div>
-      </div>
-
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightbox && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-            onClick={() => setLightbox(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="relative w-full max-w-4xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setLightbox(null)}
-                className="absolute -top-10 right-0 text-white/70 hover:text-primary transition-colors"
-              >
-                <X className="w-7 h-7" />
-              </button>
-
-              <div className="border border-primary/30">
-                <div className="aspect-[4/3] max-h-[75vh] w-full bg-black flex items-center justify-center overflow-hidden">
-                  <img
-                    src={`${import.meta.env.BASE_URL}images/${lightbox.src}`}
-                    alt={lightbox.title}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-                <div className="bg-black p-5 border-t border-primary/20">
-                  <span className="text-[10px] font-mono text-primary uppercase tracking-widest">
-                    {lightbox.category}
-                  </span>
-                  <h4 className="font-display text-white text-xl mt-1 mb-1">{lightbox.title}</h4>
-                  <p className="text-white/60 text-sm">{lightbox.description}</p>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+    <section
+      id="gallery"
+      className="relative flex min-h-screen items-stretch overflow-hidden bg-black py-0"
+    >
+      <AnimatePresence custom={direction} mode="wait">
+        <motion.img
+          key={activeSlide.src}
+          custom={direction}
+          src={activeImageSrc}
+          alt={activeSlide.location}
+          initial={{ opacity: 0, scale: 1.04, x: direction * 36 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={{ opacity: 0, scale: 1.02, x: direction * -36 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="gallery-bg absolute inset-0 h-full w-full object-cover"
+        />
       </AnimatePresence>
+
+      <div className="gallery-overlay absolute inset-0 bg-gradient-to-b from-black/40 via-black/12 to-black/62" />
+
+      <div className="gallery-content relative z-10 flex min-h-screen w-full flex-col justify-between px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.25 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto mt-6 max-w-4xl text-center text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)] sm:mt-8"
+        >
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-primary">
+            Technoshine Stone Care
+          </p>
+          <h3 className="mt-3 font-display text-4xl font-bold uppercase tracking-normal sm:text-5xl lg:text-6xl">
+            {activeSlide.title}
+          </h3>
+          <p className="mx-auto mt-4 max-w-2xl text-sm font-medium uppercase tracking-[0.16em] text-white/85">
+            {activeSlide.location}
+          </p>
+        </motion.div>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={goPrevious}
+            className="flex h-11 w-11 items-center justify-center border border-white/35 bg-black/25 text-white shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-primary hover:bg-primary sm:h-12 sm:w-12"
+            aria-label="Previous marble floor image"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={goNext}
+            className="flex h-11 w-11 items-center justify-center border border-white/35 bg-black/25 text-white shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-primary hover:bg-primary sm:h-12 sm:w-12"
+            aria-label="Next marble floor image"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mx-auto mb-2 flex items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={goPrevious}
+            className="flex h-8 w-8 items-center justify-center bg-white/90 text-black shadow-sm transition-colors hover:bg-primary hover:text-white"
+            aria-label="Previous marble floor image"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <p className="w-16 text-center font-mono text-xs text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+            {activeIndex + 1}/{slides.length}
+          </p>
+
+          <button
+            type="button"
+            onClick={goNext}
+            className="flex h-8 w-8 items-center justify-center bg-white/90 text-black shadow-sm transition-colors hover:bg-primary hover:text-white"
+            aria-label="Next marble floor image"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

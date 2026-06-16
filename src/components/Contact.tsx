@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Send, MapPin, Phone, Mail } from "lucide-react";
+import { ExternalLink, Send, MapPin, Phone, Mail } from "lucide-react";
 import { useState } from "react";
 // import { useSubmitContact } from "@/lib/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,61 @@ const contactSchema = z.object({
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
+
+const formEntrance = {
+  hidden: { opacity: 0, y: 42, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.65,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+const officeAddress =
+  "Unit 110, Union Square Condominium, 15th Avenue, Cubao, Quezon City, Philippines.";
+const officeMapQuery = encodeURIComponent(officeAddress);
+const officeMapEmbedSrc = `https://www.google.com/maps?q=${officeMapQuery}&output=embed`;
+const officeMapHref = `https://www.google.com/maps/search/?api=1&query=${officeMapQuery}`;
+
+function LocationCard() {
+  return (
+    <div className="home-accent-card bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+      <div className="flex items-center gap-4 text-primary mb-4">
+        <MapPin className="w-6 h-6" />
+        <h4 className="font-display text-lg text-foreground">Location</h4>
+      </div>
+      <p className="text-muted-foreground font-mono text-sm">
+        Unit 110, Union Square Condominium,<br />
+        15th Avenue, Cubao, Quezon City,<br />
+        Philippines.
+      </p>
+
+      <div className="mt-5 aspect-[16/10] overflow-hidden border border-border bg-neutral-100">
+        <iframe
+          title="Technoshine office location map"
+          src={officeMapEmbedSrc}
+          className="h-full w-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+
+      <a
+        href={officeMapHref}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-4 inline-flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wider text-primary transition-colors hover:text-foreground"
+      >
+        Open in Google Maps
+        <ExternalLink className="h-4 w-4" />
+      </a>
+    </div>
+  );
+}
 
 export function Contact() {
   const { toast } = useToast();
@@ -74,26 +129,16 @@ export function Contact() {
           <h3 className="text-3xl md:text-5xl font-display text-foreground">BOOK A FREE <span className="text-primary">ASSESSMENT</span></h3>
         </div>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.85fr_1.4fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.85fr_1.4fr] lg:items-start">
 
           {/* Contact Info Desktop */}
           <div
             data-aos="fade-right"
             className="hidden lg:block space-y-5"
           >
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
-              <div className="flex items-center gap-4 text-primary mb-4">
-                <MapPin className="w-6 h-6" />
-                <h4 className="font-display text-lg text-foreground">Location</h4>
-              </div>
-              <p className="text-muted-foreground font-mono text-sm">
-                Unit 110 Union Square Condominium,<br />
-                15th Avenue, Cubao, Quezon City,<br />
-                Philippines.
-              </p>
-            </div>
+            <LocationCard />
 
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="home-accent-card bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
               <div className="flex items-center gap-4 text-primary mb-4">
                 <Mail className="w-6 h-6" />
                 <h4 className="font-display text-lg text-foreground">Email Us</h4>
@@ -104,30 +149,35 @@ export function Contact() {
               </p>
             </div>
 
-            <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+            <div className="home-accent-card bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
               <div className="flex items-center gap-4 text-primary mb-4">
                 <Phone className="w-6 h-6" />
                 <h4 className="font-display text-lg text-foreground">Call Us</h4>
               </div>
               <p className="text-muted-foreground font-mono text-sm">
-                +44 (0)20 7946 0321<br />
-                Mon – Sat, 9am – 6pm
+                0917 824 1220<br />
+                Mon - Sat, 9am - 6pm
               </p>
             </div>
           </div>
 
           {/* Contact Form */}
           <motion.div
-            data-aos="fade-in"
-            data-aos-delay="120"
-            data-aos-duration="800"
-            animate={shakeForm ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : undefined}
-            className="relative border border-border bg-card p-6 sm:p-8"
+            variants={formEntrance}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.25 }}
+            className="home-elevated-surface relative self-start border border-border bg-card p-6 sm:p-8"
           >
             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/50" />
             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/50" />
 
-            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6">
+            <motion.form
+              animate={shakeForm ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : { x: 0 }}
+              transition={{ duration: 0.42 }}
+              onSubmit={handleSubmit(onSubmit, onInvalid)}
+              className="space-y-6"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className={`text-xs font-mono uppercase ${errors.name ? "text-red-500" : "text-muted-foreground"}`}>Your Name</label>
@@ -185,7 +235,7 @@ export function Contact() {
                       ? "border-red-500 hover:border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                       : "border-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary"
                   }`}
-                  placeholder="E.g. Carrara marble kitchen floor, heavy etching and scratches, approx 40m²..."
+                  placeholder="E.g. Carrara marble kitchen floor, heavy etching and scratches, approx 40 sqm..."
                 />
                 {errors.message && focusedField !== "message" && <p className="text-red-500 text-xs font-mono">{errors.message.message}</p>}
               </div>
@@ -203,7 +253,7 @@ export function Contact() {
                   </>
                 )}
               </button>
-            </form>
+            </motion.form>
           </motion.div>
 
           {/* Contact Info Phoneview */}
@@ -211,19 +261,9 @@ export function Contact() {
             data-aos="fade-up"
             className="mt-10 space-y-6 lg:hidden"
           >
-          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
-            <div className="flex items-center gap-4 text-primary mb-4">
-              <MapPin className="w-6 h-6" />
-              <h4 className="font-display text-lg text-foreground">Location</h4>
-            </div>
-            <p className="text-muted-foreground font-mono text-sm">
-              Unit 110 Union Square Condominium,<br />
-              15th Avenue, Cubao, Quezon City,<br />
-              Philippines.
-            </p>
-          </div>
+          <LocationCard />
 
-          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+          <div className="home-accent-card bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
             <div className="flex items-center gap-4 text-primary mb-4">
               <Mail className="w-6 h-6" />
               <h4 className="font-display text-lg text-foreground">Email Us</h4>
@@ -234,14 +274,14 @@ export function Contact() {
             </p>
           </div>
 
-          <div className="bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
+          <div className="home-accent-card bg-card border border-border p-6 hover:border-primary hover:shadow-[0_0_15px_rgba(255,107,0,0.1)] transition-all">
             <div className="flex items-center gap-4 text-primary mb-4">
               <Phone className="w-6 h-6" />
               <h4 className="font-display text-lg text-foreground">Call Us</h4>
             </div>
             <p className="text-muted-foreground font-mono text-sm">
-              +44 (0)20 7946 0321<br />
-              Mon – Sat, 9am – 6pm
+              0917 824 1220<br />
+              Mon - Sat, 9am - 6pm
             </p>
           </div>
         </div>

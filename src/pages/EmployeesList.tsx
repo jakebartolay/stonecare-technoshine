@@ -13,7 +13,14 @@ type Employee = {
 
 type LoadState = "loading" | "ready" | "error";
 
-const csvPath = `${import.meta.env.BASE_URL}employees/employees.csv`;
+const employeeAssetCacheBust = Date.now().toString();
+
+function withEmployeeCacheBust(path: string) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}v=${employeeAssetCacheBust}`;
+}
+
+const csvPath = withEmployeeCacheBust(`${import.meta.env.BASE_URL}employees/employees.csv`);
 const employeePhotoBasePath = `${import.meta.env.BASE_URL}employees/photos/`;
 const employeePhotoExtensions = ["jpg", "jpeg", "png", "webp"];
 
@@ -70,9 +77,14 @@ function pickField(record: Record<string, string>, keys: string[]) {
 function getEmployeePhotoPaths(photo: string) {
   const value = photo.trim();
   if (!value) return [];
-  if (value.startsWith("/") || value.startsWith("http")) return [value];
-  if (/\.(jpg|jpeg|png|webp)$/i.test(value)) return [`${employeePhotoBasePath}${value}`];
-  return employeePhotoExtensions.map((extension) => `${employeePhotoBasePath}${value}.${extension}`);
+  if (value.startsWith("http")) return [value];
+  if (value.startsWith("/")) return [withEmployeeCacheBust(value)];
+  if (/\.(jpg|jpeg|png|webp)$/i.test(value)) {
+    return [withEmployeeCacheBust(`${employeePhotoBasePath}${value}`)];
+  }
+  return employeePhotoExtensions.map((extension) =>
+    withEmployeeCacheBust(`${employeePhotoBasePath}${value}.${extension}`),
+  );
 }
 
 type EmployeePhotoProps = {
@@ -148,7 +160,7 @@ export default function EmployeesList() {
   useEffect(() => {
     let isMounted = true;
 
-    fetch(csvPath)
+    fetch(csvPath, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) throw new Error("Employee CSV not found");
         return response.text();
@@ -189,9 +201,9 @@ export default function EmployeesList() {
         : "Not Verified";
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <section className="relative min-h-screen overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
+    <main className="min-h-screen bg-white text-foreground">
+      <section className="employee-verification-shell relative min-h-screen overflow-hidden">
+        <div className="absolute inset-x-0 top-0 z-20 h-1 bg-primary" />
 
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
           <div
@@ -221,7 +233,7 @@ export default function EmployeesList() {
                 </div>
                 <div className="relative aspect-[636/1024] overflow-hidden rounded-[20px] bg-white shadow-2xl ring-1 ring-black/10">
                   <img
-                    src={`${import.meta.env.BASE_URL}employees/front.jpg`}
+                    src={withEmployeeCacheBust(`${import.meta.env.BASE_URL}employees/front.jpg`)}
                     alt=""
                     className="absolute inset-0 h-full w-full object-cover"
                   />
@@ -273,7 +285,7 @@ export default function EmployeesList() {
                     Employee Verification
                   </p>
                   <h1 className="text-3xl leading-tight text-neutral-950 sm:text-5xl">
-                    TechnoShine employee record
+                    Technoshine employee record
                   </h1>
                 </>
               )}
@@ -310,8 +322,8 @@ export default function EmployeesList() {
                         : loadState === "error"
                           ? "The employee file is missing or cannot be loaded. Please check public/employees/employees.csv."
                           : isVerified
-                            ? "This ID is listed in the TechnoShine employee file."
-                            : "Please check the ID in the link or contact TechnoShine for manual confirmation."}
+                            ? "This ID is listed in the Technoshine employee file."
+                            : "Please check the ID in the link or contact Technoshine for manual confirmation."}
                     </p>
                   </div>
                 </div>

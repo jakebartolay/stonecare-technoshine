@@ -1,18 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Menu, X } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
-const TOP_LOGO_SRC = "/logo/companylogo1.png";
-const SCROLLED_LOGO_SRC = "/logo/companylogo2.png";
-const DESKTOP_NAV_HEIGHT = 64;
-const MOBILE_NAV_HEIGHT = 64;
+const TOP_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo1.png`;
+const SCROLLED_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo2.png`;
 const WARNING_HEIGHT = 40;
-const MOBILE_MENU_CLOSE_DELAY = 260;
+
+const navLinks = [
+  { name: "Home", href: "/" },
+  { name: "Services", href: "/services" },
+  { name: "About Us", href: "/about" },
+  { name: "Gallery", href: "/gallery" },
+  { name: "Clients", href: "/clients" },
+  { name: "Contact", href: "/contact" },
+];
 
 export function Navbar() {
+  const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("home");
   const [isFooterVisible, setIsFooterVisible] = useState(false);
   const [isWarningVisible, setIsWarningVisible] = useState(() => {
     try {
@@ -21,40 +28,12 @@ export function Navbar() {
       return true;
     }
   });
-  const lastScrollYRef = React.useRef(0);
-
-  const navLinks = [
-    { name: "Home", href: "#", section: "home" },
-    { name: "Services", href: "#services", section: "services" },
-    { name: "About Us", href: "#about", section: "about" },
-    { name: "Gallery", href: "#gallery", section: "gallery" },
-    // { name: "Team", href: "#team", section: "team" },
-    { name: "Contact", href: "#contact", section: "contact" },
-  ];
-
-  const isMobileViewport = () => window.matchMedia("(max-width: 767px)").matches;
-
-  const getScrollOffset = () => {
-    const base = isMobileViewport() ? MOBILE_NAV_HEIGHT : DESKTOP_NAV_HEIGHT;
-    return base + (isWarningVisible ? WARNING_HEIGHT : 0);
-  };
-
-  const scrollToSection = (href: string) => {
-    if (href === "#") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-
-    const element = document.querySelector(href);
-    if (!element) return;
-
-    const top =
-      (element as HTMLElement).getBoundingClientRect().top +
-      window.scrollY -
-      getScrollOffset();
-
-    window.scrollTo({ top, behavior: "smooth" });
-  };
+  const lastScrollYRef = useRef(0);
+  const normalizedLocation = location.replace(/\/$/, "") || "/";
+  const solidNav = isScrolled || isMobileMenuOpen;
+  const usesDarkTransparentNav =
+    !solidNav &&
+    (normalizedLocation === "/about" || normalizedLocation === "/contact");
 
   useEffect(() => {
     const preloadImages = [TOP_LOGO_SRC, SCROLLED_LOGO_SRC].map((src) => {
@@ -64,6 +43,7 @@ export function Navbar() {
     });
 
     const handleScroll = () => setIsScrolled(window.scrollY > 16);
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
 
     return () => {
@@ -73,43 +53,8 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    const handleSectionChange = () => {
-      const scrollPosition = window.scrollY + getScrollOffset() + 1;
-      const sections = navLinks
-        .filter((link) => link.section !== "home")
-        .map((link) => document.querySelector(link.href))
-        .filter((section): section is Element => section !== null);
-
-      if (window.scrollY < 120) {
-        setActiveSection("home");
-        return;
-      }
-
-      const currentSection = sections.find((section) => {
-        const top = (section as HTMLElement).offsetTop;
-        const height = (section as HTMLElement).offsetHeight;
-        return scrollPosition >= top && scrollPosition < top + height;
-      });
-
-      if (currentSection instanceof HTMLElement) {
-        setActiveSection(currentSection.id);
-        return;
-      }
-
-      const lastSection = sections[sections.length - 1];
-      if (
-        lastSection instanceof HTMLElement &&
-        scrollPosition >= lastSection.offsetTop
-      ) {
-        setActiveSection(lastSection.id);
-      }
-    };
-
-    handleSectionChange();
-    window.addEventListener("scroll", handleSectionChange);
-
-    return () => window.removeEventListener("scroll", handleSectionChange);
-  }, []);
+    setIsMobileMenuOpen(false);
+  }, [location]);
 
   useEffect(() => {
     const handleFooterVisibility = () => {
@@ -146,29 +91,13 @@ export function Navbar() {
     };
   }, []);
 
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    href: string,
-    section: string,
-  ) => {
-    e.preventDefault();
-    const shouldUseMobileFlow = isMobileViewport();
+  const handleLinkClick = (href: string) => {
     setIsMobileMenuOpen(false);
-    setActiveSection(section);
-
-    if (shouldUseMobileFlow) {
-      window.setTimeout(() => scrollToSection(href), MOBILE_MENU_CLOSE_DELAY);
-      return;
+    if (href === normalizedLocation) {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
     }
-
-    scrollToSection(href);
-  };
-
-  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    setIsMobileMenuOpen(false);
-    setActiveSection("home");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -194,152 +123,159 @@ export function Navbar() {
                   <AlertTriangle className="h-5 w-5 text-yellow-600" />
                   <span>This site is still undergoing development.</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    aria-label="Dismiss development warning"
-                    className="rounded-md p-2"
-                    style={{ pointerEvents: "auto", background: "transparent" }}
-                    onClick={() => {
-                      setIsWarningVisible(false);
-                      try {
-                        localStorage.setItem("siteWarningDismissed", "true");
-                      } catch {}
-                    }}
-                  >
-                    <X className="h-4 w-4" style={{ color: "#92400E" }} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  aria-label="Dismiss development warning"
+                  className="rounded-md bg-transparent p-2"
+                  onClick={() => {
+                    setIsWarningVisible(false);
+                    try {
+                      localStorage.setItem("siteWarningDismissed", "true");
+                    } catch {}
+                  }}
+                >
+                  <X className="h-4 w-4" style={{ color: "#92400E" }} />
+                </button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: isFooterVisible ? -120 : 0 }}
         transition={{ duration: 0.5 }}
         style={{ top: isWarningVisible ? WARNING_HEIGHT : 0 }}
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
-          isScrolled
-            ? "border-b border-border bg-background/95 py-3 shadow-sm backdrop-blur-md"
+          solidNav
+            ? "border-b border-border bg-background/95 py-7 shadow-sm backdrop-blur-md"
             : "bg-transparent py-5"
         }`}
       >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <a
-            href="#"
-            onClick={handleLogoClick}
-            className="flex items-center gap-2 group relative z-[61]"
-          >
-            <span className="relative block h-10 w-[160px]">
-              <img
-                src={TOP_LOGO_SRC}
-                alt="TechnoShine"
-                className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 ${
-                  isScrolled ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              {/* h-10 pinaka size */}
-              <img
-                src={SCROLLED_LOGO_SRC}
-                alt="TechnoShine"
-                className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 ${
-                  isScrolled ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            </span>
-          </a>
-
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                aria-current={activeSection === link.section ? "page" : undefined}
-                onClick={(e) => handleNavClick(e, link.href, link.section)}
-                className={`text-sm font-medium transition-all duration-300 uppercase tracking-wider relative group ${
-                  activeSection === link.section
-                    ? "text-primary"
-                    : isScrolled
-                      ? "text-muted-foreground hover:text-primary"
-                      : "text-white/80 hover:text-primary"
-                }`}
-              >
-                {link.name}
-                <span
-                  className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${
-                    activeSection === link.section
-                      ? "w-full shadow-[0_0_12px_rgba(255,107,0,0.45)]"
-                      : "w-0 group-hover:w-full"
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              onClick={() => handleLinkClick("/")}
+              className="group relative z-[61] flex items-center gap-2"
+            >
+              <span className="relative block h-16 w-[210px]">
+                <img
+                  src={TOP_LOGO_SRC}
+                  alt="Technoshine"
+                  className={`absolute inset-0 h-16 w-auto max-w-none transition-opacity duration-200 ${
+                    solidNav || usesDarkTransparentNav ? "opacity-0" : "opacity-100"
                   }`}
                 />
-              </a>
-            ))}
-            <a
-              href="#contact"
-              onClick={(e) => handleNavClick(e, "#contact", "contact")}
-              className="px-5 py-2 font-display text-sm font-bold text-white bg-primary border border-primary hover:bg-transparent hover:text-primary transition-all duration-300 shadow-[0_0_15px_rgba(255,107,0,0.3)] hover:shadow-[0_0_25px_rgba(255,107,0,0.6)]"
-            >
-              FREE QUOTE
-            </a>
-          </div>
-
-          {/* Mobile Menu Toggle */}
-          <button
-            type="button"
-            aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={isMobileMenuOpen}
-            className={`md:hidden relative z-[61] p-2 -mr-2 transition-colors hover:text-primary ${
-              isScrolled ? "text-foreground" : "text-white"
-            }`}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Nav */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden relative z-[60] bg-background border-b border-border overflow-hidden shadow-lg"
-          >
-            <div className="px-4 py-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  aria-current={activeSection === link.section ? "page" : undefined}
-                  onClick={(e) => handleNavClick(e, link.href, link.section)}
-                  className={`block py-2 text-lg font-display transition-colors uppercase tracking-wider ${
-                    activeSection === link.section
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-primary"
+                <img
+                  src={SCROLLED_LOGO_SRC}
+                  alt="Technoshine"
+                  className={`absolute inset-0 h-16 w-auto max-w-none transition-opacity duration-200 ${
+                    solidNav || usesDarkTransparentNav ? "opacity-100" : "opacity-0"
                   }`}
-                >
-                  {link.name}
-                </a>
-              ))}
-              <a
-                href="#contact"
-                onClick={(e) => handleNavClick(e, "#contact", "contact")}
-                className="mt-2 inline-flex items-center justify-center px-5 py-3 font-display text-sm font-bold text-white bg-primary border border-primary hover:bg-transparent hover:text-primary transition-all duration-300"
+                />
+              </span>
+            </Link>
+
+            <div className="hidden items-center gap-6 md:flex">
+              {navLinks.map((link) => {
+                const isActive = normalizedLocation === link.href;
+
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => handleLinkClick(link.href)}
+                    className={`group relative text-sm font-medium uppercase tracking-wider transition-all duration-300 ${
+                      isActive
+                        ? "text-primary"
+                        : solidNav
+                          ? "text-muted-foreground hover:text-primary"
+                          : usesDarkTransparentNav
+                            ? "text-foreground/80 hover:text-primary"
+                            : "text-white/80 hover:text-primary"
+                    }`}
+                  >
+                    {link.name}
+                    <span
+                      className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${
+                        isActive
+                          ? "w-full shadow-[0_0_12px_rgba(255,107,0,0.45)]"
+                          : "w-0 group-hover:w-full"
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
+              <Link
+                href="/contact"
+                onClick={() => handleLinkClick("/contact")}
+                className="border border-primary bg-primary px-5 py-2 font-display text-sm font-bold text-white shadow-[0_0_15px_rgba(255,107,0,0.3)] transition-all duration-300 hover:bg-transparent hover:text-primary hover:shadow-[0_0_25px_rgba(255,107,0,0.6)]"
               >
                 FREE QUOTE
-              </a>
+              </Link>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.nav>
+
+            <button
+              type="button"
+              aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileMenuOpen}
+              className={`relative z-[61] -mr-2 p-2 transition-colors hover:text-primary md:hidden ${
+                solidNav || usesDarkTransparentNav ? "text-foreground" : "text-white"
+              }`}
+              onClick={() => setIsMobileMenuOpen((current) => !current)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="relative z-[60] overflow-hidden border-b border-border bg-background shadow-lg md:hidden"
+            >
+              <div className="flex flex-col gap-4 px-4 py-6">
+                {navLinks.map((link) => {
+                  const isActive = normalizedLocation === link.href;
+
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => handleLinkClick(link.href)}
+                      className={`block py-2 font-display text-lg uppercase tracking-wider transition-colors ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-primary"
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
+                <Link
+                  href="/contact"
+                  onClick={() => handleLinkClick("/contact")}
+                  className="mt-2 inline-flex items-center justify-center border border-primary bg-primary px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:bg-transparent hover:text-primary"
+                >
+                  FREE QUOTE
+                </Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.nav>
     </>
   );
 }

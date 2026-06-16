@@ -9,7 +9,7 @@ import {
 } from "react";
 import HTMLFlipBook from "react-pageflip";
 import { Link } from "wouter";
-import { ChevronLeft, ChevronRight, Download, Home, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
@@ -22,17 +22,23 @@ const PAGE_WIDTH = 420;
 const PAGE_HEIGHT = 594;
 const MIN_PAGE_WIDTH = 96;
 const MIN_PAGE_HEIGHT = Math.round((MIN_PAGE_WIDTH * PAGE_HEIGHT) / PAGE_WIDTH);
-const BOOK_FRAME_INSET = 28;
+const BOOK_FRAME_INSET = 12;
 
 type BookSize = {
   pageWidth: number;
   pageHeight: number;
+  isPortrait: boolean;
 };
 
 function getContainedBookSize(frameWidth: number, frameHeight: number): BookSize {
-  const usableWidth = Math.max(MIN_PAGE_WIDTH * 2, frameWidth - BOOK_FRAME_INSET);
+  const isPortrait = frameWidth < 640;
+  const pageCountWidth = isPortrait ? 1 : 2;
+  const usableWidth = Math.max(
+    MIN_PAGE_WIDTH * pageCountWidth,
+    frameWidth - BOOK_FRAME_INSET,
+  );
   const usableHeight = Math.max(MIN_PAGE_HEIGHT, frameHeight - BOOK_FRAME_INSET);
-  const widthBound = usableWidth / 2;
+  const widthBound = usableWidth / pageCountWidth;
   const heightBound = (usableHeight * PAGE_WIDTH) / PAGE_HEIGHT;
   const pageWidth = Math.floor(
     Math.max(MIN_PAGE_WIDTH, Math.min(PAGE_WIDTH, widthBound, heightBound)),
@@ -41,6 +47,7 @@ function getContainedBookSize(frameWidth: number, frameHeight: number): BookSize
   return {
     pageWidth,
     pageHeight: Math.floor((pageWidth * PAGE_HEIGHT) / PAGE_WIDTH),
+    isPortrait,
   };
 }
 
@@ -129,7 +136,7 @@ const PdfPage = forwardRef<HTMLDivElement, PdfPageProps>(
         className="company-profile-page relative flex h-full w-full items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]"
       >
         {!isRendered && !hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#f6f3ed] text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white text-center">
             <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">
               Loading page {pageNumber}
@@ -144,7 +151,7 @@ const PdfPage = forwardRef<HTMLDivElement, PdfPageProps>(
         {imageSrc && (
           <img
             src={imageSrc}
-            alt={`TechnoShine profile page ${pageNumber}`}
+            alt={`Technoshine profile page ${pageNumber}`}
             className="h-full w-full object-contain"
             draggable={false}
           />
@@ -172,7 +179,7 @@ const ProfileCoverPage = forwardRef<HTMLDivElement, ProfileCoverPageProps>(
       <div
         ref={ref}
         data-density="hard"
-        className="company-profile-cover relative flex h-full w-full flex-col justify-between overflow-hidden bg-[#120f0b] p-8 text-white"
+        className="company-profile-cover relative flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden bg-[#120f0b] p-4 text-center text-white sm:gap-8 sm:p-8"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,107,0,0.2),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.14),transparent_38%),linear-gradient(160deg,#18130d,#080706_72%)]" />
         <div className="absolute inset-x-6 top-6 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
@@ -180,27 +187,27 @@ const ProfileCoverPage = forwardRef<HTMLDivElement, ProfileCoverPageProps>(
         <div className="absolute -right-16 top-12 h-44 w-44 rotate-45 border border-primary/30" />
         <div className="absolute -left-14 bottom-16 h-36 w-36 rotate-45 border border-white/10" />
 
-        <div className="relative z-10">
-          <img src="/icon.png" alt="" className="h-16 w-auto" draggable={false} />
-          <p className="mt-8 font-mono text-xs uppercase tracking-[0.24em] text-primary">
-            {isFront ? "Interactive Company Profile" : "TechnoShine"}
+        <div className="relative z-10 flex flex-col items-center">
+          <img src="/icon.png" alt="" className="h-10 w-auto sm:h-16" draggable={false} />
+          <p className="mt-4 font-mono text-[8px] uppercase tracking-[0.18em] text-primary sm:mt-8 sm:text-xs sm:tracking-[0.24em]">
+            {isFront ? "Interactive Company Profile" : "Technoshine"}
           </p>
         </div>
 
-        <div className="relative z-10">
-          <h2 className="font-display text-[clamp(2rem,8vw,3.75rem)] font-black uppercase leading-[0.9] tracking-normal text-white">
-            {isFront ? "TechnoShine" : "Thank You"}
+        <div className="relative z-10 flex flex-col items-center">
+          <h2 className="font-display text-[clamp(1.15rem,7vw,2rem)] font-black uppercase leading-[0.9] tracking-normal text-white sm:text-[clamp(2rem,8vw,3.75rem)]">
+            {isFront ? "Technoshine" : "Thank You"}
           </h2>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/55">
+          <p className="mt-3 max-w-[12rem] text-center text-[10px] leading-relaxed text-white/55 sm:mt-4 sm:max-w-xs sm:text-sm">
             {isFront
               ? "Premium marble, granite, terrazzo, and natural stone restoration specialists."
-              : "For inquiries and project coordination, contact TechnoShine through the details on this site."}
+              : "For inquiries and project coordination, contact Technoshine through the details on this site."}
           </p>
         </div>
 
-        <div className="relative z-10 flex items-end justify-between gap-4">
+        <div className="absolute bottom-4 right-4 z-10 sm:bottom-8 sm:right-8">
           <span aria-hidden="true" />
-          <div className="h-14 w-14 rotate-45 border border-primary/60 bg-primary/10" />
+          <div className="h-9 w-9 rotate-45 border border-primary/60 bg-primary/10 sm:h-14 sm:w-14" />
         </div>
       </div>
     );
@@ -264,7 +271,8 @@ export default function CompanyProfile() {
         const nextSize = getContainedBookSize(width, height);
         setBookSize((currentSize) =>
           currentSize.pageWidth === nextSize.pageWidth &&
-          currentSize.pageHeight === nextSize.pageHeight
+          currentSize.pageHeight === nextSize.pageHeight &&
+          currentSize.isPortrait === nextSize.isPortrait
             ? currentSize
             : nextSize,
         );
@@ -338,13 +346,6 @@ export default function CompanyProfile() {
     scheduleHardPageRefresh();
     bookRef.current?.pageFlip().turnToNextPage();
   };
-  const goCover = () => {
-    if (!canGoPrev) return;
-
-    setHoverPeek(null);
-    scheduleHardPageRefresh();
-    bookRef.current?.pageFlip().turnToPage(0);
-  };
   const handleBookPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     swipeStartRef.current = { x: event.clientX, y: event.clientY };
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -396,68 +397,49 @@ export default function CompanyProfile() {
   const safeStartPage = Math.min(activePage, pages.length + 1);
 
   return (
-    <main className="relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
+    <main className="company-profile-shell relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
+      <Link
+        href="/"
+        className="absolute left-4 top-4 z-[140] inline-flex h-10 items-center gap-2 border border-black/10 bg-white/90 px-3 font-mono text-xs uppercase tracking-[0.16em] text-black/70 shadow-sm backdrop-blur transition-colors hover:border-primary hover:text-primary sm:left-6 sm:top-6"
+        aria-label="Back to home"
+      >
+        <Home className="h-4 w-4" />
+        Home
+      </Link>
       <div className="relative z-10 flex h-full min-h-0 flex-col">
-        <header className="company-profile-header flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary"
-          >
-            <Home className="h-4 w-4" />
-            Back to Home
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={goCover}
-              disabled={!canGoPrev}
-              className="inline-flex h-10 w-10 items-center justify-center border border-border bg-background text-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-muted-foreground"
-              aria-label="Back to cover"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
-            <a
-              href={PDF_URL}
-              download
-              className="inline-flex h-10 items-center gap-2 border border-primary/80 px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-primary hover:text-white"
-            >
-              <Download className="h-4 w-4" />
-              PDF
-            </a>
-          </div>
-        </header>
-
-        <section className="flex min-h-0 flex-1 flex-col items-center overflow-hidden px-4 pb-3 sm:px-6 lg:px-8">
-          <div className="company-profile-heading shrink-0 pb-3 text-center">
+        <section className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-4 pb-4 pt-5 sm:justify-start sm:px-6 sm:pt-6 lg:px-8">
+          <div className="company-profile-heading mx-auto flex w-full max-w-[1180px] shrink-0 flex-col items-center pb-2 text-center sm:pb-4">
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">
-              Interactive Company Profile
+              Company Profile
             </p>
-            <h1 className="mt-1 text-2xl leading-tight text-foreground sm:text-3xl">
-              TechnoShine Profile
+            <h1 className="mx-auto mt-1 max-w-xs text-center text-xl leading-tight text-black sm:max-w-none sm:text-3xl">
+              Technoshine Profile
             </h1>
+            <p className="mx-auto mt-2 hidden max-w-2xl text-sm leading-relaxed text-black/60 sm:block">
+              Stone restoration, polishing, and surface care credentials for residential and commercial projects.
+            </p>
           </div>
 
           <div
             ref={bookFrameRef}
-            className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-visible"
+            className="relative mx-auto flex h-[68vh] min-h-[430px] w-full flex-none items-center justify-center overflow-visible text-center sm:h-auto sm:min-h-0 sm:flex-1"
           >
-            <div className="relative flex w-full max-w-[980px] items-center justify-center overflow-visible">
+            <div className="relative mx-auto flex w-full max-w-[1040px] items-center justify-center overflow-visible">
             <button
               type="button"
               onClick={goPrev}
               disabled={!canGoPrev}
-              className="group absolute left-0 z-20 hidden h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white shadow-[0_0_24px_rgba(0,0,0,0.35)] backdrop-blur transition-all hover:border-primary/80 hover:bg-primary hover:text-white hover:shadow-[0_0_30px_rgba(255,107,0,0.35)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-black/35 disabled:text-white/25 disabled:shadow-none disabled:hover:border-white/10 disabled:hover:bg-black/35 disabled:hover:text-white/25 lg:flex"
+              className="group absolute left-0 z-20 hidden h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border border-black/10 bg-white/90 text-black shadow-[0_18px_42px_rgba(0,0,0,0.18)] backdrop-blur transition-all hover:border-primary/80 hover:bg-primary hover:text-white hover:shadow-[0_18px_44px_rgba(255,107,0,0.24)] disabled:cursor-not-allowed disabled:border-black/5 disabled:bg-white/50 disabled:text-black/20 disabled:shadow-none disabled:hover:border-black/5 disabled:hover:bg-white/50 disabled:hover:text-black/20 lg:flex"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-6 w-6 transition-transform group-hover:-translate-x-0.5" />
             </button>
 
-            <div className="company-profile-book-shell w-full overflow-visible rounded-sm border border-border bg-background p-2 shadow-2xl sm:p-3">
+            <div className="company-profile-book-shell company-profile-reader-shell mx-auto w-full overflow-visible rounded-sm border border-black/10 bg-white/90 p-1 sm:p-3">
               {loading && (
                 <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4">
                   <div className="h-12 w-12 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/50">
                     Loading company profile
                   </p>
                 </div>
@@ -465,7 +447,7 @@ export default function CompanyProfile() {
 
               {error && (
                 <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4 text-center">
-                  <p className="font-display text-2xl text-foreground">
+                  <p className="font-display text-2xl text-black">
                     Company profile could not be loaded.
                   </p>
                   <a href={PDF_URL} className="font-mono text-xs uppercase tracking-widest text-primary">
@@ -486,7 +468,7 @@ export default function CompanyProfile() {
                   onPointerUp={handleBookPointerUp}
                 >
                   <HTMLFlipBook
-                    key={`${bookSize.pageWidth}x${bookSize.pageHeight}-${pages.length}`}
+                    key={`${bookSize.pageWidth}x${bookSize.pageHeight}-${bookSize.isPortrait}-${pages.length}`}
                     ref={bookRef}
                     className="company-profile-book mx-auto"
                     style={{}}
@@ -500,7 +482,7 @@ export default function CompanyProfile() {
                     startPage={safeStartPage}
                     drawShadow
                     flippingTime={900}
-                    usePortrait={false}
+                    usePortrait={bookSize.isPortrait}
                     startZIndex={20}
                     autoSize
                     maxShadowOpacity={0.3}
@@ -554,7 +536,7 @@ export default function CompanyProfile() {
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="group absolute right-0 z-20 hidden h-14 w-14 translate-x-1/2 items-center justify-center rounded-full border border-white/15 bg-black/70 text-white shadow-[0_0_24px_rgba(0,0,0,0.35)] backdrop-blur transition-all hover:border-primary/80 hover:bg-primary hover:text-white hover:shadow-[0_0_30px_rgba(255,107,0,0.35)] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-black/35 disabled:text-white/25 disabled:shadow-none disabled:hover:border-white/10 disabled:hover:bg-black/35 disabled:hover:text-white/25 lg:flex"
+              className="group absolute right-0 z-20 hidden h-14 w-14 translate-x-1/2 items-center justify-center rounded-full border border-black/10 bg-white/90 text-black shadow-[0_18px_42px_rgba(0,0,0,0.18)] backdrop-blur transition-all hover:border-primary/80 hover:bg-primary hover:text-white hover:shadow-[0_18px_44px_rgba(255,107,0,0.24)] disabled:cursor-not-allowed disabled:border-black/5 disabled:bg-white/50 disabled:text-black/20 disabled:shadow-none disabled:hover:border-black/5 disabled:hover:bg-white/50 disabled:hover:text-black/20 lg:flex"
               aria-label="Next page"
             >
               <ChevronRight className="h-6 w-6 transition-transform group-hover:translate-x-0.5" />
@@ -562,18 +544,18 @@ export default function CompanyProfile() {
             </div>
           </div>
 
-          <div className="company-profile-controls mt-2 flex w-full max-w-[980px] shrink-0 flex-wrap items-center justify-between gap-3">
+          <div className="company-profile-controls mx-auto mt-1 flex w-full max-w-[1040px] shrink-0 flex-wrap items-center justify-center gap-2 pt-1 text-center sm:mt-3 sm:justify-between sm:gap-3 sm:border-t sm:border-black/10 sm:pt-3">
             <button
               type="button"
               onClick={goPrev}
               disabled={!canGoPrev}
-              className="inline-flex h-11 items-center gap-2 border border-border bg-background px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-muted-foreground lg:hidden"
+              className="order-2 inline-flex h-11 items-center justify-center gap-2 border border-black/10 bg-white px-4 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
             </button>
 
-            <p className="mx-auto font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="order-1 w-full text-center font-mono text-xs uppercase tracking-[0.18em] text-black/60 sm:order-none sm:w-auto">
               {currentLabel}
             </p>
 
@@ -581,7 +563,7 @@ export default function CompanyProfile() {
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="inline-flex h-11 items-center gap-2 border border-border bg-background px-4 font-display text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-muted-foreground lg:hidden"
+              className="order-3 inline-flex h-11 items-center justify-center gap-2 border border-black/10 bg-white px-4 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
             >
               Next
               <ChevronRight className="h-4 w-4" />

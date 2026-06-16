@@ -14,6 +14,12 @@ import ServerError from "@/pages/errors/ServerError";
 import Maintenance from "@/pages/errors/Maintenance";
 import { CookiePolicy, PrivacyPolicy, TermsOfService } from "@/pages/Legal";
 import CompanyProfile from "@/pages/CompanyProfile";
+import OrganizationChart from "@/pages/OrganizationChart";
+import AboutPage from "@/pages/AboutPage";
+import ClientsPage from "@/pages/ClientsPage";
+import ContactPage from "@/pages/ContactPage";
+import GalleryPage from "@/pages/GalleryPage";
+import ServicesPage from "@/pages/ServicesPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +34,16 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/services" component={ServicesPage} />
+      <Route path="/services/" component={ServicesPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/about/" component={AboutPage} />
+      <Route path="/gallery" component={GalleryPage} />
+      <Route path="/gallery/" component={GalleryPage} />
+      <Route path="/clients" component={ClientsPage} />
+      <Route path="/clients/" component={ClientsPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/contact/" component={ContactPage} />
       <Route path="/employees/list" component={EmployeesList} />
       <Route path="/error/400" component={BadRequest} />
       <Route path="/error/401" component={Unauthorized} />
@@ -39,6 +55,9 @@ function Router() {
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/cookie-policy" component={CookiePolicy} />
       <Route path="/company-profile" component={CompanyProfile} />
+      <Route path="/company-profile/" component={CompanyProfile} />
+      <Route path="/organization-chart" component={OrganizationChart} />
+      <Route path="/organization-chart/" component={OrganizationChart} />
       <Route component={NotFound} />
     </Switch>
   );

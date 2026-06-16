@@ -73,7 +73,7 @@ export function PrivacyPolicy() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      intro="This Privacy Policy explains how TechnoShine handles information submitted through this website."
+      intro="This Privacy Policy explains how Technoshine handles information submitted through this website."
       sections={[
         {
           heading: "Information We Collect",
@@ -99,14 +99,14 @@ export function PrivacyPolicy() {
         {
           heading: "Photos and Website Content",
           body: [
-            "Photos, project images, logos, text, and other website content are owned by TechnoShine or used with permission, unless otherwise stated.",
+            "Photos, project images, logos, text, and other website content are owned by Technoshine or used with permission, unless otherwise stated.",
             "Images and website materials may not be copied, downloaded, reposted, edited, or used for another business without written permission.",
           ],
         },
         {
           heading: "Contact",
           body: [
-            "For privacy-related requests or questions, contact TechnoShine through the contact details listed on this website.",
+            "For privacy-related requests or questions, contact Technoshine through the contact details listed on this website.",
           ],
         },
       ]}
@@ -119,12 +119,12 @@ export function TermsOfService() {
     <LegalPage
       eyebrow="Terms"
       title="Terms of Service"
-      intro="These Terms of Service describe the basic rules for using the TechnoShine website."
+      intro="These Terms of Service describe the basic rules for using the Technoshine website."
       sections={[
         {
           heading: "Website Use",
           body: [
-            "You may browse this website to learn about TechnoShine services and submit inquiries for quotations or assessments.",
+            "You may browse this website to learn about Technoshine services and submit inquiries for quotations or assessments.",
             "You agree not to misuse the website, attempt unauthorized access, or interfere with its normal operation.",
           ],
         },
@@ -138,20 +138,20 @@ export function TermsOfService() {
         {
           heading: "Content Ownership",
           body: [
-            "All website text, branding, layout, photos, graphics, and project images are protected content of TechnoShine or their respective owners.",
+            "All website text, branding, layout, photos, graphics, and project images are protected content of Technoshine or their respective owners.",
             "Do not copy, reuse, download, scrape, repost, or use website images and materials for commercial or promotional purposes without written permission.",
           ],
         },
         {
           heading: "External Links",
           body: [
-            "This website may link to external platforms such as social media pages. TechnoShine is not responsible for the content, policies, or practices of external websites.",
+            "This website may link to external platforms such as social media pages. Technoshine is not responsible for the content, policies, or practices of external websites.",
           ],
         },
         {
           heading: "Updates",
           body: [
-            "TechnoShine may update these terms when needed. Continued use of the website means you accept the latest version posted here.",
+            "Technoshine may update these terms when needed. Continued use of the website means you accept the latest version posted here.",
           ],
         },
       ]}

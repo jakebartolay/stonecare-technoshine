@@ -8,6 +8,8 @@ Options -Indexes
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  # React route that shares a name with the PDF asset directory.
+  RewriteRule ^company-profile/?$ /index.html [L]
   # If request is for a real file or directory, serve it
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

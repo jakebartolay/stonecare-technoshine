@@ -68,7 +68,7 @@ function Slider({
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-4xl mx-auto select-none overflow-hidden cursor-col-resize border border-border"
+      className="home-elevated-surface relative w-full max-w-4xl mx-auto select-none overflow-hidden cursor-col-resize border border-border"
       style={{ aspectRatio: "4 / 3" }}
       onMouseDown={onMouseDown}
       onTouchMove={(e) => onTouchMove(e.nativeEvent)}
@@ -153,7 +153,7 @@ export function BeforeAfter() {
               <button
                 key={p.label}
                 onClick={() => setActive(i)}
-                className={`group relative flex items-center gap-4 p-4 border transition-all duration-200 text-left ${
+                className={`home-accent-card group relative flex items-center gap-4 p-4 border transition-all duration-200 text-left ${
                   i === active
                     ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(255,107,0,0.1)]"
                     : "border-border hover:border-primary/50 bg-background"

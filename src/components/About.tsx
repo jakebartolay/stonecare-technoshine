@@ -88,7 +88,7 @@ export function About() {
             transition={{ duration: 0.6 }}
             className="relative order-2 lg:order-2"
           >
-            <div className="relative border border-border bg-card p-2">
+            <div className="home-elevated-surface relative border border-border bg-card p-2">
               <img
                 src={`${import.meta.env.BASE_URL}images/marble-hall.jpg`}
                 alt="Grand marble hall"
@@ -157,7 +157,7 @@ export function About() {
         <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-[0.85fr_1.15fr]">
           <div
             data-aos="fade-up-right"
-            className="relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
+            className="home-accent-card relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
           >
             {/* Corner accent */}
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
@@ -186,7 +186,7 @@ export function About() {
           <div
             data-aos="fade-up-left"
             data-aos-delay="120"
-            className="relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
+            className="home-accent-card relative group bg-background p-8 transition-colors duration-300 hover:bg-primary/5"
           >
             <div className="absolute top-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
             <div className="absolute bottom-0 right-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-500" />
