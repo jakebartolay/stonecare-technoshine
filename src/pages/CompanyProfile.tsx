@@ -395,6 +395,11 @@ export default function CompanyProfile() {
         ? "Back Cover"
         : `Page ${activePage} of ${pages.length}`;
   const safeStartPage = Math.min(activePage, pages.length + 1);
+  const shouldRenderPdfPage = (pageNumber: number) => {
+    if (activePage === 0) return pageNumber <= 2;
+    if (activePage > pages.length) return pageNumber >= pages.length - 1;
+    return Math.abs(pageNumber - activePage) <= 2;
+  };
 
   return (
     <main className="company-profile-shell relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
@@ -512,7 +517,7 @@ export default function CompanyProfile() {
                         key={pageNumber}
                         pageNumber={pageNumber}
                         pdf={pdf}
-                        shouldRender={Boolean(pdf)}
+                        shouldRender={Boolean(pdf) && shouldRenderPdfPage(pageNumber)}
                         onRendered={handlePageRendered}
                       />
                     ))}
