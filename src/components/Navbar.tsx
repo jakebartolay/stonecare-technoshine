@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const TOP_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo1.png`;
 const SCROLLED_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo2.png`;
-const WARNING_HEIGHT = 40;
 
 const navLinks = [
   { name: "Home", href: "/" },
@@ -21,13 +20,6 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isFooterVisible, setIsFooterVisible] = useState(false);
-  const [isWarningVisible, setIsWarningVisible] = useState(() => {
-    try {
-      return localStorage.getItem("siteWarningDismissed") !== "true";
-    } catch {
-      return true;
-    }
-  });
   const lastScrollYRef = useRef(0);
   const normalizedLocation = location.replace(/\/$/, "") || "/";
   const solidNav = isScrolled || isMobileMenuOpen;
@@ -102,51 +94,11 @@ export function Navbar() {
 
   return (
     <>
-      <AnimatePresence>
-        {isWarningVisible && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="fixed left-0 right-0 top-0 w-full"
-            style={{
-              zIndex: 9999,
-              backgroundColor: "#FEF3C7",
-              color: "#92400E",
-              borderBottom: "1px solid #FDE68A",
-              pointerEvents: "auto",
-            }}
-          >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between py-2 text-sm">
-                <div className="flex items-center gap-3 text-sm">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  <span>This site is still undergoing development.</span>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Dismiss development warning"
-                  className="rounded-md bg-transparent p-2"
-                  onClick={() => {
-                    setIsWarningVisible(false);
-                    try {
-                      localStorage.setItem("siteWarningDismissed", "true");
-                    } catch {}
-                  }}
-                >
-                  <X className="h-4 w-4" style={{ color: "#92400E" }} />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: isFooterVisible ? -120 : 0 }}
         transition={{ duration: 0.5 }}
-        style={{ top: isWarningVisible ? WARNING_HEIGHT : 0 }}
+        style={{ top: 0 }}
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
           solidNav
             ? "border-b border-border bg-background/95 py-7 shadow-sm backdrop-blur-md"
