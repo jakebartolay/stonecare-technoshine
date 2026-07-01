@@ -4,8 +4,10 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { ExternalLink, Send, MapPin, Phone, Mail } from "lucide-react";
 import { useState } from "react";
-// import { useSubmitContact } from "@/lib/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+
+const CONTACT_ENDPOINT = `${import.meta.env.BASE_URL}contact-submit.php`;
+const PRIMARY_EMAIL = "jake.bartolay@technoshineph.com";
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, "Name is required"),
@@ -75,13 +77,7 @@ export function Contact() {
   const { toast } = useToast();
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [shakeForm, setShakeForm] = useState(false);
-  const submitMutation = {
-    mutate: (data: any, callbacks?: any) => {
-      console.log("Form submitted", data);
-      if (callbacks?.onSuccess) callbacks.onSuccess();
-    },
-    isPending: false,
-  };
+  const [isSending, setIsSending] = useState(false);
 
   const {
     register,
@@ -93,26 +89,50 @@ export function Contact() {
     shouldFocusError: false,
   });
 
-  const onSubmit = (data: ContactFormValues) => {
-    submitMutation.mutate(
-      { data },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Request Received",
-            description: "We'll be in touch shortly to arrange your free assessment.",
-          });
-          reset();
+  const onSubmit = async (data: ContactFormValues) => {
+    setIsSending(true);
+
+    try {
+      const response = await fetch(CONTACT_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        onError: () => {
-          toast({
-            variant: "destructive",
-            title: "Submission Failed",
-            description: "Something went wrong. Please try again.",
-          });
-        },
+        body: JSON.stringify(data),
+      });
+      const contentType = response.headers.get("content-type") ?? "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("Contact email endpoint is not running.");
       }
-    );
+
+      const result = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Submission failed.");
+      }
+
+      toast({
+        title: "Request Sent",
+        description: `Your inquiry was sent to ${PRIMARY_EMAIL}.`,
+      });
+      reset();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description:
+          error instanceof Error && error.message.includes("endpoint")
+            ? "Email sending needs the PHP hosting server. On localhost, please test after deployment."
+            : "Something went wrong. Please email Jake directly instead.",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const onInvalid = () => {
@@ -144,8 +164,8 @@ export function Contact() {
                 <h4 className="font-display text-lg text-foreground">Email Us</h4>
               </div>
               <p className="text-muted-foreground font-mono text-sm">
-                contactus@technoshineph.com<br />
-                erwin.torrefiel@technoshineph.com
+                {PRIMARY_EMAIL}<br />
+                contactus@technoshineph.com
               </p>
             </div>
 
@@ -242,10 +262,10 @@ export function Contact() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || submitMutation.isPending}
+                disabled={isSubmitting || isSending}
                 className="w-full py-4 bg-primary text-white font-display font-bold text-lg uppercase tracking-widest hover:bg-foreground hover:text-background transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSubmitting || submitMutation.isPending ? (
+                {isSubmitting || isSending ? (
                   <span className="animate-pulse">Sending...</span>
                 ) : (
                   <>
@@ -269,8 +289,8 @@ export function Contact() {
               <h4 className="font-display text-lg text-foreground">Email Us</h4>
             </div>
             <p className="text-muted-foreground font-mono text-sm">
-              contactus@technoshineph.com<br />
-              erwin.torrefiel@technoshineph.com
+              {PRIMARY_EMAIL}<br />
+              contactus@technoshineph.com
             </p>
           </div>
 
