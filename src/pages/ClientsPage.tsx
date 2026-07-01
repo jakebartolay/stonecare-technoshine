@@ -58,6 +58,8 @@ export default function ClientsPage() {
                   <img
                     src={assetPath(client.icon)}
                     alt={client.name}
+                    loading="lazy"
+                    decoding="async"
                     className="max-h-full max-w-full object-contain"
                   />
                 </div>

@@ -86,6 +86,8 @@ export function ServicesPreview() {
                 <img
                   src={assetPath(service.image)}
                   alt={service.title}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
@@ -138,7 +140,7 @@ export function AboutPreview() {
           <div className="mt-8 flex flex-wrap gap-3">
             <RouteButton href="/about">About Technoshine</RouteButton>
             <Link
-              href="/company-profile"
+              href="/company/company-profile"
               className="inline-flex min-h-11 items-center justify-center border border-foreground/20 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
             >
               Company Profile
@@ -150,6 +152,8 @@ export function AboutPreview() {
           <img
             src={assetPath("images/marble-hall.jpg")}
             alt="Restored marble hall"
+            loading="lazy"
+            decoding="async"
             className="h-full min-h-[360px] w-full object-cover"
           />
           <div className="absolute bottom-5 left-5 right-5 rounded-md border border-white/30 bg-black/62 p-4 text-white backdrop-blur">
@@ -197,6 +201,8 @@ export function WorkPreview() {
               <img
                 src={assetPath(item.image)}
                 alt={item.title}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/76 via-black/16 to-transparent" />

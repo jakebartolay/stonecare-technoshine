@@ -140,6 +140,8 @@ function Avatar({ name, avatarColor = "gray", photo, size = 52 }: AvatarProps) {
         <img
           src={photo}
           alt={name}
+          loading="lazy"
+          decoding="async"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       ) : (

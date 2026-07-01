@@ -10,19 +10,21 @@ import {
 import HTMLFlipBook from "react-pageflip";
 import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-
-const PDF_URL = `${import.meta.env.BASE_URL}company-profile/technoshine-profile.pdf`;
-const TOTAL_PAGES = 30;
+const BASE_URL = import.meta.env.BASE_URL;
+const PROFILE_PAGES = Array.from(
+  { length: 30 },
+  (_, index) =>
+    `${BASE_URL}company-profile/pages/page-${String(index + 1).padStart(2, "0")}.jpg`,
+);
+const ICON_URL = `${BASE_URL}icon.png`;
 const PAGE_WIDTH = 420;
 const PAGE_HEIGHT = 594;
 const MIN_PAGE_WIDTH = 96;
 const MIN_PAGE_HEIGHT = Math.round((MIN_PAGE_WIDTH * PAGE_HEIGHT) / PAGE_WIDTH);
 const BOOK_FRAME_INSET = 12;
+const PAGE_LOAD_RADIUS = 4;
+const INITIAL_PROFILE_PAGE = 1;
 
 type BookSize = {
   pageWidth: number;
@@ -51,6 +53,31 @@ function getContainedBookSize(frameWidth: number, frameHeight: number): BookSize
   };
 }
 
+function getPageLoadWindow(activePage: number, totalPages: number): number[] {
+  if (activePage > totalPages) {
+    const startPage = Math.max(1, totalPages - PAGE_LOAD_RADIUS + 1);
+
+    return Array.from(
+      { length: totalPages - startPage + 1 },
+      (_, index) => startPage + index,
+    );
+  }
+
+  const startPage = Math.max(
+    1,
+    activePage <= 0 ? 1 : activePage - PAGE_LOAD_RADIUS,
+  );
+  const endPage = Math.min(
+    totalPages,
+    activePage <= 0 ? PAGE_LOAD_RADIUS : activePage + PAGE_LOAD_RADIUS,
+  );
+
+  return Array.from(
+    { length: endPage - startPage + 1 },
+    (_, index) => startPage + index,
+  );
+}
+
 type FlipBookRef = {
   pageFlip: () => {
     flipNext: (corner?: "top" | "bottom") => void;
@@ -70,64 +97,19 @@ type FlipBookRef = {
 
 type PdfPageProps = {
   pageNumber: number;
-  pdf: PDFDocumentProxy | null;
-  shouldRender: boolean;
-  onRendered?: (pageNumber: number, imageSrc: string) => void;
+  imageSrc: string;
+  shouldLoad: boolean;
 };
 
 const PdfPage = forwardRef<HTMLDivElement, PdfPageProps>(
-  ({ pageNumber, pdf, shouldRender, onRendered }, ref) => {
-    const [imageSrc, setImageSrc] = useState<string | null>(null);
-    const [isRendered, setIsRendered] = useState(false);
+  ({ pageNumber, imageSrc, shouldLoad }, ref) => {
+    const [hasLoaded, setHasLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
-      if (!pdf || !shouldRender || isRendered) return;
-
-      let cancelled = false;
-      let page: PDFPageProxy | null = null;
-
-      const renderPage = async () => {
-        try {
-          page = await pdf.getPage(pageNumber);
-          if (cancelled) return;
-
-          const viewport = page.getViewport({ scale: 1 });
-          const scale = Math.min(PAGE_WIDTH / viewport.width, PAGE_HEIGHT / viewport.height) * 2;
-          const scaledViewport = page.getViewport({ scale });
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d", { alpha: false });
-          if (!context) return;
-
-          canvas.width = Math.floor(scaledViewport.width);
-          canvas.height = Math.floor(scaledViewport.height);
-          context.fillStyle = "#ffffff";
-          context.fillRect(0, 0, canvas.width, canvas.height);
-
-          await page.render({ canvas, canvasContext: context, viewport: scaledViewport }).promise;
-          if (!cancelled) {
-            const renderedImage = canvas.toDataURL("image/jpeg", 0.92);
-            setImageSrc(renderedImage);
-            setIsRendered(true);
-            onRendered?.(pageNumber, renderedImage);
-          }
-
-          canvas.width = 1;
-          canvas.height = 1;
-        } catch {
-          if (!cancelled) {
-            setHasError(true);
-          }
-        }
-      };
-
-      renderPage();
-
-      return () => {
-        cancelled = true;
-        page?.cleanup();
-      };
-    }, [isRendered, onRendered, pageNumber, pdf, shouldRender]);
+      setHasLoaded(false);
+      setHasError(false);
+    }, [imageSrc]);
 
     return (
       <div
@@ -135,7 +117,7 @@ const PdfPage = forwardRef<HTMLDivElement, PdfPageProps>(
         data-density="hard"
         className="company-profile-page relative flex h-full w-full items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]"
       >
-        {!isRendered && !hasError && (
+        {shouldLoad && !hasLoaded && !hasError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white text-center">
             <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/45">
@@ -148,12 +130,18 @@ const PdfPage = forwardRef<HTMLDivElement, PdfPageProps>(
             Page {pageNumber} could not be loaded.
           </div>
         )}
-        {imageSrc && (
+        {shouldLoad && (
           <img
             src={imageSrc}
             alt={`Technoshine profile page ${pageNumber}`}
+            loading={pageNumber <= 2 ? "eager" : "lazy"}
+            decoding="async"
+            width={PAGE_WIDTH}
+            height={PAGE_HEIGHT}
             className="h-full w-full object-contain"
             draggable={false}
+            onLoad={() => setHasLoaded(true)}
+            onError={() => setHasError(true)}
           />
         )}
         <span className="absolute bottom-3 right-4 rounded-full bg-black/55 px-2 py-1 font-mono text-[10px] text-white">
@@ -188,7 +176,7 @@ const ProfileCoverPage = forwardRef<HTMLDivElement, ProfileCoverPageProps>(
         <div className="absolute -left-14 bottom-16 h-36 w-36 rotate-45 border border-white/10" />
 
         <div className="relative z-10 flex flex-col items-center">
-          <img src="/icon.png" alt="" className="h-10 w-auto sm:h-16" draggable={false} />
+          <img src={ICON_URL} alt="" className="h-10 w-auto sm:h-16" draggable={false} />
           <p className="mt-4 font-mono text-[8px] uppercase tracking-[0.18em] text-primary sm:mt-8 sm:text-xs sm:tracking-[0.24em]">
             {isFront ? "Interactive Company Profile" : "Technoshine"}
           </p>
@@ -221,12 +209,12 @@ type HoverPeek = "previous-top" | "previous-bottom" | "next-top" | "next-bottom"
 export default function CompanyProfile() {
   const bookRef = useRef<FlipBookRef | null>(null);
   const bookFrameRef = useRef<HTMLDivElement | null>(null);
-  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState(0);
-  const [error, setError] = useState(false);
-  const [pageImages, setPageImages] = useState<Record<number, string>>({});
+  const pages = PROFILE_PAGES;
+  const [activePage, setActivePage] = useState(INITIAL_PROFILE_PAGE);
   const [hoverPeek, setHoverPeek] = useState<HoverPeek | null>(null);
+  const [loadedPageNumbers, setLoadedPageNumbers] = useState<Set<number>>(
+    () => new Set(getPageLoadWindow(INITIAL_PROFILE_PAGE, PROFILE_PAGES.length)),
+  );
   const [bookSize, setBookSize] = useState<BookSize>(() =>
     getContainedBookSize(
       typeof window === "undefined" ? PAGE_WIDTH * 2 : window.innerWidth - 32,
@@ -236,26 +224,22 @@ export default function CompanyProfile() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    const task = pdfjsLib.getDocument(PDF_URL);
+    const nextPageNumbers = getPageLoadWindow(activePage, pages.length);
 
-    task.promise
-      .then((loadedPdf) => {
-        if (cancelled) return;
-        setPdf(loadedPdf);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError(true);
-        setLoading(false);
+    setLoadedPageNumbers((currentPageNumbers) => {
+      const mergedPageNumbers = new Set(currentPageNumbers);
+      let hasNewPage = false;
+
+      nextPageNumbers.forEach((pageNumber) => {
+        if (!mergedPageNumbers.has(pageNumber)) {
+          mergedPageNumbers.add(pageNumber);
+          hasNewPage = true;
+        }
       });
 
-    return () => {
-      cancelled = true;
-      task.destroy();
-    };
-  }, []);
+      return hasNewPage ? mergedPageNumbers : currentPageNumbers;
+    });
+  }, [activePage, pages.length]);
 
   useEffect(() => {
     const frame = bookFrameRef.current;
@@ -292,11 +276,6 @@ export default function CompanyProfile() {
     };
   }, []);
 
-  const pages = useMemo(
-    () =>
-      Array.from({ length: pdf?.numPages ?? TOTAL_PAGES }, (_, index) => index + 1),
-    [pdf?.numPages],
-  );
   const canGoPrev = activePage > 0;
   const canGoNext = activePage < pages.length + 1;
   const hoverPreviewPage = hoverPeek?.startsWith("next")
@@ -306,15 +285,8 @@ export default function CompanyProfile() {
     : activePage - 1;
   const hoverPreviewSrc =
     hoverPreviewPage >= 1 && hoverPreviewPage <= pages.length
-      ? pageImages[hoverPreviewPage]
+      ? pages[hoverPreviewPage - 1]
       : null;
-
-  const handlePageRendered = (pageNumber: number, renderedImage: string) => {
-    setPageImages((currentImages) => {
-      if (currentImages[pageNumber] === renderedImage) return currentImages;
-      return { ...currentImages, [pageNumber]: renderedImage };
-    });
-  };
 
   const forceHardPageDensity = () => {
     const flip = bookRef.current?.pageFlip();
@@ -395,11 +367,25 @@ export default function CompanyProfile() {
         ? "Back Cover"
         : `Page ${activePage} of ${pages.length}`;
   const safeStartPage = Math.min(activePage, pages.length + 1);
-  const shouldRenderPdfPage = (pageNumber: number) => {
-    if (activePage === 0) return pageNumber <= 2;
-    if (activePage > pages.length) return pageNumber >= pages.length - 1;
-    return Math.abs(pageNumber - activePage) <= 2;
-  };
+  const flipBookPages = useMemo(
+    () => [
+      <ProfileCoverPage key="profile-cover-front" variant="front" />,
+      ...pages.map((imageSrc, index) => {
+        const pageNumber = index + 1;
+
+        return (
+          <PdfPage
+            key={imageSrc}
+            pageNumber={pageNumber}
+            imageSrc={imageSrc}
+            shouldLoad={loadedPageNumbers.has(pageNumber)}
+          />
+        );
+      }),
+      <ProfileCoverPage key="profile-cover-back" variant="back" />,
+    ],
+    [loadedPageNumbers, pages],
+  );
 
   return (
     <main className="company-profile-shell relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
@@ -441,100 +427,73 @@ export default function CompanyProfile() {
             </button>
 
             <div className="company-profile-book-shell company-profile-reader-shell mx-auto w-full overflow-visible rounded-sm border border-black/10 bg-white/90 p-1 sm:p-3">
-              {loading && (
-                <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4">
-                  <div className="h-12 w-12 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-black/50">
-                    Loading company profile
-                  </p>
-                </div>
-              )}
-
-              {error && (
-                <div className="flex min-h-[42vh] flex-col items-center justify-center gap-4 text-center">
-                  <p className="font-display text-2xl text-black">
-                    Company profile could not be loaded.
-                  </p>
-                  <a href={PDF_URL} className="font-mono text-xs uppercase tracking-widest text-primary">
-                    Open PDF directly
-                  </a>
-                </div>
-              )}
-
-              {!loading && !error && (
-                <div
-                  className="company-profile-book-stage relative mx-auto w-full"
-                  onMouseLeave={() => setHoverPeek(null)}
-                  onMouseMove={handleBookMouseMove}
-                  onPointerCancel={() => {
-                    swipeStartRef.current = null;
+              <div
+                className="company-profile-book-stage relative mx-auto w-full"
+                onMouseLeave={() => setHoverPeek(null)}
+                onMouseMove={handleBookMouseMove}
+                onPointerCancel={() => {
+                  swipeStartRef.current = null;
+                }}
+                onPointerDown={handleBookPointerDown}
+                onPointerUp={handleBookPointerUp}
+              >
+                <HTMLFlipBook
+                  key={`${bookSize.pageWidth}x${bookSize.pageHeight}-${bookSize.isPortrait}-${pages.length}`}
+                  ref={bookRef}
+                  className="company-profile-book mx-auto"
+                  style={{}}
+                  width={bookSize.pageWidth}
+                  height={bookSize.pageHeight}
+                  minWidth={MIN_PAGE_WIDTH}
+                  maxWidth={bookSize.pageWidth}
+                  minHeight={MIN_PAGE_HEIGHT}
+                  maxHeight={bookSize.pageHeight}
+                  size="stretch"
+                  startPage={safeStartPage}
+                  drawShadow
+                  flippingTime={900}
+                  usePortrait={bookSize.isPortrait}
+                  startZIndex={20}
+                  autoSize
+                  maxShadowOpacity={0.3}
+                  showCover
+                  mobileScrollSupport={false}
+                  clickEventForward
+                  useMouseEvents={false}
+                  swipeDistance={20}
+                  showPageCorners={false}
+                  disableFlipByClick={false}
+                  onInit={(event) => {
+                    setActivePage(event.data?.page ?? safeStartPage);
+                    scheduleHardPageRefresh();
                   }}
-                  onPointerDown={handleBookPointerDown}
-                  onPointerUp={handleBookPointerUp}
+                  onUpdate={scheduleHardPageRefresh}
+                  onChangeState={scheduleHardPageRefresh}
+                  onFlip={(event) => {
+                    setActivePage(event.data);
+                    setHoverPeek(null);
+                    scheduleHardPageRefresh();
+                  }}
                 >
-                  <HTMLFlipBook
-                    key={`${bookSize.pageWidth}x${bookSize.pageHeight}-${bookSize.isPortrait}-${pages.length}`}
-                    ref={bookRef}
-                    className="company-profile-book mx-auto"
-                    style={{}}
-                    width={bookSize.pageWidth}
-                    height={bookSize.pageHeight}
-                    minWidth={MIN_PAGE_WIDTH}
-                    maxWidth={bookSize.pageWidth}
-                    minHeight={MIN_PAGE_HEIGHT}
-                    maxHeight={bookSize.pageHeight}
-                    size="stretch"
-                    startPage={safeStartPage}
-                    drawShadow
-                    flippingTime={900}
-                    usePortrait={bookSize.isPortrait}
-                    startZIndex={20}
-                    autoSize
-                    maxShadowOpacity={0.3}
-                    showCover
-                    mobileScrollSupport={false}
-                    clickEventForward
-                    useMouseEvents={false}
-                    swipeDistance={20}
-                    showPageCorners={false}
-                    disableFlipByClick={false}
-                    renderOnlyPageLengthChange
-                    onInit={(event) => {
-                      setActivePage(event.data?.page ?? safeStartPage);
-                      scheduleHardPageRefresh();
-                    }}
-                    onUpdate={scheduleHardPageRefresh}
-                    onChangeState={scheduleHardPageRefresh}
-                    onFlip={(event) => {
-                      setActivePage(event.data);
-                      setHoverPeek(null);
-                      scheduleHardPageRefresh();
-                    }}
-                  >
-                    <ProfileCoverPage variant="front" />
-                    {pages.map((pageNumber) => (
-                      <PdfPage
-                        key={pageNumber}
-                        pageNumber={pageNumber}
-                        pdf={pdf}
-                        shouldRender={Boolean(pdf) && shouldRenderPdfPage(pageNumber)}
-                        onRendered={handlePageRendered}
-                      />
-                    ))}
-                    <ProfileCoverPage variant="back" />
-                  </HTMLFlipBook>
+                  {flipBookPages}
+                </HTMLFlipBook>
 
-                  {hoverPeek && hoverPreviewSrc && (
-                    <div
-                      aria-hidden="true"
-                      className="company-profile-page-peek"
-                      data-peek={hoverPeek}
-                    >
-                      <img src={hoverPreviewSrc} alt="" draggable={false} />
-                    </div>
-                  )}
+                {hoverPeek && hoverPreviewSrc && (
+                  <div
+                    aria-hidden="true"
+                    className="company-profile-page-peek"
+                    data-peek={hoverPeek}
+                  >
+                    <img
+                      src={hoverPreviewSrc}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                    />
+                  </div>
+                )}
                 </div>
-              )}
             </div>
 
             <button

@@ -25,7 +25,7 @@ export default function AboutPage() {
 
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             <Link
-              href="/company-profile"
+              href="/company/company-profile"
               className="group rounded-md border border-border bg-card p-6 shadow-sm transition-colors hover:border-primary"
             >
               <Building2 className="mb-5 h-7 w-7 text-primary" />
@@ -42,7 +42,7 @@ export default function AboutPage() {
             </Link>
 
             <Link
-              href="/organization-chart"
+              href="/company/organization-chart"
               className="group rounded-md border border-border bg-card p-6 shadow-sm transition-colors hover:border-primary"
             >
               <Network className="mb-5 h-7 w-7 text-primary" />

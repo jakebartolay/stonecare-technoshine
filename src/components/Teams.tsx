@@ -69,6 +69,8 @@ export function Team() {
                       : `${base}images/${member.image}`
                   }
                   alt={member.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                 />
 

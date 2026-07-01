@@ -40,6 +40,8 @@ export function Clients() {
                     <img
                       src={`${base}${icon}`}
                       alt={name}
+                      loading="lazy"
+                      decoding="async"
                       className="max-w-full max-h-full object-contain opacity-85 group-hover:opacity-100 transition-opacity duration-300"
                     />
                   </div>

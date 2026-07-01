@@ -77,6 +77,8 @@ function Slider({
       <img
         src={`${base}images/${after}`}
         alt="After"
+        loading="lazy"
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover"
         draggable={false}
       />
@@ -89,6 +91,8 @@ function Slider({
         <img
           src={`${base}images/${before}`}
           alt="Before"
+          loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full object-cover"
           style={{ width: containerRef.current?.offsetWidth ?? "100%" }}
           draggable={false}
@@ -163,6 +167,8 @@ export function BeforeAfter() {
                   <img
                     src={`${import.meta.env.BASE_URL}images/${p.after}`}
                     alt={p.label}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   {i === active && (

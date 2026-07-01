@@ -19,27 +19,27 @@ const slides = [
     location: "Hotel lobby restoration",
   },
   {
-    src: "client-images/gallery-4.png",
+    src: "client-images/gallery-4.jpg",
     title: "Marble Floor",
     location: "Deep clean and polish",
   },
   {
-    src: "client-images/gallery-5.png",
+    src: "client-images/gallery-5.jpg",
     title: "Marble Floor",
     location: "Stone surface sealing",
   },
   {
-    src: "client-images/gallery-6.png",
+    src: "client-images/gallery-6.jpg",
     title: "Marble Floor",
     location: "Stair and floor detail",
   },
   {
-    src: "client-images/gallery-7.png",
+    src: "client-images/gallery-7.jpg",
     title: "Marble Floor",
     location: "Gloss restoration",
   },
   {
-    src: "client-images/gallery-8.png",
+    src: "client-images/gallery-8.jpg",
     title: "Marble Floor",
     location: "Large format finish",
   },

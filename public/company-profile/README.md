@@ -1,13 +1,13 @@
-# Company Profile PDF
+# Company Profile Pages
 
-Place the company profile PDF in this folder.
+The Company Profile page uses pre-rendered JPG pages for fast loading.
 
-Current filename:
+Current folder:
 
-`technoshine-profile.pdf`
+`pages/`
 
-Website path after adding it:
+Website page assets:
 
-`/company-profile/technoshine-profile.pdf`
+`/company-profile/pages/page-01.jpg` through `/company-profile/pages/page-30.jpg`
 
-Note: this PDF has 30 pages.
+Note: these pages were rendered from the original 30-page profile PDF.

@@ -54,6 +54,10 @@ function Router() {
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/cookie-policy" component={CookiePolicy} />
+      <Route path="/company/company-profile" component={CompanyProfile} />
+      <Route path="/company/company-profile/" component={CompanyProfile} />
+      <Route path="/company/organization-chart" component={OrganizationChart} />
+      <Route path="/company/organization-chart/" component={OrganizationChart} />
       <Route path="/company-profile" component={CompanyProfile} />
       <Route path="/company-profile/" component={CompanyProfile} />
       <Route path="/organization-chart" component={OrganizationChart} />

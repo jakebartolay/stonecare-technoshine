@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Facebook, Instagram } from "lucide-react";
+import { FaTiktok } from "react-icons/fa";
 
 const services = [
   {
@@ -36,6 +37,24 @@ const legalLinks = [
   { label: "Privacy Policy", href: "/privacy-policy" },
   { label: "Terms of Service", href: "/terms-of-service" },
   { label: "Cookie Policy", href: "/cookie-policy" },
+];
+
+const socialLinks = [
+  {
+    label: "Technoshine Facebook",
+    href: "https://www.facebook.com/profile.php?id=61568188433022",
+    Icon: Facebook,
+  },
+  {
+    label: "Technoshine Instagram",
+    href: "https://www.instagram.com/technoshine_ph/",
+    Icon: Instagram,
+  },
+  {
+    label: "Technoshine TikTok",
+    href: "https://www.tiktok.com/@technoshine.ph",
+    Icon: FaTiktok,
+  },
 ];
 
 export function Footer() {
@@ -80,6 +99,8 @@ export function Footer() {
                 <img
                   src="/icon.png"
                   alt="Technoshine"
+                  loading="lazy"
+                  decoding="async"
                   className="h-12 w-auto"
                 />
               </Link>
@@ -121,7 +142,7 @@ export function Footer() {
               <ul className="space-y-3">
                 <li>
                   <Link
-                    href="/company-profile"
+                    href="/company/company-profile"
                     className="text-sm font-display text-foreground transition-colors hover:text-primary"
                   >
                     Company Profile
@@ -129,7 +150,7 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/organization-chart"
+                    href="/company/organization-chart"
                     className="text-sm font-display text-foreground transition-colors hover:text-primary"
                   >
                     Our Organization
@@ -167,13 +188,13 @@ export function Footer() {
                 Contact Us
               </Link>
               <Link
-                href="/company-profile"
+                href="/company/company-profile"
                 className="mb-4 inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 Company Profile
               </Link>
               <Link
-                href="/organization-chart"
+                href="/company/organization-chart"
                 className="inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 Organization
@@ -204,24 +225,18 @@ export function Footer() {
                 Social Links
               </p>
               <div className="flex justify-end gap-3">
-                <a
-                  href="https://www.facebook.com/profile.php?id=61568188433022"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Technoshine Facebook"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.instagram.com/technoshine_ph/"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Technoshine Instagram"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
+                {socialLinks.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
               </div>
             </div>
           </div>
@@ -234,6 +249,8 @@ export function Footer() {
               <img
                 src="/icon.png"
                 alt="Technoshine"
+                loading="lazy"
+                decoding="async"
                 className="mx-auto h-44 w-auto"
               />
             </Link>
@@ -259,7 +276,7 @@ export function Footer() {
               ))}
               <li>
                 <Link
-                  href="/company-profile"
+                  href="/company/company-profile"
                   className="text-sm font-mono text-foreground transition-colors hover:text-primary"
                 >
                   Company Profile
@@ -267,7 +284,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/organization-chart"
+                  href="/company/organization-chart"
                   className="text-sm font-mono text-foreground transition-colors hover:text-primary"
                 >
                   Organization
@@ -294,24 +311,18 @@ export function Footer() {
               Our Social Links
             </h4>
             <div className="flex flex-wrap justify-center gap-3">
-              <a
-                href="https://www.facebook.com/profile.php?id=61568188433022"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Technoshine Facebook"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/technoshine_ph/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Technoshine Instagram"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
+              {socialLinks.map(({ label, href, Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
+                >
+                  <Icon className="h-5 w-5" />
+                </a>
+              ))}
             </div>
           </div>
 

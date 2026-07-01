@@ -92,6 +92,8 @@ export function About() {
               <img
                 src={`${import.meta.env.BASE_URL}images/marble-hall.jpg`}
                 alt="Grand marble hall"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-auto object-cover contrast-110"
               />
               <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary" />
