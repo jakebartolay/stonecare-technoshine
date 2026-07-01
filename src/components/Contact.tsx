@@ -118,7 +118,8 @@ export function Contact() {
 
       toast({
         title: "Request Sent",
-        description: `Your inquiry was sent to ${PRIMARY_EMAIL}.`,
+        description: "Please wait. We will contact you as soon as possible.",
+        duration: 10000,
       });
       reset();
     } catch (error) {
