@@ -59,7 +59,21 @@ export function Hero() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
-          className="mt-6 max-w-6xl text-left font-display text-sm font-medium leading-relaxed tracking-normal text-white sm:text-base lg:whitespace-nowrap"
+          className="mt-6 max-w-4xl text-left font-display text-base font-medium leading-relaxed tracking-normal text-white sm:text-xl"
+        >
+          The{" "}
+          <strong className="font-bold text-primary">First and Leading</strong>{" "}
+          stone restoration expert in the Philippines. <br></br>Where innovation meets{" "}
+          <strong className="font-bold text-primary">craftsmanship</strong>. We
+          don't just clean —{" "}
+          <strong className="font-bold text-primary">we restore prestige</strong>.
+        </motion.p>
+
+        <motion.p
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.82 }}
+          className="mt-4 max-w-6xl text-left font-display text-xs font-medium leading-relaxed tracking-normal text-white sm:text-sm lg:whitespace-nowrap"
         >
           {heroServices}
         </motion.p>
