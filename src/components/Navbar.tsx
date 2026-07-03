@@ -101,7 +101,7 @@ export function Navbar() {
         style={{ top: 0 }}
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
           solidNav
-            ? "border-b border-border bg-background/95 py-7 shadow-sm backdrop-blur-md"
+            ? "border-b border-border bg-background/95 py-[0.70rem] shadow-sm backdrop-blur-md"
             : "bg-transparent py-5"
         }`}
       >

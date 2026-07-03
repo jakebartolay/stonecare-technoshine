@@ -209,7 +209,7 @@ export function BeforeAfter() {
             </p>
             {projects.map((p, i) => (
               <button
-                key={p.label}
+                key={`${p.title}-${p.before}`}
                 onClick={() => setActive(i)}
                 className={`home-accent-card group relative flex items-center gap-4 p-4 border transition-all duration-200 text-left ${
                   i === active

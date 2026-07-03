@@ -20,6 +20,8 @@ import ClientsPage from "@/pages/ClientsPage";
 import ContactPage from "@/pages/ContactPage";
 import GalleryPage from "@/pages/GalleryPage";
 import ServicesPage from "@/pages/ServicesPage";
+import StoneCareProductPage from "@/pages/StoneCareProductPage";
+import StoneCareShopPage from "@/pages/StoneCareShopPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +46,10 @@ function Router() {
       <Route path="/clients/" component={ClientsPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact/" component={ContactPage} />
+      <Route path="/stone-care/shops/:slug" component={StoneCareProductPage} />
+      <Route path="/stone-care/shops/:slug/" component={StoneCareProductPage} />
+      <Route path="/stone-care/shops" component={StoneCareShopPage} />
+      <Route path="/stone-care/shops/" component={StoneCareShopPage} />
       <Route path="/employees/list" component={EmployeesList} />
       <Route path="/error/400" component={BadRequest} />
       <Route path="/error/401" component={Unauthorized} />
