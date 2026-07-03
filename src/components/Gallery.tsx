@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -17,31 +17,6 @@ const slides = [
     src: "client-images/gallery-3.jpg",
     title: "Marble Floor",
     location: "Hotel lobby restoration",
-  },
-  {
-    src: "client-images/gallery-4.jpg",
-    title: "Marble Floor",
-    location: "Deep clean and polish",
-  },
-  {
-    src: "client-images/gallery-5.jpg",
-    title: "Marble Floor",
-    location: "Stone surface sealing",
-  },
-  {
-    src: "client-images/gallery-6.jpg",
-    title: "Marble Floor",
-    location: "Stair and floor detail",
-  },
-  {
-    src: "client-images/gallery-7.jpg",
-    title: "Marble Floor",
-    location: "Gloss restoration",
-  },
-  {
-    src: "client-images/gallery-8.jpg",
-    title: "Marble Floor",
-    location: "Large format finish",
   },
   {
     src: "client-images/gallery-9.jpg",
@@ -80,6 +55,8 @@ const slides = [
   },
 ];
 
+const slideDuration = 60000;
+
 export function Gallery() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -91,13 +68,13 @@ export function Gallery() {
     [activeSlide.src, base],
   );
 
-  const goToSlide = (nextIndex: number, nextDirection: number) => {
+  const goToSlide = useCallback((nextIndex: number, nextDirection: number) => {
     setDirection(nextDirection);
     setActiveIndex((nextIndex + slides.length) % slides.length);
-  };
+  }, []);
 
-  const goPrevious = () => goToSlide(activeIndex - 1, -1);
-  const goNext = () => goToSlide(activeIndex + 1, 1);
+  const goPrevious = useCallback(() => goToSlide(activeIndex - 1, -1), [activeIndex, goToSlide]);
+  const goNext = useCallback(() => goToSlide(activeIndex + 1, 1), [activeIndex, goToSlide]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -112,7 +89,16 @@ export function Gallery() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex]);
+  }, [goNext, goPrevious]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDirection(1);
+      setActiveIndex((currentIndex) => (currentIndex + 1) % slides.length);
+    }, slideDuration);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <section
@@ -135,13 +121,13 @@ export function Gallery() {
 
       <div className="gallery-overlay absolute inset-0 bg-gradient-to-b from-black/40 via-black/12 to-black/62" />
 
-      <div className="gallery-content relative z-10 flex min-h-screen w-full flex-col justify-between px-4 py-16 sm:px-6 sm:py-20 lg:px-10">
+      <div className="gallery-content relative z-10 min-h-screen w-full px-4 pb-12 pt-32 sm:px-6 sm:pb-16 sm:pt-36 lg:px-10">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.25 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto mt-6 max-w-4xl text-center text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)] sm:mt-8"
+          className="mx-auto max-w-4xl text-center text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]"
         >
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-primary">
             Technoshine Stone Care
@@ -154,7 +140,7 @@ export function Gallery() {
           </p>
         </motion.div>
 
-        <div className="flex items-center justify-between">
+        <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between sm:inset-x-6 lg:inset-x-10">
           <button
             type="button"
             onClick={goPrevious}
@@ -171,30 +157,6 @@ export function Gallery() {
             aria-label="Next marble floor image"
           >
             <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mx-auto mb-2 flex items-center justify-center gap-4">
-          <button
-            type="button"
-            onClick={goPrevious}
-            className="flex h-8 w-8 items-center justify-center bg-white/90 text-black shadow-sm transition-colors hover:bg-primary hover:text-white"
-            aria-label="Previous marble floor image"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          <p className="w-16 text-center font-mono text-xs text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-            {activeIndex + 1}/{slides.length}
-          </p>
-
-          <button
-            type="button"
-            onClick={goNext}
-            className="flex h-8 w-8 items-center justify-center bg-white/90 text-black shadow-sm transition-colors hover:bg-primary hover:text-white"
-            aria-label="Next marble floor image"
-          >
-            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>

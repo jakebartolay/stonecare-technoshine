@@ -67,16 +67,7 @@ export function Services() {
       <div className="services-carousel-overlay absolute inset-0 bg-gradient-to-r from-black/78 via-black/28 to-black/8" />
       <div className="services-carousel-overlay absolute inset-0 bg-gradient-to-t from-black/62 via-transparent to-black/20" />
 
-      <div className="services-carousel-content relative z-10 mx-auto flex min-h-screen w-full max-w-[1216px] flex-col justify-between px-6 pb-16 pt-32 text-white sm:px-10 sm:pb-20 sm:pt-36 lg:px-0 lg:pt-40">
-        <div id="services-heading" className="max-w-3xl drop-shadow-[0_3px_16px_rgba(0,0,0,0.72)] [text-shadow:0_2px_8px_rgba(0,0,0,0.8),0_8px_22px_rgba(0,0,0,0.55)]">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-primary">
-            What We Do
-          </p>
-          <h3 className="mt-3 font-display text-3xl font-bold uppercase tracking-normal sm:text-5xl">
-            Our Services
-          </h3>
-        </div>
-
+      <div className="services-carousel-content relative z-10 mx-auto flex min-h-screen w-full max-w-[1216px] flex-col justify-end px-6 pb-16 pt-32 text-white sm:px-10 sm:pb-20 sm:pt-36 lg:px-0 lg:pt-40">
         <div className="space-y-5">
           <div className="relative min-h-[12.5rem] max-w-xl sm:min-h-[12rem]">
             {serviceItems.map((service, index) => (

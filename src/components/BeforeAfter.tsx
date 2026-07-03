@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -9,16 +9,35 @@ const projects = [
     before: "before-after/before-1.jpeg",
     after: "before-after/after-1.jpeg",
   },
-  // {
-  //   label: "Countertop Restoration",
-  //   before: "before-2.png",
-  //   after: "after-2.png",
-  // },
+  {
+    title: "La Plaza Okada Manila",
+    label: "Floor Restoration",
+    before: "before-after/before-2.jpg",
+    after: "before-after/after-2.jpg",
+  },
   {
     title: "Edsa Shangrila",
     label: "Floor Restoration",
     before: "before-after/before-3.jpg",
     after: "before-after/after-3.jpg",
+  },
+  {
+    title: "Diamond Hotel",
+    label: "Floor Restoration",
+    before: "before-after/before-4.jpg",
+    after: "before-after/after-4.jpg",
+  },
+  {
+    title: "Residence",
+    label: "Floor Restoration",
+    before: "before-after/before-5.jpg",
+    after: "before-after/after-5.jpg",
+  },
+  {
+    title: "Makati Underpass",
+    label: "Floor Restoration",
+    before: "before-after/before-6.jpg",
+    after: "before-after/after-6.jpg",
   },
 ];
 
@@ -34,6 +53,7 @@ function Slider({
   const [position, setPosition] = useState(50);
   const [dragging, setDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLButtonElement>(null);
 
   const getPosition = useCallback((clientX: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -42,36 +62,55 @@ function Slider({
     setPosition((x / rect.width) * 100);
   }, []);
 
-  const onMouseDown = () => setDragging(true);
-  const onMouseMove = useCallback(
-    (e: MouseEvent) => { if (dragging) getPosition(e.clientX); },
-    [dragging, getPosition]
-  );
-  const onMouseUp = useCallback(() => setDragging(false), []);
-
-  const onTouchMove = useCallback(
-    (e: TouchEvent) => { getPosition(e.touches[0].clientX); },
-    [getPosition]
+  const startDrag = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      setDragging(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      getPosition(event.clientX);
+    },
+    [getPosition],
   );
 
-  useEffect(() => {
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [onMouseMove, onMouseUp]);
+  const moveDrag = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (!dragging) return;
+      getPosition(event.clientX);
+    },
+    [dragging, getPosition],
+  );
+
+  const stopDrag = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      setDragging(false);
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [],
+  );
+
+  const onHandleKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setPosition((current) => Math.max(0, current - 5));
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setPosition((current) => Math.min(100, current + 5));
+    }
+  }, []);
 
   const base = import.meta.env.BASE_URL;
+  const revealClip = `polygon(0 0, ${position}% 0, ${position}% 100%, 0 100%)`;
+  const isShowingTechnoshineWork = position < 50;
 
   return (
     <div
       ref={containerRef}
-      className="home-elevated-surface relative w-full max-w-4xl mx-auto select-none overflow-hidden cursor-col-resize border border-border"
+      className="home-elevated-surface relative w-full max-w-4xl mx-auto select-none overflow-hidden border border-border"
       style={{ aspectRatio: "4 / 3" }}
-      onMouseDown={onMouseDown}
-      onTouchMove={(e) => onTouchMove(e.nativeEvent)}
     >
       {/* AFTER image (full width, clipped on left) */}
       <img
@@ -79,22 +118,21 @@ function Slider({
         alt="After"
         loading="lazy"
         decoding="async"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover"
         draggable={false}
       />
 
       {/* BEFORE image clipped to left side */}
       <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ width: `${position}%` }}
+        className="absolute inset-0"
+        style={{ clipPath: revealClip }}
       >
         <img
           src={`${base}images/${before}`}
           alt="Before"
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 h-full object-cover"
-          style={{ width: containerRef.current?.offsetWidth ?? "100%" }}
+          className="absolute inset-0 h-full w-full object-cover"
           draggable={false}
         />
       </div>
@@ -106,17 +144,33 @@ function Slider({
       />
 
       {/* Handle */}
-      <div
-        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-10 h-10 rounded-full bg-primary shadow-[0_0_20px_rgba(255,107,0,0.6)] flex items-center justify-center border-2 border-white cursor-grab active:cursor-grabbing"
+      <button
+        ref={handleRef}
+        type="button"
+        aria-label="Slide before and after comparison"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(position)}
+        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-primary shadow-[0_0_20px_rgba(255,107,0,0.6)] cursor-ew-resize active:cursor-grabbing"
+        role="slider"
         style={{ left: `${position}%` }}
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={stopDrag}
+        onPointerCancel={stopDrag}
+        onKeyDown={onHandleKeyDown}
       >
         <ChevronLeft className="w-3 h-3 text-white -mr-0.5" />
         <ChevronRight className="w-3 h-3 text-white -ml-0.5" />
-      </div>
+      </button>
 
       {/* Labels */}
-      <div className="absolute bottom-3 left-3 z-10 px-2 py-0.5 bg-black/70 text-white text-[10px] font-mono uppercase tracking-widest">
-        Before
+      <div
+        className={`absolute bottom-3 left-3 z-10 px-2 py-0.5 text-white text-[10px] font-mono uppercase tracking-widest transition-colors ${
+          isShowingTechnoshineWork ? "bg-primary/90" : "bg-black/70"
+        }`}
+      >
+        {isShowingTechnoshineWork ? "Technoshine Works" : "Before"}
       </div>
       <div className="absolute bottom-3 right-3 z-10 px-2 py-0.5 bg-primary/90 text-white text-[10px] font-mono uppercase tracking-widest">
         After
@@ -137,7 +191,7 @@ export function BeforeAfter() {
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[360px_1fr] lg:items-start">
         {/* Header */}
-        <div className="lg:sticky lg:top-28" data-aos="fade-up">
+        <div data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
             The Difference
           </h2>

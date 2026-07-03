@@ -1,4 +1,12 @@
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export type TierType = "board" | "leadership" | "dept" | "staff";
 type AvatarColorType = "orange" | "blue" | "it" | "gray";
@@ -67,6 +75,13 @@ const TIER_COLORS = {
   leadership: GOLD,
   dept: BLUE,
   staff: "#9ca3af",
+};
+
+const TIER_LABELS = {
+  board: "Board / Executive",
+  leadership: "Leadership",
+  dept: "Department head",
+  staff: "Staff",
 };
 
 const BADGE_STYLES = {
@@ -172,6 +187,66 @@ function Badge({ type, label }: BadgeComponentProps) {
   );
 }
 
+function ProfileDialogContent({
+  name,
+  role,
+  tier,
+  avatarColor,
+  badge,
+  photo,
+}: {
+  name: string;
+  role: string;
+  tier: TierType;
+  avatarColor: AvatarColorType;
+  badge?: BadgeProp;
+  photo?: string;
+}) {
+  return (
+    <DialogContent className="max-w-[min(92vw,520px)] overflow-hidden border border-black/10 bg-white p-0 text-neutral-950 shadow-2xl sm:rounded-lg">
+      <div
+        className="h-1 w-full"
+        style={{ background: TIER_COLORS[tier] }}
+      />
+      <div className="p-6 sm:p-8">
+        <DialogHeader className="items-center text-center">
+          <Avatar
+            name={name}
+            avatarColor={avatarColor}
+            photo={photo}
+            size={132}
+          />
+          <DialogTitle className="font-display text-3xl font-bold uppercase leading-tight tracking-normal text-neutral-950">
+            {name}
+          </DialogTitle>
+          <DialogDescription className="font-mono text-xs uppercase tracking-[0.18em] text-neutral-500">
+            {role}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4 text-center">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+              Group
+            </p>
+            <p className="mt-1 font-display text-sm font-bold uppercase tracking-normal text-neutral-950">
+              {TIER_LABELS[tier]}
+            </p>
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4 text-center">
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+              Role
+            </p>
+            <p className="mt-1 font-display text-sm font-bold uppercase tracking-normal text-neutral-950">
+              {badge?.label ?? role}
+            </p>
+          </div>
+        </div>
+      </div>
+    </DialogContent>
+  );
+}
+
 function Card({
   name,
   role,
@@ -210,51 +285,69 @@ function Card({
           : {}),
       }}
     >
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          background: hovered ? "#f9fafb" : "#fff",
-          border: "0.5px solid",
-          borderColor: hovered ? "#9ca3af" : "#e5e7eb",
-          borderRadius: 12,
-          borderTop: `3px solid ${TIER_COLORS[tier]}`,
-          padding: isSmall ? "10px 10px" : "12px 14px",
-          width: "100%",
-          textAlign: "center",
-          transition: "border-color 0.15s, background 0.15s",
-        }}
-      >
-        <Avatar
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            aria-label={`View details for ${name}`}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+              appearance: "none",
+              background: hovered ? "#f9fafb" : "#fff",
+              border: "0.5px solid",
+              borderColor: hovered ? "#9ca3af" : "#e5e7eb",
+              borderRadius: 12,
+              borderTop: `3px solid ${TIER_COLORS[tier]}`,
+              cursor: "zoom-in",
+              display: "block",
+              font: "inherit",
+              padding: isSmall ? "10px 10px" : "12px 14px",
+              width: "100%",
+              textAlign: "center",
+              transition: "border-color 0.15s, background 0.15s, transform 0.15s",
+            }}
+          >
+            <Avatar
+              name={name}
+              avatarColor={avatarColor}
+              photo={photo}
+              size={avatarSize}
+            />
+            <div
+              style={{
+                fontSize: isSmall ? 11 : 12,
+                fontWeight: 500,
+                color: "#111827",
+                lineHeight: 1.35,
+                marginBottom: 3,
+              }}
+            >
+              {name}
+            </div>
+            <div
+              style={{
+                fontSize: isSmall ? 9 : 10,
+                color: "#6b7280",
+                lineHeight: 1.3,
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {role}
+            </div>
+            {badge && <Badge type={badge.type} label={badge.label} />}
+          </button>
+        </DialogTrigger>
+        <ProfileDialogContent
           name={name}
+          role={role}
+          tier={tier}
           avatarColor={avatarColor}
+          badge={badge}
           photo={photo}
-          size={avatarSize}
         />
-        <div
-          style={{
-            fontSize: isSmall ? 11 : 12,
-            fontWeight: 500,
-            color: "#111827",
-            lineHeight: 1.35,
-            marginBottom: 3,
-          }}
-        >
-          {name}
-        </div>
-        <div
-          style={{
-            fontSize: isSmall ? 9 : 10,
-            color: "#6b7280",
-            lineHeight: 1.3,
-            textTransform: "uppercase",
-            letterSpacing: "0.03em",
-          }}
-        >
-          {role}
-        </div>
-        {badge && <Badge type={badge.type} label={badge.label} />}
-      </div>
+      </Dialog>
     </div>
   );
 }

@@ -11,12 +11,21 @@ type LegalPageProps = {
   eyebrow: string;
   title: string;
   intro: string;
+  lastUpdated?: string;
+  showAuthor?: boolean;
   sections: LegalSection[];
 };
 
-const lastUpdated = "May 25, 2026";
+const defaultLastUpdated = "May 25, 2026";
 
-function LegalPage({ eyebrow, title, intro, sections }: LegalPageProps) {
+function LegalPage({
+  eyebrow,
+  title,
+  intro,
+  lastUpdated = defaultLastUpdated,
+  showAuthor = true,
+  sections,
+}: LegalPageProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main>
@@ -38,7 +47,9 @@ function LegalPage({ eyebrow, title, intro, sections }: LegalPageProps) {
               {intro}
             </p>
             <p className="mt-4 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              Author: manager staff | Last updated: {lastUpdated}
+              {showAuthor
+                ? `Author: manager staff | Last updated: ${lastUpdated}`
+                : `Last updated: ${lastUpdated}`}
             </p>
           </div>
         </section>
@@ -72,41 +83,54 @@ export function PrivacyPolicy() {
   return (
     <LegalPage
       eyebrow="Privacy"
-      title="Privacy Policy"
+      title="PRIVACY POLICY"
       intro="This Privacy Policy explains how Technoshine handles information submitted through this website."
+      lastUpdated="July 2026"
+      showAuthor={false}
       sections={[
         {
-          heading: "Information We Collect",
+          heading: "WHO WE ARE",
           body: [
-            "When you contact us through the website, we may collect your name, email address, company or property name, and the message or service details you submit.",
-            "We do not intentionally collect sensitive personal information through this website.",
+            'Technoshine Stonecare and Restoration ("Technoshine", "we", "us") operates this website. Office: Unit 110, Union Square Condominium, 15th Avenue, Cubao, Quezon City, Philippines.',
           ],
         },
         {
-          heading: "How We Use Information",
+          heading: "INFORMATION WE COLLECT",
           body: [
-            "We use submitted information to respond to inquiries, prepare quotations, coordinate assessments, and communicate about requested stone care or restoration services.",
-            "We do not sell personal information submitted through this website.",
+            "When you use our contact or quote request form, we collect the information you provide: your name, email address, company or property name (optional), and the details of your enquiry. We do not collect data through advertising or analytics trackers.",
           ],
         },
         {
-          heading: "Tracking and Analytics",
+          heading: "HOW WE USE YOUR INFORMATION",
           body: [
-            "This website does not currently use analytics trackers, advertising pixels, or tracking cookies.",
-            "If tracking tools are added in the future, this policy should be updated before or when those tools are enabled.",
+            "We use the information you submit only to respond to your enquiry, prepare quotations or site assessments, and communicate with you about requested services. We do not sell, rent, or share your personal information with third parties for marketing purposes.",
           ],
         },
         {
-          heading: "Photos and Website Content",
+          heading: "DATA RETENTION",
           body: [
-            "Photos, project images, logos, text, and other website content are owned by Technoshine or used with permission, unless otherwise stated.",
-            "Images and website materials may not be copied, downloaded, reposted, edited, or used for another business without written permission.",
+            "Enquiry details are kept only as long as needed to handle your request and for reasonable business records, after which they are deleted.",
           ],
         },
         {
-          heading: "Contact",
+          heading: "DATA SECURITY",
           body: [
-            "For privacy-related requests or questions, contact Technoshine through the contact details listed on this website.",
+            "We take reasonable organizational and technical measures to protect the personal information submitted through this website against unauthorized access, disclosure, or loss.",
+          ],
+        },
+        {
+          heading: "YOUR RIGHTS",
+          body: [
+            "Under the Data Privacy Act of 2012 (RA 10173), you have the right to access, correct, or request deletion of your personal information, and to object to its processing. To exercise these rights, contact us using the details below.",
+          ],
+        },
+        {
+          heading: "CONTACT US",
+          body: [
+            "For privacy-related questions or requests:",
+            "Email: contactus@technoshineph.com",
+            "Phone: 0917 824 1220",
+            "Address: Unit 110, Union Square Condominium, 15th Avenue, Cubao, Quezon City, Philippines",
           ],
         },
       ]}

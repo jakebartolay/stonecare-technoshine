@@ -15,7 +15,7 @@ export const serviceItems = [
     title: "Crack & Chip Repair",
     summary:
       "Expert structural repair of cracks, chips, and fractures using color-matched stone epoxies.",
-    image: "images/client-images/gallery-8.jpg",
+    image: "images/client-images/gallery-9.jpg",
     scope: [
       "Crack assessment and stone matching",
       "Color-matched epoxy filling",
@@ -39,7 +39,7 @@ export const serviceItems = [
     title: "Sealing & Protection",
     summary:
       "Premium penetrating sealers that guard against staining, etching, and moisture ingress.",
-    image: "images/client-images/gallery-7.jpg",
+    image: "images/client-images/gallery-12.jpg",
     scope: [
       "Stone porosity inspection",
       "Penetrating sealer application",
@@ -101,7 +101,7 @@ export const galleryHighlights = [
   },
   {
     title: "Gloss Recovery",
-    image: "images/client-images/gallery-7.jpg",
+    image: "images/client-images/gallery-13.jpg",
     label: "Polished and protected",
   },
 ];

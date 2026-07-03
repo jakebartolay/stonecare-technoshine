@@ -78,7 +78,7 @@ export function About() {
   const statsRef = useRef<HTMLDivElement>(null);
   const inView = useInView(statsRef, { once: true, margin: "-80px" });
   return (
-    <section id="about" className="relative flex min-h-screen items-center bg-background py-20">
+    <section id="about" className="relative flex min-h-screen items-center bg-background pb-20 pt-36 sm:pt-40 lg:pt-44">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <motion.div

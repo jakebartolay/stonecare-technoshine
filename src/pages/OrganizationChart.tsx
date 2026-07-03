@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Eye, EyeOff, Home, RotateCcw } from "lucide-react";
+import { Download, Eye, EyeOff, Home, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
 import AOS from "aos";
 import OrgChart, {
@@ -37,6 +37,7 @@ const TIER_CONTROLS: Array<{
   { tier: "staff", label: "Staff", color: "#9ca3af" },
 ];
 const ORGANIZATION_BG = `${import.meta.env.BASE_URL}team/organizationbg.jpg`;
+const ORGANIZATION_PDF = `${import.meta.env.BASE_URL}org-chart.pdf`;
 
 export default function OrganizationChart() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -133,23 +134,24 @@ export default function OrganizationChart() {
       <img
         src={ORGANIZATION_BG}
         alt=""
-        className="absolute inset-0 h-full w-full object-contain object-left-top"
+        className="absolute inset-0 h-full w-full object-cover object-center"
         aria-hidden="true"
       />
       <div className="absolute inset-0 bg-white/50" />
-
-      <Link
-        href="/"
-        className="absolute left-3 top-3 z-30 inline-flex h-9 items-center justify-center gap-2 border border-black/10 bg-white px-3 font-mono text-[9px] uppercase tracking-[0.12em] text-black/70 shadow-sm transition-colors hover:border-primary hover:text-primary sm:left-5 sm:top-4 sm:text-[10px]"
-      >
-        <Home className="h-4 w-4" />
-        Home
-      </Link>
 
       <aside
         aria-label="Organization chart filters"
         className="absolute inset-x-2 bottom-2 z-30 rounded-xl border border-black/10 bg-white/95 p-2 shadow-[0_16px_45px_rgba(0,0,0,0.16)] backdrop-blur sm:inset-x-auto sm:bottom-auto sm:right-5 sm:top-1/2 sm:w-44 sm:-translate-y-1/2 sm:p-3"
       >
+        <Link
+          href="/"
+          aria-label="Back to homepage"
+          className="mb-2 inline-flex h-8 w-full items-center justify-center gap-2 rounded-md border border-black/10 bg-white px-2 font-mono text-[8px] uppercase tracking-[0.1em] text-black/70 transition-colors hover:border-primary hover:text-primary sm:h-9 sm:text-[9px]"
+        >
+          <Home className="h-3.5 w-3.5" />
+          Home
+        </Link>
+
         <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-col sm:gap-2">
           {TIER_CONTROLS.map((item) => {
             const isVisible =
@@ -187,6 +189,16 @@ export default function OrganizationChart() {
           <RotateCcw className="h-3 w-3" />
           Show All
         </button>
+
+        <a
+          href={ORGANIZATION_PDF}
+          download="org-chart.pdf"
+          aria-label="Download organization chart PDF"
+          className="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-2 rounded-md border border-primary bg-primary px-2 font-mono text-[8px] uppercase tracking-[0.1em] text-white transition-colors hover:bg-white hover:text-primary sm:mt-2 sm:h-8 sm:text-[9px]"
+        >
+          <Download className="h-3 w-3" />
+          Download Chart
+        </a>
       </aside>
 
       <section
@@ -195,7 +207,7 @@ export default function OrganizationChart() {
       >
         <div
           ref={viewportRef}
-          className="absolute inset-x-0 bottom-[136px] top-0 sm:bottom-0 sm:right-[184px]"
+          className="absolute inset-x-0 bottom-[220px] top-0 sm:bottom-0 sm:right-[184px]"
         >
           <div className="absolute inset-0 flex items-center justify-center">
             <div
