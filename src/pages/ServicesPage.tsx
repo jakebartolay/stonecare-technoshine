@@ -33,9 +33,10 @@ export default function ServicesPage() {
 
           <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {serviceItems.map((service) => (
-              <article
+              <Link
                 key={service.title}
-                className="overflow-hidden rounded-md border border-border bg-card shadow-sm"
+                href={`/services/${service.slug}`}
+                className="group overflow-hidden rounded-md border border-border bg-card shadow-sm transition hover:border-primary"
               >
                 <div className="aspect-[16/10] overflow-hidden bg-neutral-100">
                   <img
@@ -43,7 +44,7 @@ export default function ServicesPage() {
                     alt={service.title}
                     loading="lazy"
                     decoding="async"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                   />
                 </div>
                 <div className="p-6">
@@ -62,8 +63,12 @@ export default function ServicesPage() {
                       </li>
                     ))}
                   </ul>
+                  <span className="mt-6 inline-flex min-h-10 items-center justify-center gap-2 border border-primary px-4 py-2 font-display text-xs font-bold uppercase tracking-wider text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+                    View Showcase
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
 

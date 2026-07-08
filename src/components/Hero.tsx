@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
 
 const heroServices =
-  "Marble Restoration | Granite Care | Terrazzo Polishing | Sealing & Protection | Floor Maintenance";
+  "Tiles Cleaning | Marble Restoration | Granite Care | Terrazzo Polishing | Floor Maintenance";
 
 export function Hero() {
   const scrollToServices = () => {

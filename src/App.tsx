@@ -19,7 +19,10 @@ import AboutPage from "@/pages/AboutPage";
 import ClientsPage from "@/pages/ClientsPage";
 import ContactPage from "@/pages/ContactPage";
 import GalleryPage from "@/pages/GalleryPage";
+import ServiceShowcasePage from "@/pages/ServiceShowcasePage";
 import ServicesPage from "@/pages/ServicesPage";
+import HelpPage from "@/pages/HelpPage";
+import ProductInfoPage from "@/pages/ProductInfoPage";
 import StoneCareProductPage from "@/pages/StoneCareProductPage";
 import StoneCareShopPage from "@/pages/StoneCareShopPage";
 
@@ -36,6 +39,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/services/:slug" component={ServiceShowcasePage} />
+      <Route path="/services/:slug/" component={ServiceShowcasePage} />
       <Route path="/services" component={ServicesPage} />
       <Route path="/services/" component={ServicesPage} />
       <Route path="/about" component={AboutPage} />
@@ -46,6 +51,10 @@ function Router() {
       <Route path="/clients/" component={ClientsPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact/" component={ContactPage} />
+      <Route path="/help" component={HelpPage} />
+      <Route path="/help/" component={HelpPage} />
+      <Route path="/help/product-info/:productId" component={ProductInfoPage} />
+      <Route path="/help/product-info/:productId/" component={ProductInfoPage} />
       <Route path="/stone-care/shops/:slug" component={StoneCareProductPage} />
       <Route path="/stone-care/shops/:slug/" component={StoneCareProductPage} />
       <Route path="/stone-care/shops" component={StoneCareShopPage} />

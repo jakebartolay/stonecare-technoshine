@@ -4,25 +4,37 @@ import { FaTiktok } from "react-icons/fa";
 
 const services = [
   {
+    title: "Tiles Cleaning",
+    text: "Professional cleaning and stain treatment for ceramic, porcelain, and other tile surfaces.",
+    href: "/services/tiles",
+  },
+  {
     title: "Marble Restoration",
     text: "Deep cleaning, honing, polishing, and sealing for marble surfaces.",
+    href: "/services/marble-polishing",
   },
   {
     title: "Granite Care",
     text: "Professional maintenance for granite floors, counters, and walls.",
+    href: "/services/granite-care",
   },
   {
     title: "Terrazzo Polishing",
     text: "Restoration and shine recovery for terrazzo surfaces.",
+    href: "/services/terrazzo-polishing",
   },
   {
     title: "Floor Maintenance",
     text: "Routine stone care programs for commercial and residential spaces.",
+    href: "/services",
   },
-  {
-    title: "Stone Protection",
-    text: "Sealing and treatment solutions built for long-term durability.",
-  },
+];
+
+const serviceChips = [
+  { label: "Tiles", href: "/services/tiles" },
+  { label: "Marble", href: "/services/marble-polishing" },
+  { label: "Granite", href: "/services/granite-care" },
+  { label: "Terrazzo", href: "/services/terrazzo-polishing" },
 ];
 
 const quickLinks = [
@@ -82,13 +94,18 @@ export function Footer() {
             </div>
             <div className="lg:text-right">
               <p className="ml-auto max-w-xl text-base leading-relaxed text-foreground/75">
-                Marble, granite, terrazzo, and natural stone restoration for hotels, commercial properties, and homes.
+                Tile, marble, granite, and terrazzo cleaning and restoration for hotels, commercial properties, and homes.
               </p>
               <div className="mt-6 flex flex-wrap gap-3 lg:justify-end">
-                <span className="border border-foreground/15 px-4 py-2 font-display text-xs uppercase tracking-wider text-foreground">Marble</span>
-                <span className="border border-foreground/15 px-4 py-2 font-display text-xs uppercase tracking-wider text-foreground">Granite</span>
-                <span className="border border-foreground/15 px-4 py-2 font-display text-xs uppercase tracking-wider text-foreground">Terrazzo</span>
-                <span className="border border-foreground/15 px-4 py-2 font-display text-xs uppercase tracking-wider text-foreground">Sealing</span>
+                {serviceChips.map((chip) => (
+                  <Link
+                    key={chip.label}
+                    href={chip.href}
+                    className="border border-foreground/15 px-4 py-2 font-display text-xs uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {chip.label}
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
@@ -117,7 +134,7 @@ export function Footer() {
                 {services.map((service) => (
                   <li key={service.title}>
                     <Link
-                      href="/services"
+                      href={service.href}
                       className="text-sm font-display text-foreground transition-colors hover:text-primary"
                     >
                       {service.title}
@@ -182,12 +199,6 @@ export function Footer() {
                 Quick Links
               </p>
               <Link
-                href="/contact"
-                className="mb-4 inline-flex w-full items-center justify-center border border-foreground px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
-              >
-                Contact Us
-              </Link>
-              <Link
                 href="/company/company-profile"
                 className="mb-4 inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
               >
@@ -195,9 +206,15 @@ export function Footer() {
               </Link>
               <Link
                 href="/company/organization-chart"
-                className="inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+                className="mb-4 inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
               >
                 Organization
+              </Link>
+              <Link
+                href="/help"
+                className="inline-flex w-full items-center justify-center border border-foreground/20 px-6 py-2.5 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                Help Center
               </Link>
             </div>
           </div>
