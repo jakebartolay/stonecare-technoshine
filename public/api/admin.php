@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, private, max-age=0');
+header('Pragma: no-cache');
+header('Vary: Cookie');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -30,7 +33,7 @@ function db(): PDO
     $user = getenv('TECHNOSHINE_DB_USER') ?: 'root';
     $pass = getenv('TECHNOSHINE_DB_PASS') ?: '';
 
-    return new PDO(
+    $pdo = new PDO(
         "mysql:host={$host};dbname={$name};charset=utf8mb4",
         $user,
         $pass,
@@ -39,6 +42,18 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]
     );
+
+    // Keep TIMESTAMP reads and SQL date comparisons on the same clock on every host.
+    // A numeric offset works even when MySQL time-zone tables are not installed.
+    $pdo->exec("SET time_zone = '+00:00'");
+
+    return $pdo;
+}
+
+function utcDateTime(string $value): string
+{
+    return (new DateTimeImmutable($value, new DateTimeZone('UTC')))
+        ->format(DateTimeInterface::ATOM);
 }
 
 function sessionCookieOptions(int $expires): array
@@ -80,7 +95,7 @@ function currentUser(PDO $pdo): ?array
          FROM sessions
          INNER JOIN users ON users.id = sessions.user_id
          WHERE sessions.token_hash = :token_hash
-           AND sessions.expires_at > NOW()
+           AND sessions.expires_at > UTC_TIMESTAMP()
          LIMIT 1'
     );
     $statement->execute(['token_hash' => hash('sha256', $token)]);
@@ -353,20 +368,28 @@ try {
         }
 
         $token = bin2hex(random_bytes(32));
-        $expiresAt = $remember
-            ? (new DateTimeImmutable('+30 days'))->format('Y-m-d H:i:s')
-            : (new DateTimeImmutable('+8 hours'))->format('Y-m-d H:i:s');
+        $expiryExpression = $remember
+            ? 'DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 DAY)'
+            : 'DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR)';
 
         $insert = $pdo->prepare(
             'INSERT INTO sessions (user_id, token_hash, remember_me, expires_at)
-             VALUES (:user_id, :token_hash, :remember_me, :expires_at)'
+             VALUES (:user_id, :token_hash, :remember_me, ' . $expiryExpression . ')'
         );
         $insert->execute([
             'user_id' => $user['id'],
             'token_hash' => hash('sha256', $token),
             'remember_me' => $remember ? 1 : 0,
-            'expires_at' => $expiresAt,
         ]);
+
+        $sessionStatement = $pdo->prepare(
+            'SELECT created_at, expires_at FROM sessions WHERE id = :id LIMIT 1'
+        );
+        $sessionStatement->execute(['id' => $pdo->lastInsertId()]);
+        $session = $sessionStatement->fetch();
+        if (!$session) {
+            respond(500, ['ok' => false, 'message' => 'Session could not be created.']);
+        }
 
         setSessionCookie($token, $remember);
         respond(200, [
@@ -375,8 +398,8 @@ try {
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'remember' => $remember,
-                'createdAt' => date('c'),
-                'expiresAt' => (new DateTimeImmutable($expiresAt))->format(DateTimeInterface::ATOM),
+                'createdAt' => utcDateTime((string)$session['created_at']),
+                'expiresAt' => utcDateTime((string)$session['expires_at']),
             ],
         ]);
     }
@@ -400,8 +423,8 @@ try {
                 'email' => $user['email'],
                 'role' => $user['role'],
                 'remember' => (bool)$user['remember_me'],
-                'createdAt' => (new DateTimeImmutable((string)$user['created_at']))->format(DateTimeInterface::ATOM),
-                'expiresAt' => (new DateTimeImmutable((string)$user['expires_at']))->format(DateTimeInterface::ATOM),
+                'createdAt' => utcDateTime((string)$user['created_at']),
+                'expiresAt' => utcDateTime((string)$user['expires_at']),
             ] : null,
         ]);
     }

@@ -13,6 +13,7 @@ const socialReelStorageKey = "technoshine-admin-social-reels";
 const sessionStorageKey = "technoshine-admin-session";
 let hasVerifiedAdminSession = false;
 let adminSessionVerification: Promise<AdminSession | null> | null = null;
+let adminSessionRevision = 0;
 const adminApiPath = `${import.meta.env.BASE_URL}api/admin.php`;
 
 export const adminProductCategories = [
@@ -215,6 +216,7 @@ async function apiRequest<T>(
 
   try {
     response = await fetch(adminApiUrl(action, params), {
+      cache: "no-store",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -286,13 +288,19 @@ function cacheSession(session: AdminSession | null, remember = true) {
 async function verifyAdminSession() {
   if (adminSessionVerification) return adminSessionVerification;
 
+  const verificationRevision = adminSessionRevision;
+
   adminSessionVerification = (async () => {
     try {
       const payload = await apiRequest<{ ok: boolean; session: AdminSession | null }>("me");
+      if (verificationRevision !== adminSessionRevision) return getAdminSession();
+
       hasVerifiedAdminSession = true;
       cacheSession(payload.session, payload.session?.remember ?? false);
       return payload.session;
     } catch (error) {
+      if (verificationRevision !== adminSessionRevision) return getAdminSession();
+
       hasVerifiedAdminSession = true;
 
       const cachedSession = getAdminSession();
@@ -498,6 +506,7 @@ export async function loginAdmin(email: string, password: string, remember: bool
     body: JSON.stringify({ email, password, remember }),
   });
   const session = payload.session;
+  adminSessionRevision += 1;
   hasVerifiedAdminSession = true;
   cacheSession(session, session.remember ?? remember);
   return session;
@@ -507,6 +516,7 @@ export async function logoutAdmin() {
   try {
     await apiRequest("logout", { method: "POST", body: "{}" });
   } finally {
+    adminSessionRevision += 1;
     hasVerifiedAdminSession = false;
     cacheSession(null);
   }
