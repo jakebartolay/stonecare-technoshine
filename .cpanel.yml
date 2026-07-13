@@ -14,4 +14,4 @@ deployment:
     - /bin/mkdir -p /home/technosh/dev.technoshineph.com/images
     - /bin/cp -r /home/technosh/dev.technoshineph.com.__uploads_backup/images/services /home/technosh/dev.technoshineph.com/images/services || true
     - /bin/rm -rf /home/technosh/dev.technoshineph.com.__uploads_backup
-    - /bin/cp .htaccess /home/technosh/dev.technoshineph.com/ || true
+    - /bin/cp dist/.htaccess /home/technosh/dev.technoshineph.com/.htaccess

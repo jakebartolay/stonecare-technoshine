@@ -11,9 +11,11 @@ const contentStorageKey = "technoshine-admin-content";
 const serviceStorageKey = "technoshine-admin-services";
 const socialReelStorageKey = "technoshine-admin-social-reels";
 const sessionStorageKey = "technoshine-admin-session";
+const loginPreferenceStorageKey = "technoshine-admin-login-preferences-v1";
 let hasVerifiedAdminSession = false;
 let adminSessionVerification: Promise<AdminSession | null> | null = null;
 let adminSessionRevision = 0;
+let adminApiRequestSequence = 0;
 const adminApiPath = `${import.meta.env.BASE_URL}api/admin.php`;
 
 export const adminProductCategories = [
@@ -126,7 +128,13 @@ export interface ProductFormData {
 }
 
 function canUseStorage() {
-  return typeof window !== "undefined" && Boolean(window.localStorage);
+  if (typeof window === "undefined") return false;
+
+  try {
+    return Boolean(window.localStorage);
+  } catch {
+    return false;
+  }
 }
 
 function now() {
@@ -164,8 +172,55 @@ function readStorageJson<T>(storage: Storage, key: string, fallback: T): T {
   }
 }
 
-function adminApiUrl(action: string, params?: Record<string, string>) {
+export interface AdminLoginPreferences {
+  email: string;
+  remember: boolean;
+}
+
+export function getAdminLoginPreferences(): AdminLoginPreferences {
+  if (!canUseStorage()) return { email: "", remember: false };
+
+  const stored = readStorageJson<Partial<AdminLoginPreferences>>(
+    window.localStorage,
+    loginPreferenceStorageKey,
+    {},
+  );
+  const remember = stored.remember === true;
+
+  return {
+    email: remember && typeof stored.email === "string" ? stored.email : "",
+    remember,
+  };
+}
+
+export function saveAdminLoginPreferences(email: string, remember: boolean) {
+  if (!canUseStorage()) return;
+
+  try {
+    if (!remember) {
+      window.localStorage.removeItem(loginPreferenceStorageKey);
+      return;
+    }
+
+    window.localStorage.setItem(
+      loginPreferenceStorageKey,
+      JSON.stringify({ email: email.trim().toLowerCase(), remember: true }),
+    );
+  } catch {
+    // Login should still succeed when the browser blocks persistent storage.
+  }
+}
+
+function adminApiUrl(
+  action: string,
+  params?: Record<string, string>,
+  bypassServerCache = false,
+) {
   const searchParams = new URLSearchParams({ action, ...(params ?? {}) });
+  if (bypassServerCache) {
+    adminApiRequestSequence += 1;
+    searchParams.set("_cb", `${Date.now()}-${adminApiRequestSequence}`);
+  }
   return `${adminApiPath}?${searchParams.toString()}`;
 }
 
@@ -213,9 +268,10 @@ async function apiRequest<T>(
   params?: Record<string, string>,
 ): Promise<T> {
   let response: Response;
+  const method = (init?.method ?? "GET").toUpperCase();
 
   try {
-    response = await fetch(adminApiUrl(action, params), {
+    response = await fetch(adminApiUrl(action, params, method === "GET"), {
       cache: "no-store",
       credentials: "include",
       headers: {

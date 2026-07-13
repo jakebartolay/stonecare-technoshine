@@ -5,7 +5,12 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { loginAdmin, useAdminSession } from "@/lib/admin-store";
+import {
+  getAdminLoginPreferences,
+  loginAdmin,
+  saveAdminLoginPreferences,
+  useAdminSession,
+} from "@/lib/admin-store";
 import { transactionToast } from "@/lib/transaction-toast";
 
 type FormStatus = "idle" | "submitting";
@@ -13,9 +18,10 @@ type FormStatus = "idle" | "submitting";
 export default function AdminLogin() {
   const [, navigate] = useLocation();
   const session = useAdminSession();
-  const [email, setEmail] = useState("");
+  const [initialPreferences] = useState(getAdminLoginPreferences);
+  const [email, setEmail] = useState(initialPreferences.email);
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(initialPreferences.remember);
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<FormStatus>("idle");
 
@@ -25,17 +31,26 @@ export default function AdminLogin() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const submittedEmail = String(formData.get("username") ?? email).trim();
+    const submittedPassword = String(formData.get("password") ?? password);
+    const submittedRemember = formData.get("remember") === "on";
 
-    if (!email.trim() || !password) {
+    if (!submittedEmail || !submittedPassword) {
       transactionToast.warning("Missing login details", "Enter your admin email and password.");
       return;
     }
 
+    setEmail(submittedEmail);
+    setPassword(submittedPassword);
+    setRemember(submittedRemember);
+    setShowPassword(false);
     setStatus("submitting");
 
     window.setTimeout(() => {
-      void loginAdmin(email, password, remember)
+      void loginAdmin(submittedEmail, submittedPassword, submittedRemember)
         .then(() => {
+          saveAdminLoginPreferences(submittedEmail, submittedRemember);
           transactionToast.success("Login successful", "Redirecting to the admin dashboard.");
           navigate("/company/admin/dashboard");
         })
@@ -85,6 +100,7 @@ export default function AdminLogin() {
           <div className="flex items-center pb-8 lg:pb-0">
             <form
               onSubmit={handleSubmit}
+              autoComplete="on"
               className="w-full rounded-lg border border-white/14 bg-white p-5 text-neutral-950 shadow-2xl sm:p-6"
             >
               <div className="mb-6 flex items-start gap-4">
@@ -106,9 +122,13 @@ export default function AdminLogin() {
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
                     <Input
                       id="admin-email"
+                      name="username"
                       type="email"
                       value={email}
-                      autoComplete="email"
+                      autoComplete="username"
+                      autoCapitalize="none"
+                      inputMode="email"
+                      spellCheck={false}
                       placeholder="admin@technoshineph.com"
                       className="h-11 rounded-md border-neutral-300 bg-white pl-10 text-neutral-950"
                       onChange={(event) => {
@@ -125,6 +145,7 @@ export default function AdminLogin() {
                     <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
                     <Input
                       id="admin-password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       value={password}
                       autoComplete="current-password"
@@ -154,6 +175,7 @@ export default function AdminLogin() {
                 >
                   <input
                     id="remember-admin"
+                    name="remember"
                     type="checkbox"
                     checked={remember}
                     className="h-4 w-4 rounded border-neutral-300 accent-primary"
