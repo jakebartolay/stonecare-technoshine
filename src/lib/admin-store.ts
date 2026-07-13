@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { shopProducts, type ProductBadge, type ShopProduct } from "@/lib/shop-products";
 import { serviceItems } from "@/lib/site-content";
@@ -45,6 +46,15 @@ export interface AdminSession {
   expiresAt?: string;
 }
 
+export interface AdminCounts {
+  employees: number;
+  products: number;
+  publishedProducts: number;
+  contentSections: number;
+  services: number;
+  reels: number;
+}
+
 export interface AdminProduct extends ShopProduct {
   id: string;
   category: AdminProductCategory;
@@ -64,6 +74,7 @@ export interface EmployeeRecord {
   employeeId: string;
   reportsTo: string;
   photoUrl: string;
+  isPublished: boolean;
   deletedAt?: string;
 }
 
@@ -280,7 +291,9 @@ async function apiRequest<T>(
       },
       ...init,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+
     throw new AdminApiError(
       "Cannot reach the admin API. Start the PHP API server or check the deployed API path.",
     );
@@ -682,6 +695,7 @@ function normalizeEmployee(employee: EmployeeRecord): EmployeeRecord {
     orgGroup,
     reportsTo: employee.reportsTo ?? "",
     photoUrl: employee.photoUrl ?? "",
+    isPublished: employee.isPublished ?? !employee.deletedAt,
   };
 }
 
@@ -695,6 +709,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-MD-001",
     reportsTo: "",
     photoUrl: "team/MANAGING%20DIRECTOR.png",
+    isPublished: true,
   },
   {
     id: "ORG-COO-001",
@@ -705,6 +720,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-COO-001",
     reportsTo: "",
     photoUrl: "team/COO.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-PRES-001",
@@ -715,6 +731,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-PRES-001",
     reportsTo: "ORG-MD-001",
     photoUrl: "team/President.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-VP-001",
@@ -725,6 +742,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-VP-001",
     reportsTo: "ORG-PRES-001",
     photoUrl: "team/Vice%20President.jpg",
+    isPublished: true,
   },
   {
     id: "MLR-001",
@@ -735,6 +753,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "MLR-001",
     reportsTo: "ORG-VP-001",
     photoUrl: "team/Executive%20Manager.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-TECH-001",
@@ -745,36 +764,40 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-TECH-001",
     reportsTo: "MLR-001",
     photoUrl: "team/Technical%20Manager.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-OPSMGR-001",
     name: "Henry Cadorna",
-    position: "Operations Mgr",
+    position: "Operations Manager 1",
     department: "Technical",
     orgGroup: "staff",
     employeeId: "ORG-OPSMGR-001",
     reportsTo: "ORG-TECH-001",
     photoUrl: "team/Operations%20Mgr.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-OPSMGR-002",
     name: "Renato Aducal",
-    position: "Operations Mgr",
+    position: "Operations Manager 2",
     department: "Technical",
     orgGroup: "staff",
     employeeId: "ORG-OPSMGR-002",
     reportsTo: "ORG-TECH-001",
     photoUrl: "team/Operations%20Mgr%202.jpg",
+    isPublished: true,
   },
   {
     id: "26-001",
     name: "Nonito Regino Guiao Jr",
-    position: "Rider Liaison",
+    position: "Rider / Liaison",
     department: "Admin",
     orgGroup: "staff",
     employeeId: "26-001",
-    reportsTo: "24-015",
+    reportsTo: "MLR-001",
     photoUrl: "employees/photos/26-001.jpg",
+    isPublished: true,
   },
   {
     id: "26-003",
@@ -785,6 +808,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "26-003",
     reportsTo: "ORG-TECH-001",
     photoUrl: "employees/photos/26-003.png",
+    isPublished: true,
     deletedAt: now(),
   },
   {
@@ -796,16 +820,18 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "24-015",
     reportsTo: "MLR-001",
     photoUrl: "employees/photos/24-015.png",
+    isPublished: true,
   },
   {
     id: "ORG-OFFICEAID-001",
     name: "Winks Morales Balala",
-    position: "Office Aid",
+    position: "Office Aide",
     department: "Admin",
     orgGroup: "staff",
     employeeId: "ORG-OFFICEAID-001",
-    reportsTo: "24-015",
+    reportsTo: "MLR-001",
     photoUrl: "team/Office%20Aid.jpg",
+    isPublished: true,
   },
   {
     id: "23-003",
@@ -816,6 +842,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "23-003",
     reportsTo: "MLR-001",
     photoUrl: "employees/photos/23-003.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-IT-001",
@@ -826,6 +853,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-IT-001",
     reportsTo: "MLR-001",
     photoUrl: "team/IT%20Supervisor.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-GRAPHIC-001",
@@ -836,6 +864,7 @@ const seedEmployees: EmployeeRecord[] = [
     employeeId: "ORG-GRAPHIC-001",
     reportsTo: "ORG-IT-001",
     photoUrl: "team/Graphic%20Designer.jpg",
+    isPublished: true,
   },
   {
     id: "ORG-ITASSIST-001",
@@ -844,8 +873,9 @@ const seedEmployees: EmployeeRecord[] = [
     department: "IT / Creative",
     orgGroup: "staff",
     employeeId: "ORG-ITASSIST-001",
-    reportsTo: "ORG-GRAPHIC-001",
+    reportsTo: "ORG-IT-001",
     photoUrl: "team/IT%20Assistant.jpg",
+    isPublished: true,
   },
 ];
 
@@ -877,29 +907,35 @@ async function loadEmployees(publicOnly = false) {
   return employees;
 }
 
-export async function deleteEmployee(employeeId: string) {
+export async function deleteEmployee(employeeRecord: Pick<EmployeeRecord, "id" | "employeeId">) {
   await apiRequest("employees.delete", {
     method: "POST",
-    body: JSON.stringify({ id: employeeId }),
+    body: JSON.stringify({ id: employeeRecord.id, employeeId: employeeRecord.employeeId }),
   });
   const deletedAt = now();
   writeJson(
     employeeStorageKey,
     getEmployees().map((employee) =>
-      employee.id === employeeId ? { ...employee, deletedAt } : employee,
+      employee.id === employeeRecord.id || employee.employeeId === employeeRecord.employeeId
+        ? { ...employee, isPublished: false, deletedAt }
+        : employee,
     ),
   );
 }
 
 export function useEmployees(publicOnly = false) {
   const [employees, setEmployees] = useState(() =>
-    publicOnly ? getEmployees().filter((employee) => !employee.deletedAt) : getEmployees(),
+    publicOnly
+      ? getEmployees().filter((employee) => employee.isPublished && !employee.deletedAt)
+      : getEmployees(),
   );
 
   useEffect(() => {
     const refresh = () =>
       setEmployees(
-        publicOnly ? getEmployees().filter((employee) => !employee.deletedAt) : getEmployees(),
+        publicOnly
+          ? getEmployees().filter((employee) => employee.isPublished && !employee.deletedAt)
+          : getEmployees(),
       );
     const refreshFromApi = async () => {
       try {
@@ -1227,22 +1263,89 @@ export function useSocialReels(publishedOnly = false) {
   return useSocialReelsState(publishedOnly).reels;
 }
 
-export function useAdminCounts() {
-  const products = useAdminProducts(false);
-  const employees = useEmployees();
-  const contentSections = useContentSections();
-  const services = useServicePages();
-  const reels = useSocialReels(false);
+const adminCountsQueryKey = ["admin", "counts"] as const;
+const emptyAdminCounts: AdminCounts = {
+  employees: 0,
+  products: 0,
+  publishedProducts: 0,
+  contentSections: 0,
+  services: 0,
+  reels: 0,
+};
+const adminCountStorageKeys = new Set([
+  productStorageKey,
+  employeeStorageKey,
+  contentStorageKey,
+  serviceStorageKey,
+  socialReelStorageKey,
+]);
 
-  return useMemo(
-    () => ({
-      products: products.length,
-      publishedProducts: products.filter((product) => product.isPublished).length,
-      employees: employees.filter((employee) => !employee.deletedAt).length,
-      contentSections: contentSections.length,
-      services: services.length,
-      reels: reels.length,
-    }),
-    [contentSections.length, employees, products, reels.length, services.length],
-  );
+function normalizeAdminCount(value: unknown, field: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new AdminApiError(`Admin count "${field}" is invalid.`);
+  }
+
+  return Math.trunc(value);
+}
+
+async function loadAdminCounts(signal?: AbortSignal): Promise<AdminCounts> {
+  const payload = await apiRequest<{
+    ok: boolean;
+    counts?: Partial<Record<keyof AdminCounts, unknown>>;
+  }>("counts", { signal });
+  if (!payload.counts) throw new AdminApiError("Admin counts are missing from the API response.");
+
+  return {
+    employees: normalizeAdminCount(payload.counts.employees, "employees"),
+    products: normalizeAdminCount(payload.counts.products, "products"),
+    publishedProducts: normalizeAdminCount(
+      payload.counts.publishedProducts,
+      "publishedProducts",
+    ),
+    contentSections: normalizeAdminCount(payload.counts.contentSections, "contentSections"),
+    services: normalizeAdminCount(payload.counts.services, "services"),
+    reels: normalizeAdminCount(payload.counts.reels, "reels"),
+  };
+}
+
+export function useAdminCountsState() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: adminCountsQueryKey,
+    queryFn: ({ signal }) => loadAdminCounts(signal),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 10_000,
+  });
+
+  useEffect(() => {
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: adminCountsQueryKey });
+    };
+    const refreshFromStorage = (event: StorageEvent) => {
+      if (event.key && adminCountStorageKeys.has(event.key)) refresh();
+    };
+
+    window.addEventListener(adminStoreEvent, refresh);
+    window.addEventListener("storage", refreshFromStorage);
+    return () => {
+      window.removeEventListener(adminStoreEvent, refresh);
+      window.removeEventListener("storage", refreshFromStorage);
+    };
+  }, [queryClient]);
+
+  return {
+    counts: query.data ?? emptyAdminCounts,
+    error: query.error,
+    hasData: query.data !== undefined,
+    isFetching: query.isFetching,
+    isLoading: query.isPending,
+    lastUpdatedAt: query.dataUpdatedAt || null,
+  };
+}
+
+export function useAdminCounts() {
+  return useAdminCountsState().counts;
 }

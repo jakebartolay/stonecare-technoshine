@@ -1,4 +1,8 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { Component, FormEvent, lazy, ReactNode, Suspense, useEffect, useMemo, useState } from "react";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import CardMedia from "@mui/material/CardMedia";
 import {
   Boxes,
   ChevronLeft,
@@ -11,6 +15,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   Save,
@@ -41,6 +47,7 @@ import {
 } from "@/components/ui/sheet";
 
 import { ProductCard } from "@/components/shop/ProductCard";
+import { ProductVisual } from "@/components/shop/ProductVisual";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +67,7 @@ import {
   saveAdminProducts,
   uploadServiceImage,
   upsertProduct,
-  useAdminCounts,
+  useAdminCountsState,
   useAdminProducts,
   useAdminSession,
   useContentSections,
@@ -88,8 +95,59 @@ type AdminPageProps = {
 };
 
 type ProductView = "table" | "cards";
-const employeePageSize = 8;
-const reelPageSize = 8;
+const adminTablePageSize = 8;
+const adminSidebarPreferenceKey = "technoshine:admin-sidebar:v1";
+const adminVersion = "0.25";
+const adminActionButtonStyles = {
+  edit:
+    "!border-sky-300 bg-sky-50 text-sky-700 shadow-sm hover:!border-sky-400 hover:bg-sky-100 hover:text-sky-800 focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2 disabled:shadow-none",
+  draft:
+    "!border-slate-300 bg-slate-100 text-slate-700 shadow-sm hover:!border-slate-400 hover:bg-slate-200 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 disabled:shadow-none",
+  publish:
+    "!border-emerald-700 bg-emerald-700 text-white shadow-sm hover:!border-emerald-800 hover:bg-emerald-800 hover:text-white focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:shadow-none",
+  delete:
+    "!border-red-700 bg-red-700 text-white shadow-sm hover:!border-red-800 hover:bg-red-800 hover:text-white focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 disabled:shadow-none",
+} as const;
+
+function getTablePagination(totalItems: number, requestedPage: number) {
+  const pageCount = Math.max(1, Math.ceil(totalItems / adminTablePageSize));
+  const currentPage = Math.min(Math.max(1, requestedPage), pageCount);
+  const startIndex = (currentPage - 1) * adminTablePageSize;
+  const endIndex = Math.min(startIndex + adminTablePageSize, totalItems);
+
+  return {
+    currentPage,
+    endIndex,
+    firstItem: totalItems === 0 ? 0 : startIndex + 1,
+    lastItem: endIndex,
+    pageCount,
+    startIndex,
+  };
+}
+
+function loadAdminSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    return window.localStorage.getItem(adminSidebarPreferenceKey) === "collapsed";
+  } catch {
+    return false;
+  }
+}
+
+function saveAdminSidebarCollapsed(isCollapsed: boolean) {
+  try {
+    window.localStorage.setItem(
+      adminSidebarPreferenceKey,
+      isCollapsed ? "collapsed" : "expanded",
+    );
+  } catch {
+    // The sidebar remains usable when storage is unavailable or blocked.
+  }
+}
+
+const loadAdminDashboardChart = () => import("@/components/admin/AdminDashboardChart");
+const AdminDashboardChart = lazy(loadAdminDashboardChart);
 
 const navItems = [
   { label: "Dashboard", href: "/company/admin/dashboard", icon: LayoutDashboard },
@@ -109,16 +167,20 @@ function isAdminNavItemActive(location: string, itemHref: string) {
 }
 
 function AdminNavLinks({
+  collapsed = false,
+  id,
   location,
   className,
   onNavigate,
 }: {
+  collapsed?: boolean;
+  id?: string;
   location: string;
   className?: string;
   onNavigate?: () => void;
 }) {
   return (
-    <nav aria-label="Admin navigation" className={className}>
+    <nav id={id} aria-label="Admin navigation" className={className}>
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = isAdminNavItemActive(location, item.href);
@@ -129,7 +191,10 @@ function AdminNavLinks({
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             onClick={onNavigate}
-            className={`flex min-h-12 items-center gap-3 rounded-lg px-3.5 text-sm font-bold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
+            title={collapsed ? item.label : undefined}
+            className={`flex min-h-12 items-center rounded-lg text-sm font-bold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
+              collapsed ? "justify-center px-2" : "gap-3 px-3.5"
+            } ${
               isActive
                 ? "bg-primary text-neutral-950 shadow-sm shadow-primary/20"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -142,11 +207,71 @@ function AdminNavLinks({
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
             </span>
-            {item.label}
+            <span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
           </Link>
         );
       })}
     </nav>
+  );
+}
+
+function PaginationControls({
+  currentPage,
+  firstItem,
+  itemLabel,
+  lastItem,
+  onPageChange,
+  pageCount,
+  totalItems,
+}: {
+  currentPage: number;
+  firstItem: number;
+  itemLabel: string;
+  lastItem: number;
+  onPageChange: (page: number) => void;
+  pageCount: number;
+  totalItems: number;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-neutral-200 px-4 py-3 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
+      <p>
+        Showing {firstItem}-{lastItem} of {totalItems} {itemLabel}
+      </p>
+      <nav
+        aria-label={`${itemLabel} pagination`}
+        className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start"
+      >
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={currentPage === 1}
+          aria-label={`Previous ${itemLabel} page`}
+          onClick={() => onPageChange(currentPage - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Prev
+        </Button>
+        <span
+          className="min-w-24 text-center font-semibold tabular-nums text-neutral-950"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Page {currentPage} of {pageCount}
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={currentPage === pageCount}
+          aria-label={`Next ${itemLabel} page`}
+          onClick={() => onPageChange(currentPage + 1)}
+        >
+          Next
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </nav>
+    </div>
   );
 }
 
@@ -159,6 +284,7 @@ const blankEmployee: EmployeeRecord = {
   employeeId: "",
   reportsTo: "",
   photoUrl: "",
+  isPublished: false,
 };
 
 function AdminGuard({ children }: { children: ReactNode }) {
@@ -185,6 +311,7 @@ function AdminGuard({ children }: { children: ReactNode }) {
 function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
   const [location, navigate] = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(loadAdminSidebarCollapsed);
   const activeNavItem = navItems.find((item) => isAdminNavItemActive(location, item.href));
 
   useEffect(() => {
@@ -195,6 +322,10 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
       document.title = previousTitle;
     };
   }, []);
+
+  useEffect(() => {
+    saveAdminSidebarCollapsed(isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
 
   async function handleLogout() {
     setIsMobileNavOpen(false);
@@ -211,11 +342,26 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
 
   return (
     <AdminGuard>
-      <main className="min-h-screen bg-[#f5f6f6] text-neutral-950">
-        <div className="grid min-h-screen lg:grid-cols-[17rem_1fr]">
-          <aside className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950 text-white lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r lg:px-4 lg:py-5">
-            <div className="flex h-16 items-center justify-between gap-4 px-4 lg:h-auto lg:px-0">
-              <div className="min-w-0">
+      <main className="min-h-dvh bg-[#f5f6f6] text-neutral-950">
+        <div
+          className={`grid min-h-dvh transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none ${
+            isSidebarCollapsed
+              ? "lg:grid-cols-[5.5rem_minmax(0,1fr)]"
+              : "lg:grid-cols-[17rem_minmax(0,1fr)]"
+          }`}
+        >
+          <aside
+            id="admin-desktop-sidebar"
+            className={`sticky top-0 z-40 min-w-0 border-b border-neutral-800 bg-neutral-950 text-white lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:h-dvh lg:max-h-dvh lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r lg:px-4 lg:py-5 lg:transition-[width] lg:duration-200 lg:ease-out motion-reduce:transition-none ${
+              isSidebarCollapsed ? "lg:w-[5.5rem]" : "lg:w-[17rem]"
+            }`}
+          >
+            <div
+              className={`flex h-16 items-center justify-between gap-4 px-4 lg:h-auto lg:shrink-0 lg:px-0 ${
+                isSidebarCollapsed ? "lg:justify-center" : ""
+              }`}
+            >
+              <div className={`min-w-0 ${isSidebarCollapsed ? "lg:hidden" : ""}`}>
                 <Link
                   href="/company/admin/dashboard"
                   className="inline-flex text-xl font-black uppercase tracking-normal"
@@ -226,6 +372,24 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
                   Admin · {activeNavItem?.label ?? "Console"}
                 </p>
               </div>
+
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="hidden h-11 w-11 shrink-0 border-white/15 text-white hover:bg-white/10 focus-visible:ring-primary lg:inline-flex"
+                aria-controls="admin-desktop-sidebar"
+                aria-expanded={!isSidebarCollapsed}
+                aria-label={isSidebarCollapsed ? "Expand admin sidebar" : "Collapse admin sidebar"}
+                title={isSidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                onClick={() => setIsSidebarCollapsed((current) => !current)}
+              >
+                {isSidebarCollapsed ? (
+                  <PanelLeftOpen className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <PanelLeftClose className="h-5 w-5" aria-hidden="true" />
+                )}
+              </Button>
 
               <Sheet open={isMobileNavOpen} onOpenChange={setIsMobileNavOpen}>
                 <SheetTrigger asChild>
@@ -241,9 +405,9 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
                 </SheetTrigger>
                 <SheetContent
                   side="left"
-                  className="flex w-[min(20rem,86vw)] flex-col gap-0 border-neutral-800 bg-neutral-950 p-0 text-white sm:max-w-xs [&>button]:right-3 [&>button]:top-3 [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-md [&>button]:text-white [&>button]:hover:bg-white/10"
+                  className="flex h-dvh max-h-dvh w-[min(20rem,86vw)] flex-col gap-0 overflow-hidden border-neutral-800 bg-neutral-950 p-0 text-white sm:max-w-xs [&>button]:right-3 [&>button]:top-3 [&>button]:flex [&>button]:h-11 [&>button]:w-11 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-md [&>button]:text-white [&>button]:hover:bg-white/10"
                 >
-                  <SheetHeader className="border-b border-neutral-800 px-5 py-5 text-left">
+                  <SheetHeader className="shrink-0 border-b border-neutral-800 px-5 py-5 text-left">
                     <SheetTitle className="text-left text-xl font-black uppercase tracking-normal text-white">
                       TECHNO<span className="text-primary">SHINE</span>
                     </SheetTitle>
@@ -255,10 +419,10 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
                   <AdminNavLinks
                     location={location}
                     onNavigate={() => setIsMobileNavOpen(false)}
-                    className="grid gap-2 overflow-y-auto px-4 py-5"
+                    className="grid min-h-0 flex-1 content-start gap-2 overflow-y-auto overscroll-contain px-4 py-5"
                   />
 
-                  <div className="mt-auto border-t border-neutral-800 p-4">
+                  <div className="shrink-0 border-t border-neutral-800 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                     <Button
                       type="button"
                       variant="ghost"
@@ -268,27 +432,43 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
                       <LogOut className="h-4 w-4" aria-hidden="true" />
                       Logout
                     </Button>
+                    <p className="mt-2 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/50">
+                      Version {adminVersion}
+                    </p>
                   </div>
                 </SheetContent>
               </Sheet>
             </div>
 
-            <AdminNavLinks location={location} className="mt-8 hidden gap-2 lg:grid" />
+            <AdminNavLinks
+              id="admin-desktop-navigation"
+              collapsed={isSidebarCollapsed}
+              location={location}
+              className={`mt-8 hidden min-h-0 flex-1 content-start gap-2 overflow-y-auto overscroll-contain pb-2 lg:grid ${
+                isSidebarCollapsed ? "pr-0" : "pr-1"
+              }`}
+            />
 
-            <div className="mt-auto hidden border-t border-neutral-800 pt-4 lg:block">
+            <div className="hidden shrink-0 border-t border-neutral-800 pt-4 lg:block">
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-11 w-full justify-start border-white/15 text-white hover:bg-white/10"
+                className={`min-h-11 w-full border-white/15 text-white hover:bg-white/10 ${
+                  isSidebarCollapsed ? "justify-center px-0" : "justify-start"
+                }`}
                 onClick={handleLogout}
+                title={isSidebarCollapsed ? "Logout" : undefined}
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
-                Logout
+                <span className={isSidebarCollapsed ? "sr-only" : undefined}>Logout</span>
               </Button>
+              <p className="mt-2 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                {isSidebarCollapsed ? `v${adminVersion}` : `Version ${adminVersion}`}
+              </p>
             </div>
           </aside>
 
-          <section className="min-w-0">
+          <section className="min-w-0 lg:col-start-2">
             <header className="border-b border-neutral-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
               <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -312,67 +492,299 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
 }
 
 function MetricCard({
+  href,
   label,
+  loading,
   value,
   icon: Icon,
 }: {
+  href: string;
   label: string;
-  value: number;
+  loading: boolean;
+  value: number | null;
   icon: typeof Boxes;
 }) {
   return (
-    <div className="border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-neutral-500">{label}</p>
-          <p className="mt-2 font-display text-4xl font-bold text-neutral-950">{value}</p>
+    <Link
+      href={href}
+      aria-busy={value === null && loading}
+      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+    >
+      <Card
+        component="article"
+        variant="outlined"
+        className="h-full !overflow-hidden !rounded-xl !border-neutral-200 !bg-white !shadow-sm transition-[border-color,box-shadow,transform] duration-200 group-hover:-translate-y-0.5 group-hover:!border-primary/60 group-hover:!shadow-lg motion-reduce:transform-none motion-reduce:transition-none"
+      >
+        <CardMedia
+          component="div"
+          aria-hidden="true"
+          className="h-1.5 bg-gradient-to-r from-primary via-orange-400 to-neutral-950"
+        />
+        <CardContent className="!p-5 !pb-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-neutral-500">{label}</p>
+              {value === null && loading ? (
+                <span className="mt-3 block h-9 w-14 motion-safe:animate-pulse rounded bg-neutral-200" />
+              ) : (
+                <p className="mt-2 font-display text-4xl font-bold text-neutral-950">{value ?? "—"}</p>
+              )}
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-neutral-950">
+              <Icon className="h-6 w-6" aria-hidden="true" />
+            </div>
+          </div>
+        </CardContent>
+        <CardActions className="!px-5 !pb-4 !pt-0">
+          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400 transition-colors group-hover:text-primary">
+            Open
+            <ChevronRight
+              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
+          </span>
+        </CardActions>
+      </Card>
+    </Link>
+  );
+}
+
+function AdminDashboardChartSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading dashboard chart"
+      className="space-y-5 motion-safe:animate-pulse"
+    >
+      <div className="grid min-h-[27rem] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="p-5 sm:p-6">
+          <div className="h-3 w-40 rounded bg-neutral-200" />
+          <div className="mt-4 h-8 w-64 max-w-full rounded bg-neutral-200" />
+          <div className="mt-3 h-4 w-96 max-w-full rounded bg-neutral-100" />
+          <div className="mt-8 grid gap-5">
+            {[72, 86, 54, 68, 44].map((width) => (
+              <div key={width} className="flex items-center gap-4">
+                <div className="h-3 w-20 rounded bg-neutral-100" />
+                <div className="h-7 rounded bg-primary/15" style={{ width: `${width}%` }} />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Icon className="h-6 w-6" />
+        <div className="bg-neutral-950 p-6">
+          <div className="h-3 w-32 rounded bg-white/10" />
+          <div className="mt-10 h-12 w-24 rounded bg-white/10" />
+          <div className="mt-10 h-2 w-full rounded bg-white/10" />
         </div>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="min-h-[23rem] rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+            <div className="h-2 w-24 rounded bg-primary/15" />
+            <div className="mt-4 h-6 w-40 rounded bg-neutral-200" />
+            <div className="mt-3 h-4 w-full rounded bg-neutral-100" />
+            <div className="mt-2 h-4 w-4/5 rounded bg-neutral-100" />
+            <div className="mx-auto mt-8 h-44 w-44 rounded-full border-[20px] border-neutral-100" />
+          </div>
+        ))}
+      </div>
+      <span className="sr-only">Loading dashboard chart</span>
     </div>
   );
 }
 
+class AdminDashboardChartErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section
+          role="alert"
+          className="flex min-h-[18rem] flex-col items-center justify-center border border-amber-200 bg-amber-50 px-6 text-center shadow-sm"
+        >
+          <ServerCrash className="h-8 w-8 text-amber-600" aria-hidden="true" />
+          <h2 className="mt-4 text-xl text-neutral-950">Dashboard chart could not be loaded.</h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-neutral-600">
+            Reload this page to fetch the latest dashboard chart files.
+          </p>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export function AdminDashboard() {
-  const counts = useAdminCounts();
+  const { counts, error, hasData, isFetching, isLoading, lastUpdatedAt } = useAdminCountsState();
+  const metricCounts = hasData ? counts : null;
+
+  useEffect(() => {
+    void loadAdminDashboardChart().catch(() => undefined);
+  }, []);
 
   return (
     <AdminLayout title="Admin Dashboard" eyebrow="Company Admin">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <MetricCard label="Employees" value={counts.employees} icon={Users} />
-        <MetricCard label="Services" value={counts.services} icon={Images} />
-        <MetricCard label="Reels" value={counts.reels} icon={Video} />
-        <MetricCard label="Products" value={counts.products} icon={ShoppingBag} />
-        <MetricCard label="Published" value={counts.publishedProducts} icon={Boxes} />
-        <MetricCard label="Content Sections" value={counts.contentSections} icon={FileText} />
+        <MetricCard
+          href="/company/admin/employees"
+          label="Employees"
+          loading={isLoading}
+          value={metricCounts?.employees ?? null}
+          icon={Users}
+        />
+        <MetricCard
+          href="/company/admin/services"
+          label="Services"
+          loading={isLoading}
+          value={metricCounts?.services ?? null}
+          icon={Images}
+        />
+        <MetricCard
+          href="/company/admin/reels"
+          label="Reels"
+          loading={isLoading}
+          value={metricCounts?.reels ?? null}
+          icon={Video}
+        />
+        <MetricCard
+          href="/company/admin/products"
+          label="Products"
+          loading={isLoading}
+          value={metricCounts?.products ?? null}
+          icon={ShoppingBag}
+        />
+        <MetricCard
+          href="/company/admin/products"
+          label="Published"
+          loading={isLoading}
+          value={metricCounts?.publishedProducts ?? null}
+          icon={Boxes}
+        />
+        <MetricCard
+          href="/company/admin/content"
+          label="Content Sections"
+          loading={isLoading}
+          value={metricCounts?.contentSections ?? null}
+          icon={FileText}
+        />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        {navItems.slice(1).map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-primary/50"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-100 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-neutral-400 transition group-hover:translate-x-1 group-hover:text-primary" />
-              </div>
-              <h2 className="mt-5 text-xl">{item.label}</h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-600">
-                Manage {item.label.toLowerCase()} records for Technoshine operations.
-              </p>
-            </Link>
-          );
-        })}
+      <div className="mt-6">
+        {isLoading ? (
+          <AdminDashboardChartSkeleton />
+        ) : (
+          <AdminDashboardChartErrorBoundary>
+            <Suspense fallback={<AdminDashboardChartSkeleton />}>
+              <AdminDashboardChart
+                counts={counts}
+                hasData={hasData}
+                hasError={Boolean(error)}
+                isRefreshing={isFetching}
+                lastUpdatedAt={lastUpdatedAt}
+              />
+            </Suspense>
+          </AdminDashboardChartErrorBoundary>
+        )}
       </div>
     </AdminLayout>
+  );
+}
+
+function AdminProductMediaCard({
+  onDelete,
+  onEdit,
+  onTogglePublish,
+  product,
+}: {
+  onDelete: (product: AdminProduct) => void | Promise<void>;
+  onEdit: (product: AdminProduct) => void;
+  onTogglePublish: (product: AdminProduct) => void | Promise<void>;
+  product: AdminProduct;
+}) {
+  return (
+    <Card
+      component="article"
+      variant="outlined"
+      className="group flex h-full flex-col !overflow-hidden !rounded-xl !border-neutral-200 !bg-white !shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:!border-primary/50 hover:!shadow-lg motion-reduce:transform-none motion-reduce:transition-none"
+    >
+      <CardMedia component="div" className="relative aspect-[4/3] overflow-hidden bg-[#fff8f2]">
+        <ProductVisual product={product} compact />
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/45 to-transparent p-3">
+          <span className="rounded-full bg-white/95 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-800 shadow-sm">
+            {product.category}
+          </span>
+          <span
+            className={`rounded-full px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] shadow-sm ${
+              product.isPublished
+                ? "bg-emerald-700 text-white"
+                : "bg-slate-200 text-slate-700"
+            }`}
+          >
+            {product.isPublished ? "Published" : "Draft"}
+          </span>
+        </div>
+      </CardMedia>
+
+      <CardContent className="flex flex-1 flex-col !p-4">
+        <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+          {product.brand}
+        </p>
+        <h3 className="mt-1 text-lg leading-snug text-neutral-950">{product.name}</h3>
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-neutral-600">{product.usesLine}</p>
+        <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+          <p className="font-display text-2xl font-bold text-primary">{product.priceLabel}</p>
+          <p className={`text-xs font-bold ${product.stockLeft <= 7 ? "text-red-700" : "text-neutral-500"}`}>
+            {product.stockLeft} left
+          </p>
+        </div>
+      </CardContent>
+
+      <CardActions className="!grid !grid-cols-[1fr_1fr_auto] !gap-2 !border-t !border-neutral-200 !bg-neutral-50 !p-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={`w-full ${adminActionButtonStyles.edit}`}
+          onClick={() => onEdit(product)}
+        >
+          <Edit3 className="h-4 w-4" aria-hidden="true" />
+          Edit
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={`w-full ${
+            product.isPublished
+              ? adminActionButtonStyles.draft
+              : adminActionButtonStyles.publish
+          }`}
+          onClick={() => void onTogglePublish(product)}
+        >
+          {product.isPublished ? "Unpublish" : "Publish"}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="destructive"
+          className={adminActionButtonStyles.delete}
+          aria-label={`Delete ${product.name}`}
+          title={`Delete ${product.name}`}
+          onClick={() => void onDelete(product)}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      </CardActions>
+    </Card>
   );
 }
 
@@ -614,6 +1026,8 @@ export function AdminServices() {
   const [, navigate] = useLocation();
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [servicePage, setServicePage] = useState(1);
+  const [mediaPage, setMediaPage] = useState(1);
 
   useEffect(() => {
     setDrafts(services);
@@ -632,12 +1046,52 @@ export function AdminServices() {
   const selectedService =
     drafts.find((service) => service.slug === selectedSlug) ?? filteredServices[0];
   const totalGalleryImages = drafts.reduce((total, service) => total + service.images.length, 0);
+  const servicePagination = getTablePagination(filteredServices.length, servicePage);
+  const paginatedServices = filteredServices.slice(
+    servicePagination.startIndex,
+    servicePagination.endIndex,
+  );
+  const serviceMediaRows = useMemo(
+    () =>
+      selectedService
+        ? [
+            { kind: "hero" as const },
+            ...selectedService.images.map((image, imageIndex) => ({
+              kind: "gallery" as const,
+              image,
+              imageIndex,
+            })),
+          ]
+        : [],
+    [selectedService],
+  );
+  const mediaPagination = getTablePagination(serviceMediaRows.length, mediaPage);
+  const paginatedServiceMediaRows = serviceMediaRows.slice(
+    mediaPagination.startIndex,
+    mediaPagination.endIndex,
+  );
 
   useEffect(() => {
     if (!filteredServices.length) return;
     if (filteredServices.some((service) => service.slug === selectedSlug)) return;
     setSelectedSlug(filteredServices[0].slug);
   }, [filteredServices, selectedSlug]);
+
+  useEffect(() => {
+    setServicePage(1);
+  }, [serviceQuery]);
+
+  useEffect(() => {
+    setMediaPage(1);
+  }, [selectedSlug]);
+
+  useEffect(() => {
+    setServicePage((current) => Math.min(current, servicePagination.pageCount));
+  }, [servicePagination.pageCount]);
+
+  useEffect(() => {
+    setMediaPage((current) => Math.min(current, mediaPagination.pageCount));
+  }, [mediaPagination.pageCount]);
 
   function updateService(slug: string, updates: Partial<ServicePageRecord>) {
     setUnsavedChanges(true);
@@ -720,7 +1174,7 @@ export function AdminServices() {
       const nextDrafts = applyUploadedImage(drafts, imageUrl);
       setDrafts(nextDrafts);
       setUnsavedChanges(true);
-      transactionToast.success("Image uploaded to draft", "Changes saved to draft. Click Save to publish.");
+      transactionToast.upload("Image uploaded to draft", "Changes saved to draft. Click Save to publish.");
     } catch (error) {
       transactionToast.error("Image upload failed", error);
     } finally {
@@ -933,18 +1387,20 @@ export function AdminServices() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[820px] text-left text-sm">
+              <caption className="sr-only">Services directory</caption>
               <thead className="bg-neutral-950 text-xs uppercase tracking-wide text-white">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Preview</th>
-                  <th className="px-4 py-3 font-semibold">Service</th>
-                  <th className="px-4 py-3 font-semibold">Slug</th>
-                  <th className="px-4 py-3 font-semibold">Gallery</th>
-                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                  <th scope="col" className="w-16 px-4 py-3 font-semibold">No.</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Preview</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Service</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Slug</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Gallery</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredServices.map((service) => {
+                {paginatedServices.map((service, index) => {
                   const isActive = selectedService?.slug === service.slug;
 
                   return (
@@ -956,6 +1412,9 @@ export function AdminServices() {
                       ].join(" ")}
                       onClick={() => openServiceEditor(service.slug)}
                     >
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                        {servicePagination.startIndex + index + 1}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="h-16 w-24 overflow-hidden rounded-md bg-neutral-100">
                           {service.heroImageUrl ? (
@@ -990,7 +1449,8 @@ export function AdminServices() {
                           <Button
                             type="button"
                             size="sm"
-                            variant={isActive ? "default" : "outline"}
+                            variant="outline"
+                            className={adminActionButtonStyles.edit}
                             onClick={(event) => {
                               event.stopPropagation();
                               openServiceEditor(service.slug);
@@ -1018,6 +1478,16 @@ export function AdminServices() {
               </p>
             </div>
           ) : null}
+
+          <PaginationControls
+            currentPage={servicePagination.currentPage}
+            firstItem={servicePagination.firstItem}
+            itemLabel="services"
+            lastItem={servicePagination.lastItem}
+            onPageChange={setServicePage}
+            pageCount={servicePagination.pageCount}
+            totalItems={filteredServices.length}
+          />
         </section>
 
         <div>
@@ -1081,7 +1551,7 @@ export function AdminServices() {
                             try {
                               // eslint-disable-next-line no-await-in-loop
                               usedFile = await compressImageFile(file);
-                              transactionToast.success("Compression complete", `${Math.round(usedFile.size/1024/1024)}MB`);
+                              transactionToast.upload("Compression complete", `${Math.round(usedFile.size/1024/1024)}MB`);
                             } catch (e) {
                               transactionToast.error("Compression failed", "Unable to reduce image size. Please reduce manually.");
                               event.currentTarget.value = "";
@@ -1175,7 +1645,7 @@ export function AdminServices() {
                               transactionToast.info("Compressing image", "Reducing image size before upload...");
                               try {
                                 usedFile = await compressImageFile(file);
-                                transactionToast.success("Compression complete", `${Math.round(usedFile.size/1024/1024)}MB`);
+                                transactionToast.upload("Compression complete", `${Math.round(usedFile.size/1024/1024)}MB`);
                               } catch (e) {
                                 transactionToast.error("Compression failed", "Unable to reduce image size. Please reduce manually.");
                                 event.currentTarget.value = "";
@@ -1216,76 +1686,98 @@ export function AdminServices() {
 
                 <div className="overflow-hidden rounded-md border border-neutral-200">
                   <div className="overflow-x-auto">
-                  <table className="w-full min-w-[820px] border-collapse bg-white text-sm">
+                  <table className="w-full min-w-[880px] border-collapse bg-white text-sm">
+                    <caption className="sr-only">
+                      Image rows for {selectedService.title}
+                    </caption>
                     <thead className="bg-neutral-950 text-left text-xs uppercase tracking-wide text-white">
                       <tr>
-                        <th className="w-28 px-3 py-3 font-semibold">Type</th>
-                        <th className="w-36 px-3 py-3 font-semibold">Preview</th>
-                        <th className="w-48 px-3 py-3 font-semibold">Caption</th>
-                        <th className="w-48 px-3 py-3 font-semibold">Alt Text</th>
-                        <th className="w-48 px-3 py-3 font-semibold">Actions</th>
+                        <th scope="col" className="w-16 px-3 py-3 font-semibold">No.</th>
+                        <th scope="col" className="w-28 px-3 py-3 font-semibold">Type</th>
+                        <th scope="col" className="w-36 px-3 py-3 font-semibold">Preview</th>
+                        <th scope="col" className="w-48 px-3 py-3 font-semibold">Caption</th>
+                        <th scope="col" className="w-48 px-3 py-3 font-semibold">Alt Text</th>
+                        <th scope="col" className="w-48 px-3 py-3 font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="align-top transition hover:bg-neutral-50">
-                        <td className="border-b border-neutral-200 px-3 py-3">
-                          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-                            Hero
-                          </span>
-                        </td>
-                        <td className="border-b border-neutral-200 px-3 py-3">
-                          <div className="h-20 w-28 overflow-hidden rounded-md bg-neutral-100">
-                            {selectedService.heroImageUrl ? (
-                              <img
-                                src={adminAssetPath(selectedService.heroImageUrl)}
-                                alt={selectedService.title}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="border-b border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-500">
-                          Service hero image
-                        </td>
-                        <td className="border-b border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-500">
-                          {selectedService.title}
-                        </td>
-                        <td className="border-b border-neutral-200 px-3 py-3">
-                          <input
-                            id={`${selectedService.slug}-hero-table-upload`}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            className="sr-only"
-                            onChange={(event) => {
-                              const file = event.currentTarget.files?.[0];
-                              void uploadHeroImage(selectedService.slug, file);
-                              event.currentTarget.value = "";
-                            }}
-                          />
-                          <label
-                            htmlFor={`${selectedService.slug}-hero-table-upload`}
-                            aria-disabled={uploadingKey === `${selectedService.slug}:hero`}
-                            className={[
-                              "inline-flex min-h-8 cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-200 px-3 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-primary hover:text-primary",
-                              uploadingKey === `${selectedService.slug}:hero`
-                                ? "pointer-events-none opacity-60"
-                                : "",
-                            ].join(" ")}
-                          >
-                            <Upload className="h-4 w-4" />
-                            {uploadingKey === `${selectedService.slug}:hero` ? "Uploading" : "Upload"}
-                          </label>
-                        </td>
-                      </tr>
+                      {paginatedServiceMediaRows.map((row, index) => {
+                        const rowNumber = mediaPagination.startIndex + index + 1;
 
-                      {selectedService.images.map((image, index) => {
+                        if (row.kind === "hero") {
+                          return (
+                            <tr
+                              key={`${selectedService.slug}:hero`}
+                              className="align-top transition hover:bg-neutral-50"
+                            >
+                              <td className="border-b border-neutral-200 px-3 py-3 font-mono text-xs font-bold text-neutral-500">
+                                {rowNumber}
+                              </td>
+                              <td className="border-b border-neutral-200 px-3 py-3">
+                                <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+                                  Hero
+                                </span>
+                              </td>
+                              <td className="border-b border-neutral-200 px-3 py-3">
+                                <div className="h-20 w-28 overflow-hidden rounded-md bg-neutral-100">
+                                  {selectedService.heroImageUrl ? (
+                                    <img
+                                      src={adminAssetPath(selectedService.heroImageUrl)}
+                                      alt={selectedService.title}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : null}
+                                </div>
+                              </td>
+                              <td className="border-b border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-500">
+                                Service hero image
+                              </td>
+                              <td className="border-b border-neutral-200 px-3 py-3 text-xs font-semibold text-neutral-500">
+                                {selectedService.title}
+                              </td>
+                              <td className="border-b border-neutral-200 px-3 py-3">
+                                <input
+                                  id={`${selectedService.slug}-hero-table-upload`}
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  className="sr-only"
+                                  onChange={(event) => {
+                                    const file = event.currentTarget.files?.[0];
+                                    void uploadHeroImage(selectedService.slug, file);
+                                    event.currentTarget.value = "";
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`${selectedService.slug}-hero-table-upload`}
+                                  aria-disabled={uploadingKey === `${selectedService.slug}:hero`}
+                                  className={[
+                                    "inline-flex min-h-8 cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-200 px-3 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-primary hover:text-primary",
+                                    uploadingKey === `${selectedService.slug}:hero`
+                                      ? "pointer-events-none opacity-60"
+                                      : "",
+                                  ].join(" ")}
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  {uploadingKey === `${selectedService.slug}:hero`
+                                    ? "Uploading"
+                                    : "Upload"}
+                                </label>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        const { image, imageIndex } = row;
                         const rowUploadKey = `${selectedService.slug}:gallery:${image.id}`;
 
                         return (
                           <tr key={image.id} className="align-top transition hover:bg-neutral-50">
+                            <td className="border-b border-neutral-200 px-3 py-3 font-mono text-xs font-bold text-neutral-500">
+                              {rowNumber}
+                            </td>
                             <td className="border-b border-neutral-200 px-3 py-3">
                               <span className="font-mono text-xs font-bold text-neutral-500">
-                                Gallery #{index + 1}
+                                Gallery #{imageIndex + 1}
                               </span>
                             </td>
                             <td className="border-b border-neutral-200 px-3 py-3">
@@ -1300,32 +1792,38 @@ export function AdminServices() {
                               </div>
                             </td>
                             <td className="border-b border-neutral-200 px-3 py-3">
-                              <Label htmlFor={`${selectedService.slug}-${image.id}-caption`} className="sr-only">
+                              <Label
+                                htmlFor={`${selectedService.slug}-${image.id}-caption`}
+                                className="sr-only"
+                              >
                                 Caption
                               </Label>
-                            <Input
-                              id={`${selectedService.slug}-${image.id}-caption`}
-                              value={image.caption}
-                              onChange={(event) =>
-                                updateServiceImage(selectedService.slug, image.id, {
-                                  caption: event.currentTarget.value,
-                                })
-                              }
-                            />
+                              <Input
+                                id={`${selectedService.slug}-${image.id}-caption`}
+                                value={image.caption}
+                                onChange={(event) =>
+                                  updateServiceImage(selectedService.slug, image.id, {
+                                    caption: event.currentTarget.value,
+                                  })
+                                }
+                              />
                             </td>
                             <td className="border-b border-neutral-200 px-3 py-3">
-                              <Label htmlFor={`${selectedService.slug}-${image.id}-alt`} className="sr-only">
+                              <Label
+                                htmlFor={`${selectedService.slug}-${image.id}-alt`}
+                                className="sr-only"
+                              >
                                 Alt Text
                               </Label>
-                            <Input
-                              id={`${selectedService.slug}-${image.id}-alt`}
-                              value={image.altText}
-                              onChange={(event) =>
-                                updateServiceImage(selectedService.slug, image.id, {
-                                  altText: event.currentTarget.value,
-                                })
-                              }
-                            />
+                              <Input
+                                id={`${selectedService.slug}-${image.id}-alt`}
+                                value={image.altText}
+                                onChange={(event) =>
+                                  updateServiceImage(selectedService.slug, image.id, {
+                                    altText: event.currentTarget.value,
+                                  })
+                                }
+                              />
                             </td>
                             <td className="border-b border-neutral-200 px-3 py-3">
                               <div className="flex flex-wrap gap-2">
@@ -1339,24 +1837,40 @@ export function AdminServices() {
                                     if (!file) return;
                                     try {
                                       if (file.size > 200 * 1024 * 1024) {
-                                        transactionToast.error("File too large", "Files 200MB+ are not accepted. Please reduce size.");
+                                        transactionToast.error(
+                                          "File too large",
+                                          "Files 200MB+ are not accepted. Please reduce size.",
+                                        );
                                         event.currentTarget.value = "";
                                         return;
                                       }
                                       let usedFile = file;
                                       if (file.size > 10 * 1024 * 1024) {
-                                        transactionToast.info("Compressing image", "Reducing image size before upload...");
+                                        transactionToast.info(
+                                          "Compressing image",
+                                          "Reducing image size before upload...",
+                                        );
                                         try {
                                           usedFile = await compressImageFile(file);
-                                          transactionToast.success("Compression complete", `${Math.round(usedFile.size/1024/1024)}MB`);
-                                        } catch (e) {
-                                          transactionToast.error("Compression failed", "Unable to reduce image size. Please reduce manually.");
+                                          transactionToast.upload(
+                                            "Compression complete",
+                                            `${Math.round(usedFile.size / 1024 / 1024)}MB`,
+                                          );
+                                        } catch (error) {
+                                          transactionToast.error(
+                                            "Compression failed",
+                                            "Unable to reduce image size. Please reduce manually.",
+                                          );
                                           event.currentTarget.value = "";
                                           return;
                                         }
                                       }
 
-                                      void uploadGalleryImage(selectedService.slug, image.id, usedFile);
+                                      void uploadGalleryImage(
+                                        selectedService.slug,
+                                        image.id,
+                                        usedFile,
+                                      );
                                     } finally {
                                       event.currentTarget.value = "";
                                     }
@@ -1367,7 +1881,9 @@ export function AdminServices() {
                                   aria-disabled={uploadingKey === rowUploadKey}
                                   className={[
                                     "inline-flex min-h-8 cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-200 px-3 text-xs font-semibold uppercase tracking-wide text-neutral-700 transition hover:border-primary hover:text-primary",
-                                    uploadingKey === rowUploadKey ? "pointer-events-none opacity-60" : "",
+                                    uploadingKey === rowUploadKey
+                                      ? "pointer-events-none opacity-60"
+                                      : "",
                                   ].join(" ")}
                                 >
                                   <Upload className="h-4 w-4" />
@@ -1377,7 +1893,10 @@ export function AdminServices() {
                                   type="button"
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() => removeServiceImage(selectedService.slug, image.id)}
+                                  className={adminActionButtonStyles.delete}
+                                  onClick={() =>
+                                    removeServiceImage(selectedService.slug, image.id)
+                                  }
                                 >
                                   <Trash2 className="h-4 w-4" />
                                   Remove
@@ -1390,6 +1909,15 @@ export function AdminServices() {
                     </tbody>
                   </table>
                   </div>
+                  <PaginationControls
+                    currentPage={mediaPagination.currentPage}
+                    firstItem={mediaPagination.firstItem}
+                    itemLabel="image rows"
+                    lastItem={mediaPagination.lastItem}
+                    onPageChange={setMediaPage}
+                    pageCount={mediaPagination.pageCount}
+                    totalItems={serviceMediaRows.length}
+                  />
                 </div>
               </div>
             </section>
@@ -1428,14 +1956,11 @@ export function AdminReels() {
         .includes(search),
     );
   }, [drafts, query]);
-  const pageCount = Math.max(1, Math.ceil(filteredReels.length / reelPageSize));
-  const currentPage = Math.min(page, pageCount);
+  const reelPagination = getTablePagination(filteredReels.length, page);
   const paginatedReels = filteredReels.slice(
-    (currentPage - 1) * reelPageSize,
-    currentPage * reelPageSize,
+    reelPagination.startIndex,
+    reelPagination.endIndex,
   );
-  const firstVisibleReel = filteredReels.length === 0 ? 0 : (currentPage - 1) * reelPageSize + 1;
-  const lastVisibleReel = Math.min(currentPage * reelPageSize, filteredReels.length);
   const generatedReelId = form.id || createSocialReelId(form.title, drafts);
   const isDeleteConfirmed = Boolean(
     reelPendingDelete && deleteConfirmation === reelPendingDelete.id,
@@ -1444,6 +1969,10 @@ export function AdminReels() {
   useEffect(() => {
     setPage(1);
   }, [query]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, reelPagination.pageCount));
+  }, [reelPagination.pageCount]);
 
   function openNewReel() {
     setForm(createBlankSocialReel(drafts.length + 1));
@@ -1469,12 +1998,22 @@ export function AdminReels() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function persistReels(nextReels: SocialReelRecord[], successTitle: string) {
+  async function persistReels(
+    nextReels: SocialReelRecord[],
+    successTitle: string,
+    successTone: "success" | "draft" | "deleted" = "success",
+  ) {
     setIsSaving(true);
     try {
       await saveSocialReels(nextReels);
       setDrafts(nextReels);
-      transactionToast.success(successTitle, "Reels module was updated.");
+      if (successTone === "deleted") {
+        transactionToast.deleted(successTitle, "The reel was removed from the module.");
+      } else if (successTone === "draft") {
+        transactionToast.draft(successTitle, "The reel stays hidden from the homepage.");
+      } else {
+        transactionToast.success(successTitle, "Reels module was updated.");
+      }
       return true;
     } catch (error) {
       transactionToast.error("Reels save failed", error);
@@ -1516,7 +2055,17 @@ export function AdminReels() {
       ? drafts.map((reel) => (reel.id === nextReel.id ? nextReel : reel))
       : [...drafts, nextReel];
 
-    if (await persistReels(nextReels, exists ? "Reel updated" : "Reel added")) {
+    if (
+      await persistReels(
+        nextReels,
+        nextReel.isPublished
+          ? exists
+            ? "Reel updated"
+            : "Reel added"
+          : "Reel saved as draft",
+        nextReel.isPublished ? "success" : "draft",
+      )
+    ) {
       setIsEditorOpen(false);
     }
   }
@@ -1525,7 +2074,7 @@ export function AdminReels() {
     if (!reelPendingDelete || deleteConfirmation !== reelPendingDelete.id) return;
 
     const nextReels = drafts.filter((reel) => reel.id !== reelPendingDelete.id);
-    if (await persistReels(nextReels, "Reel deleted")) {
+    if (await persistReels(nextReels, "Reel deleted", "deleted")) {
       closeDeleteReel();
     }
   }
@@ -1586,19 +2135,20 @@ export function AdminReels() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
+            <caption className="sr-only">Facebook videos and reels</caption>
             <thead className="bg-neutral-950 text-xs uppercase tracking-wide text-white">
               <tr>
-                <th className="w-16 px-4 py-3 font-semibold">No.</th>
-                <th className="px-4 py-3 font-semibold">Video</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                <th scope="col" className="w-16 px-4 py-3 font-semibold">No.</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Video</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {paginatedReels.map((reel, index) => (
                 <tr key={reel.id} className="border-t border-neutral-200 transition hover:bg-neutral-50">
                   <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
-                    {(currentPage - 1) * reelPageSize + index + 1}
+                    {reelPagination.startIndex + index + 1}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -1620,8 +2170,8 @@ export function AdminReels() {
                       className={[
                         "inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide",
                         reel.isPublished
-                          ? "bg-primary/10 text-primary"
-                          : "bg-neutral-100 text-neutral-500",
+                          ? "border border-emerald-200 bg-emerald-100 text-emerald-800"
+                          : "border border-slate-300 bg-slate-100 text-slate-700",
                       ].join(" ")}
                     >
                       {reel.isPublished ? "Published" : "Draft"}
@@ -1629,11 +2179,23 @@ export function AdminReels() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openEditReel(reel)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={adminActionButtonStyles.edit}
+                        onClick={() => openEditReel(reel)}
+                      >
                         <Edit3 className="h-4 w-4" />
                         Edit
                       </Button>
-                      <Button type="button" size="sm" variant="destructive" onClick={() => openDeleteReel(reel)}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className={adminActionButtonStyles.delete}
+                        onClick={() => openDeleteReel(reel)}
+                      >
                         <Trash2 className="h-4 w-4" />
                         Delete
                       </Button>
@@ -1657,36 +2219,15 @@ export function AdminReels() {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-neutral-200 px-4 py-3 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Showing {firstVisibleReel}-{lastVisibleReel} of {filteredReels.length}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={currentPage === 1}
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Prev
-            </Button>
-            <span className="min-w-20 text-center font-semibold text-neutral-950">
-              {currentPage} / {pageCount}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={currentPage === pageCount}
-              onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <PaginationControls
+          currentPage={reelPagination.currentPage}
+          firstItem={reelPagination.firstItem}
+          itemLabel="reels"
+          lastItem={reelPagination.lastItem}
+          onPageChange={setPage}
+          pageCount={reelPagination.pageCount}
+          totalItems={filteredReels.length}
+        />
       </section>
 
       <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
@@ -1846,7 +2387,8 @@ export function AdminReels() {
               </Button>
               <Button
                 type="submit"
-                variant={isDeleteConfirmed ? "destructive" : "outline"}
+                variant="destructive"
+                className={adminActionButtonStyles.delete}
                 disabled={!isDeleteConfirmed || isSaving}
               >
                 <Trash2 className="h-4 w-4" />
@@ -1868,6 +2410,9 @@ export function AdminProducts() {
   const [view, setView] = useState<ProductView>("table");
   const [form, setForm] = useState<ProductFormData>(() => createBlankProduct());
   const [errors, setErrors] = useState<ProductValidationErrors>({});
+  const [page, setPage] = useState(1);
+  const [isProductEditorOpen, setIsProductEditorOpen] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   const visibleProducts = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -1881,6 +2426,19 @@ export function AdminProducts() {
       return second.updatedAt.localeCompare(first.updatedAt);
     });
   }, [category, products, query, sortBy]);
+  const productPagination = getTablePagination(visibleProducts.length, page);
+  const paginatedProducts = visibleProducts.slice(
+    productPagination.startIndex,
+    productPagination.endIndex,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [category, query, sortBy]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, productPagination.pageCount));
+  }, [productPagination.pageCount]);
 
   function updateForm<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -1890,6 +2448,24 @@ export function AdminProducts() {
   function resetForm() {
     setForm(createBlankProduct());
     setErrors({});
+  }
+
+  function openNewProductEditor() {
+    resetForm();
+    setIsProductEditorOpen(true);
+  }
+
+  function openEditProductEditor(product: AdminProduct) {
+    setForm(productToFormData(product));
+    setErrors({});
+    setIsProductEditorOpen(true);
+  }
+
+  function handleProductEditorOpenChange(open: boolean) {
+    if (!open && isSavingProduct) return;
+
+    setIsProductEditorOpen(open);
+    if (!open) resetForm();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1903,15 +2479,26 @@ export function AdminProducts() {
 
     const isEditing = Boolean(form.id);
 
+    setIsSavingProduct(true);
     try {
       await upsertProduct(form);
+      setIsProductEditorOpen(false);
       resetForm();
-      transactionToast.success(
-        isEditing ? "Product updated" : "Product created",
-        `${form.name || "Product"} was saved successfully.`,
-      );
+      if (form.isPublished) {
+        transactionToast.success(
+          isEditing ? "Product updated" : "Product created",
+          `${form.name || "Product"} was saved successfully.`,
+        );
+      } else {
+        transactionToast.draft(
+          "Product saved as draft",
+          `${form.name || "Product"} stays hidden until published.`,
+        );
+      }
     } catch (error) {
       transactionToast.error("Product save failed", error);
+    } finally {
+      setIsSavingProduct(false);
     }
   }
 
@@ -1929,10 +2516,11 @@ export function AdminProducts() {
 
     try {
       await upsertProduct(productToFormData(nextProduct));
-      transactionToast.success(
-        nextProduct.isPublished ? "Product published" : "Product drafted",
-        product.name,
-      );
+      if (nextProduct.isPublished) {
+        transactionToast.success("Product published", product.name);
+      } else {
+        transactionToast.draft("Product drafted", product.name);
+      }
     } catch (error) {
       saveAdminProducts(previousProducts);
       transactionToast.error("Publish update failed", error);
@@ -1942,7 +2530,7 @@ export function AdminProducts() {
   async function handleDeleteProduct(product: AdminProduct) {
     try {
       await deleteProduct(product.id);
-      transactionToast.success("Product deleted", product.name);
+      transactionToast.deleted("Product deleted", product.name);
     } catch (error) {
       transactionToast.error("Product delete failed", error);
     }
@@ -1959,17 +2547,17 @@ export function AdminProducts() {
           <Button type="button" variant="outline" onClick={() => setView(view === "table" ? "cards" : "table")}>
             {view === "table" ? "Card Preview" : "Table View"}
           </Button>
-          <Button type="button" onClick={resetForm}>
+          <Button type="button" onClick={openNewProductEditor}>
             <Plus className="h-4 w-4" />
-            New Product
+            Add Product
           </Button>
         </div>
       }
     >
-      <div className="grid gap-5 xl:grid-cols-[1fr_24rem]">
+      <>
         <section className="min-w-0">
-          <div className="mb-4 grid gap-3 rounded-md border border-neutral-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto_auto]">
-            <label className="flex min-h-10 items-center gap-2 border border-neutral-200 bg-white px-3">
+          <div className="mb-4 grid gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto_auto]">
+            <label className="flex min-h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3">
               <Search className="h-4 w-4 text-primary" />
               <span className="sr-only">Search products</span>
               <input
@@ -1982,7 +2570,7 @@ export function AdminProducts() {
             <select
               value={category}
               onChange={(event) => setCategory(event.currentTarget.value)}
-              className="min-h-10 border border-neutral-200 bg-white px-3 text-sm font-semibold"
+              className="min-h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold"
             >
               <option>All</option>
               {adminProductCategories.map((item) => (
@@ -1992,7 +2580,7 @@ export function AdminProducts() {
             <select
               value={sortBy}
               onChange={(event) => setSortBy(event.currentTarget.value)}
-              className="min-h-10 border border-neutral-200 bg-white px-3 text-sm font-semibold"
+              className="min-h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold"
             >
               <option>Newest</option>
               <option>Popular</option>
@@ -2001,28 +2589,39 @@ export function AdminProducts() {
           </div>
 
           {view === "cards" ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visibleProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <AdminProductMediaCard
+                  key={product.id}
+                  product={product}
+                  onDelete={handleDeleteProduct}
+                  onEdit={openEditProductEditor}
+                  onTogglePublish={togglePublish}
+                />
               ))}
             </div>
           ) : (
-            <div className="overflow-hidden border border-neutral-200 bg-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md shadow-neutral-200/60">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[820px] text-left text-sm">
+                  <caption className="sr-only">Products and shop inventory</caption>
                   <thead className="bg-neutral-950 text-white">
                     <tr>
-                      <th className="px-4 py-3">Product</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Price</th>
-                      <th className="px-4 py-3">Stock</th>
-                      <th className="px-4 py-3">Published</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th scope="col" className="w-16 px-4 py-3">No.</th>
+                      <th scope="col" className="px-4 py-3">Product</th>
+                      <th scope="col" className="px-4 py-3">Category</th>
+                      <th scope="col" className="px-4 py-3">Price</th>
+                      <th scope="col" className="px-4 py-3">Stock</th>
+                      <th scope="col" className="px-4 py-3">Published</th>
+                      <th scope="col" className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleProducts.map((product) => (
-                      <tr key={product.id} className="border-t border-neutral-200">
+                    {paginatedProducts.map((product, index) => (
+                      <tr key={product.id} className="border-t border-neutral-200 transition-colors hover:bg-orange-50/50">
+                        <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                          {productPagination.startIndex + index + 1}
+                        </td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-neutral-950">{product.name}</p>
                           <p className="text-xs text-neutral-500">{product.usesLine}</p>
@@ -2038,10 +2637,10 @@ export function AdminProducts() {
                           <button
                             type="button"
                             onClick={() => togglePublish(product)}
-                            className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${
+                            className={`rounded-full border px-3 py-1 text-xs font-bold uppercase transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                               product.isPublished
-                                ? "bg-primary/10 text-primary"
-                                : "bg-neutral-100 text-neutral-500"
+                                ? "border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 focus-visible:ring-emerald-500"
+                                : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-500"
                             }`}
                           >
                             {product.isPublished ? "Published" : "Draft"}
@@ -2049,11 +2648,23 @@ export function AdminProducts() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setForm(productToFormData(product))}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className={adminActionButtonStyles.edit}
+                              onClick={() => openEditProductEditor(product)}
+                            >
                               <Edit3 className="h-4 w-4" />
                               Edit
                             </Button>
-                            <Button type="button" size="sm" variant="destructive" onClick={() => void handleDeleteProduct(product)}>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className={adminActionButtonStyles.delete}
+                              onClick={() => void handleDeleteProduct(product)}
+                            >
                               <Trash2 className="h-4 w-4" />
                               Delete
                             </Button>
@@ -2068,124 +2679,180 @@ export function AdminProducts() {
               {visibleProducts.length === 0 ? (
                 <div className="p-8 text-center text-sm text-neutral-600">No products found.</div>
               ) : null}
+
+              <PaginationControls
+                currentPage={productPagination.currentPage}
+                firstItem={productPagination.firstItem}
+                itemLabel="products"
+                lastItem={productPagination.lastItem}
+                onPageChange={setPage}
+                pageCount={productPagination.pageCount}
+                totalItems={visibleProducts.length}
+              />
             </div>
           )}
         </section>
 
-        <aside className="border border-neutral-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xl">{form.id ? "Edit Product" : "Add Product"}</h2>
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="product-name">Name</Label>
-              <Input id="product-name" value={form.name} onChange={(event) => updateForm("name", event.currentTarget.value)} />
-              {errors.name ? <p className="text-xs font-semibold text-red-700">{errors.name}</p> : null}
+        <Dialog open={isProductEditorOpen} onOpenChange={handleProductEditorOpenChange}>
+          <DialogContent className="max-h-[92vh] max-w-[min(68rem,96vw)] overflow-y-auto p-0 sm:rounded-lg">
+            <div className="border-b border-neutral-200 px-5 py-4 pr-14">
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                Product Editor
+              </p>
+              <DialogTitle className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+                {form.id ? "Edit Product" : "Add Product"}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm leading-6 text-neutral-600">
+                {form.id
+                  ? "Update the product details and save your changes."
+                  : "Enter the product details, preview the card, then add it to the shop list."}
+              </DialogDescription>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="product-category">Category</Label>
-                <select
-                  id="product-category"
-                  value={form.category}
-                  onChange={(event) => updateForm("category", event.currentTarget.value as ProductFormData["category"])}
-                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-                >
-                  {adminProductCategories.map((item) => (
-                    <option key={item}>{item}</option>
-                  ))}
-                </select>
+
+            <form onSubmit={handleSubmit} className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product-name">Name</Label>
+                  <Input
+                    id="product-name"
+                    value={form.name}
+                    onChange={(event) => updateForm("name", event.currentTarget.value)}
+                    aria-invalid={Boolean(errors.name)}
+                    aria-describedby={errors.name ? "product-name-error" : undefined}
+                    autoFocus
+                  />
+                  {errors.name ? (
+                    <p id="product-name-error" className="text-xs font-semibold text-red-700">{errors.name}</p>
+                  ) : null}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="product-category">Category</Label>
+                    <select
+                      id="product-category"
+                      value={form.category}
+                      onChange={(event) => updateForm("category", event.currentTarget.value as ProductFormData["category"])}
+                      className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                    >
+                      {adminProductCategories.map((item) => (
+                        <option key={item}>{item}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="product-size">Size</Label>
+                    <select
+                      id="product-size"
+                      value={form.size}
+                      onChange={(event) => updateForm("size", event.currentTarget.value as ProductFormData["size"])}
+                      className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                    >
+                      {shopSizes.map((size) => (
+                        <option key={size}>{size}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="product-price">Price</Label>
+                    <Input
+                      id="product-price"
+                      type="number"
+                      min="0"
+                      value={form.price}
+                      onChange={(event) => updateForm("price", Number(event.currentTarget.value))}
+                      aria-invalid={Boolean(errors.price)}
+                      aria-describedby={errors.price ? "product-price-error" : undefined}
+                    />
+                    {errors.price ? (
+                      <p id="product-price-error" className="text-xs font-semibold text-red-700">{errors.price}</p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="product-stock">Stock</Label>
+                    <Input
+                      id="product-stock"
+                      type="number"
+                      min="0"
+                      value={form.stockLeft}
+                      onChange={(event) => updateForm("stockLeft", Number(event.currentTarget.value))}
+                      aria-invalid={Boolean(errors.stockLeft)}
+                      aria-describedby={errors.stockLeft ? "product-stock-error" : undefined}
+                    />
+                    {errors.stockLeft ? (
+                      <p id="product-stock-error" className="text-xs font-semibold text-red-700">{errors.stockLeft}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-badge">Badge</Label>
+                  <select
+                    id="product-badge"
+                    value={form.badge}
+                    onChange={(event) => updateForm("badge", event.currentTarget.value as ProductFormData["badge"])}
+                    className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  >
+                    <option value="">None</option>
+                    <option>Best Seller</option>
+                    <option>New Arrival</option>
+                    <option>Pro Grade</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-usage">Para sa</Label>
+                  <Input id="product-usage" value={form.usesLine} onChange={(event) => updateForm("usesLine", event.currentTarget.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-image">Image URL</Label>
+                  <Input id="product-image" value={form.imageUrl} onChange={(event) => updateForm("imageUrl", event.currentTarget.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-shopee">Shopee URL</Label>
+                  <Input id="product-shopee" value={form.shopeeUrl} onChange={(event) => updateForm("shopeeUrl", event.currentTarget.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-description">Description</Label>
+                  <textarea
+                    id="product-description"
+                    value={form.description}
+                    onChange={(event) => updateForm("description", event.currentTarget.value)}
+                    className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <Label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.isPublished}
+                    onChange={(event) => updateForm("isPublished", event.currentTarget.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Publish on public shop
+                </Label>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-size">Size</Label>
-                <select
-                  id="product-size"
-                  value={form.size}
-                  onChange={(event) => updateForm("size", event.currentTarget.value as ProductFormData["size"])}
-                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-                >
-                  {shopSizes.map((size) => (
-                    <option key={size}>{size}</option>
-                  ))}
-                </select>
+
+              <aside className="self-start rounded-md border border-neutral-200 bg-neutral-50 p-3 lg:sticky lg:top-0">
+                <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                  Product Preview
+                </p>
+                <div className="overflow-hidden rounded-md border border-neutral-200 bg-white">
+                  <ProductCard product={previewProduct} />
+                </div>
+              </aside>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-neutral-200 pt-4 sm:flex-row sm:justify-end lg:col-span-2">
+                <Button type="button" variant="outline" disabled={isSavingProduct} onClick={() => handleProductEditorOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSavingProduct}>
+                  <Save className="h-4 w-4" />
+                  {isSavingProduct ? "Saving Product" : form.id ? "Update Product" : "Add Product"}
+                </Button>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="product-price">Price</Label>
-                <Input
-                  id="product-price"
-                  type="number"
-                  min="0"
-                  value={form.price}
-                  onChange={(event) => updateForm("price", Number(event.currentTarget.value))}
-                />
-                {errors.price ? <p className="text-xs font-semibold text-red-700">{errors.price}</p> : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-stock">Stock</Label>
-                <Input
-                  id="product-stock"
-                  type="number"
-                  min="0"
-                  value={form.stockLeft}
-                  onChange={(event) => updateForm("stockLeft", Number(event.currentTarget.value))}
-                />
-                {errors.stockLeft ? <p className="text-xs font-semibold text-red-700">{errors.stockLeft}</p> : null}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-badge">Badge</Label>
-              <select
-                id="product-badge"
-                value={form.badge}
-                onChange={(event) => updateForm("badge", event.currentTarget.value as ProductFormData["badge"])}
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">None</option>
-                <option>Best Seller</option>
-                <option>New Arrival</option>
-                <option>Pro Grade</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-usage">Para sa</Label>
-              <Input id="product-usage" value={form.usesLine} onChange={(event) => updateForm("usesLine", event.currentTarget.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-image">Image URL</Label>
-              <Input id="product-image" value={form.imageUrl} onChange={(event) => updateForm("imageUrl", event.currentTarget.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-shopee">Shopee URL</Label>
-              <Input id="product-shopee" value={form.shopeeUrl} onChange={(event) => updateForm("shopeeUrl", event.currentTarget.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-description">Description</Label>
-              <textarea
-                id="product-description"
-                value={form.description}
-                onChange={(event) => updateForm("description", event.currentTarget.value)}
-                className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
-              />
-            </div>
-            <Label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isPublished}
-                onChange={(event) => updateForm("isPublished", event.currentTarget.checked)}
-                className="h-4 w-4 accent-primary"
-              />
-              Publish on public shop
-            </Label>
-            <div className="overflow-hidden rounded-md border border-neutral-200">
-              <ProductCard product={previewProduct} />
-            </div>
-            <Button type="submit" className="w-full">
-              <Save className="h-4 w-4" />
-              Save Product
-            </Button>
-          </form>
-        </aside>
-      </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </>
     </AdminLayout>
   );
 }
@@ -2215,35 +2882,52 @@ function exportEmployees(employees: EmployeeRecord[]) {
 
 export function AdminEmployees() {
   const employees = useEmployees();
-  const activeEmployees = employees.filter((employee) => !employee.deletedAt);
+  const currentEmployees = employees.filter((employee) => !employee.deletedAt);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("All");
   const [form, setForm] = useState<EmployeeRecord>(blankEmployee);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSavingEmployee, setIsSavingEmployee] = useState(false);
   const [page, setPage] = useState(1);
+  const [employeePendingDelete, setEmployeePendingDelete] = useState<EmployeeRecord | null>(null);
+  const [employeeDeleteConfirmation, setEmployeeDeleteConfirmation] = useState("");
 
-  const departments = ["All", ...Array.from(new Set(activeEmployees.map((employee) => employee.department).filter(Boolean)))];
-  const visibleEmployees = activeEmployees.filter((employee) => {
+  const departments = ["All", ...Array.from(new Set(currentEmployees.map((employee) => employee.department).filter(Boolean)))];
+  const visibleEmployees = currentEmployees.filter((employee) => {
     const matchesDepartment = department === "All" || employee.department === department;
     const orgGroupLabel = orgChartGroups.find((group) => group.value === employee.orgGroup)?.label ?? employee.orgGroup;
-    const matchesQuery = [employee.name, employee.position, employee.employeeId, employee.department, orgGroupLabel]
+    const matchesQuery = [
+      employee.name,
+      employee.position,
+      employee.employeeId,
+      employee.department,
+      orgGroupLabel,
+      employee.isPublished ? "active" : "draft",
+    ]
       .join(" ")
       .toLowerCase()
       .includes(query.toLowerCase());
     return matchesDepartment && matchesQuery;
   });
-  const pageCount = Math.max(1, Math.ceil(visibleEmployees.length / employeePageSize));
-  const currentPage = Math.min(page, pageCount);
-  const paginatedEmployees = visibleEmployees.slice((currentPage - 1) * employeePageSize, currentPage * employeePageSize);
-  const firstVisibleEmployee = visibleEmployees.length === 0 ? 0 : (currentPage - 1) * employeePageSize + 1;
-  const lastVisibleEmployee = Math.min(currentPage * employeePageSize, visibleEmployees.length);
+  const employeePagination = getTablePagination(visibleEmployees.length, page);
+  const paginatedEmployees = visibleEmployees.slice(
+    employeePagination.startIndex,
+    employeePagination.endIndex,
+  );
+  const isEmployeeDeleteConfirmed = Boolean(
+    employeePendingDelete && employeeDeleteConfirmation === employeePendingDelete.employeeId,
+  );
 
   useEffect(() => {
     setPage(1);
   }, [department, query]);
 
+  useEffect(() => {
+    setPage((current) => Math.min(current, employeePagination.pageCount));
+  }, [employeePagination.pageCount]);
+
   function resetForm() {
-    setForm(blankEmployee);
+    setForm({ ...blankEmployee });
   }
 
   function openNewEmployeeModal() {
@@ -2261,6 +2945,52 @@ export function AdminEmployees() {
     resetForm();
   }
 
+  function handleEmployeeModalOpenChange(open: boolean) {
+    if (open) {
+      setIsModalOpen(true);
+      return;
+    }
+
+    if (!isSavingEmployee) closeEmployeeModal();
+  }
+
+  function updateEmployeeForm<K extends keyof EmployeeRecord>(key: K, value: EmployeeRecord[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function openDeleteEmployee(employee: EmployeeRecord) {
+    setEmployeeDeleteConfirmation("");
+    setEmployeePendingDelete(employee);
+  }
+
+  function closeDeleteEmployee() {
+    setEmployeeDeleteConfirmation("");
+    setEmployeePendingDelete(null);
+  }
+
+  async function persistEmployees(
+    nextEmployees: EmployeeRecord[],
+    successTitle: string,
+    successDescription: string,
+    successTone: "success" | "draft" = "success",
+  ) {
+    setIsSavingEmployee(true);
+    try {
+      await saveEmployees(nextEmployees);
+      if (successTone === "draft") {
+        transactionToast.draft(successTitle, successDescription);
+      } else {
+        transactionToast.success(successTitle, successDescription);
+      }
+      return true;
+    } catch (error) {
+      transactionToast.error("Employee save failed", error);
+      return false;
+    } finally {
+      setIsSavingEmployee(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form.name.trim() || !form.employeeId.trim()) {
@@ -2268,36 +2998,79 @@ export function AdminEmployees() {
       return;
     }
 
-    const id = form.id || form.employeeId;
+    const normalizedEmployeeId = form.employeeId.trim();
+    const hasDuplicateId = employees.some(
+      (employee) =>
+        !employee.deletedAt &&
+        employee.id !== form.id &&
+        employee.employeeId.toLowerCase() === normalizedEmployeeId.toLowerCase(),
+    );
+    if (hasDuplicateId) {
+      transactionToast.warning("Employee ID already exists", normalizedEmployeeId);
+      return;
+    }
+
+    const id = form.id || normalizedEmployeeId;
     const nextEmployee = {
       ...form,
       id,
-      employeeId: form.employeeId.trim(),
+      employeeId: normalizedEmployeeId,
       name: form.name.trim(),
       position: form.position.trim(),
       department: form.department.trim(),
       orgGroup: form.orgGroup || "staff",
     };
     const exists = employees.some((employee) => employee.id === id);
+    const nextEmployees = exists
+      ? employees.map((employee) => (employee.id === id ? nextEmployee : employee))
+      : [nextEmployee, ...employees];
 
-    try {
-      await saveEmployees(exists ? employees.map((employee) => (employee.id === id ? nextEmployee : employee)) : [nextEmployee, ...employees]);
+    if (
+      await persistEmployees(
+        nextEmployees,
+        nextEmployee.isPublished
+          ? exists
+            ? "Employee updated"
+            : "Employee added"
+          : "Employee saved as draft",
+        nextEmployee.isPublished
+          ? `${nextEmployee.name} was saved successfully.`
+          : `${nextEmployee.name} stays hidden from the public organization chart.`,
+        nextEmployee.isPublished ? "success" : "draft",
+      )
+    ) {
       closeEmployeeModal();
-      transactionToast.success(
-        exists ? "Employee updated" : "Employee added",
-        `${nextEmployee.name} was saved successfully.`,
-      );
-    } catch (error) {
-      transactionToast.error("Employee save failed", error);
     }
   }
 
-  async function softDelete(employeeId: string) {
+  async function handleToggleEmployeeStatus(employee: EmployeeRecord) {
+    const nextEmployee = { ...employee, isPublished: !employee.isPublished };
+    const nextEmployees = employees.map((item) =>
+      item.id === employee.id ? nextEmployee : item,
+    );
+
+    await persistEmployees(
+      nextEmployees,
+      nextEmployee.isPublished ? "Employee activated" : "Employee moved to draft",
+      nextEmployee.isPublished
+        ? `${employee.name} is now visible on the public organization chart.`
+        : `${employee.name} is now hidden from the public organization chart.`,
+      nextEmployee.isPublished ? "success" : "draft",
+    );
+  }
+
+  async function handleDeleteEmployee() {
+    if (!employeePendingDelete || !isEmployeeDeleteConfirmed) return;
+
+    setIsSavingEmployee(true);
     try {
-      await deleteEmployee(employeeId);
-      transactionToast.success("Employee deleted", employeeId);
+      await deleteEmployee(employeePendingDelete);
+      transactionToast.deleted("Employee deleted", employeePendingDelete.employeeId);
+      closeDeleteEmployee();
     } catch (error) {
       transactionToast.error("Employee delete failed", error);
+    } finally {
+      setIsSavingEmployee(false);
     }
   }
 
@@ -2307,7 +3080,7 @@ export function AdminEmployees() {
       eyebrow="HR Records"
       actions={
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => exportEmployees(activeEmployees)}>
+          <Button type="button" variant="outline" onClick={() => exportEmployees(currentEmployees)}>
             <Download className="h-4 w-4" />
             Export ID List
           </Button>
@@ -2333,179 +3106,335 @@ export function AdminEmployees() {
         </div>
 
         <div className="overflow-hidden border border-neutral-200 bg-white">
-          <table className="w-full min-w-[840px] text-left text-sm">
-            <thead className="bg-neutral-950 text-white">
-              <tr>
-                <th className="px-4 py-3">Employee</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Department</th>
-                <th className="px-4 py-3">Org Group</th>
-                <th className="px-4 py-3">Manager</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedEmployees.map((employee) => (
-                <tr key={employee.id} className="border-t border-neutral-200">
-                  <td className="px-4 py-3">
-                    <p className="font-bold">{employee.name}</p>
-                    <p className="text-xs text-neutral-500">{employee.employeeId}</p>
-                  </td>
-                  <td className="px-4 py-3">{employee.position}</td>
-                  <td className="px-4 py-3">{employee.department}</td>
-                  <td className="px-4 py-3">
-                    {orgChartGroups.find((group) => group.value === employee.orgGroup)?.label ?? "Staff"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {activeEmployees.find((manager) => manager.employeeId === employee.reportsTo)?.name || "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openEditEmployeeModal(employee)}>
-                        <Edit3 className="h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button type="button" size="sm" variant="destructive" onClick={() => void softDelete(employee.id)}>
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {paginatedEmployees.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1240px] text-left text-sm">
+              <caption className="sr-only">Employee records</caption>
+              <thead className="bg-neutral-950 text-white">
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-neutral-500">
-                    No employees found.
-                  </td>
+                  <th scope="col" className="w-16 px-4 py-3">No.</th>
+                  <th scope="col" className="px-4 py-3">Employee</th>
+                  <th scope="col" className="px-4 py-3">Role</th>
+                  <th scope="col" className="px-4 py-3">Department</th>
+                  <th scope="col" className="px-4 py-3">Org Group</th>
+                  <th scope="col" className="px-4 py-3">Status</th>
+                  <th scope="col" className="px-4 py-3">Manager</th>
+                  <th scope="col" className="min-w-[21rem] whitespace-nowrap px-4 py-3 text-right">Actions</th>
                 </tr>
-              ) : null}
-            </tbody>
-          </table>
-          <div className="flex flex-col gap-3 border-t border-neutral-200 px-4 py-3 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              Showing {firstVisibleEmployee}-{lastVisibleEmployee} of {visibleEmployees.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={currentPage === 1}
-                onClick={() => setPage((value) => Math.max(1, value - 1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <span className="min-w-20 text-center font-semibold text-neutral-950">
-                {currentPage} / {pageCount}
-              </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={currentPage === pageCount}
-                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+              </thead>
+              <tbody>
+                {paginatedEmployees.map((employee, index) => (
+                  <tr key={employee.id} className="border-t border-neutral-200">
+                    <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                      {employeePagination.startIndex + index + 1}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-bold">{employee.name}</p>
+                      <p className="text-xs text-neutral-500">{employee.employeeId}</p>
+                    </td>
+                    <td className="px-4 py-3">{employee.position}</td>
+                    <td className="px-4 py-3">{employee.department}</td>
+                    <td className="px-4 py-3">
+                      {orgChartGroups.find((group) => group.value === employee.orgGroup)?.label ?? "Staff"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={[
+                          "inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide",
+                          employee.isPublished
+                            ? "border border-emerald-200 bg-emerald-100 text-emerald-800"
+                            : "border border-slate-300 bg-slate-100 text-slate-700",
+                        ].join(" ")}
+                      >
+                        {employee.isPublished ? "Active" : "Draft"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {currentEmployees.find((manager) => manager.employeeId === employee.reportsTo)?.name || "-"}
+                    </td>
+                    <td className="min-w-[21rem] px-4 py-3 align-middle">
+                      <div className="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={adminActionButtonStyles.edit}
+                          disabled={isSavingEmployee}
+                          onClick={() => openEditEmployeeModal(employee)}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={
+                            employee.isPublished
+                              ? adminActionButtonStyles.draft
+                              : adminActionButtonStyles.publish
+                          }
+                          disabled={isSavingEmployee}
+                          onClick={() => void handleToggleEmployeeStatus(employee)}
+                        >
+                          {employee.isPublished ? (
+                            <FileText className="h-4 w-4" />
+                          ) : (
+                            <ShieldCheck className="h-4 w-4" />
+                          )}
+                          {employee.isPublished ? "Draft" : "Activate"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className={adminActionButtonStyles.delete}
+                          disabled={isSavingEmployee}
+                          onClick={() => openDeleteEmployee(employee)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {paginatedEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-sm text-neutral-500">
+                      No employees found.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
+          <PaginationControls
+            currentPage={employeePagination.currentPage}
+            firstItem={employeePagination.firstItem}
+            itemLabel="employees"
+            lastItem={employeePagination.lastItem}
+            onPageChange={setPage}
+            pageCount={employeePagination.pageCount}
+            totalItems={visibleEmployees.length}
+          />
         </div>
       </section>
 
-      {isModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
-          <div className="max-h-full w-full max-w-lg overflow-y-auto border border-neutral-200 bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                  Employee Record
-                </p>
-                <h2 className="mt-1 text-2xl">{form.id ? "Edit Employee" : "Add Employee"}</h2>
-              </div>
-              <Button type="button" size="sm" variant="ghost" onClick={closeEmployeeModal} aria-label="Close employee form">
-                <X className="h-5 w-5" />
-              </Button>
+      <Dialog open={isModalOpen} onOpenChange={handleEmployeeModalOpenChange}>
+        <DialogContent className="max-h-[92vh] max-w-[min(40rem,96vw)] overflow-y-auto p-0 sm:rounded-lg">
+          <div className="border-b border-neutral-200 p-5 pr-12">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Employee Record
+            </p>
+            <DialogTitle className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              {form.id ? "Edit Employee" : "Add Employee"}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Add or edit an employee record and choose whether it is active or saved as a draft.
+            </DialogDescription>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 p-5">
+            <div className="space-y-2">
+              <Label htmlFor="employee-name">Name</Label>
+              <Input
+                id="employee-name"
+                value={form.name}
+                placeholder="Name"
+                disabled={isSavingEmployee}
+                autoFocus
+                onChange={(event) => updateEmployeeForm("name", event.currentTarget.value)}
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="employee-name">Name</Label>
-                <Input id="employee-name" value={form.name} placeholder="Name" onChange={(event) => setForm({ ...form, name: event.currentTarget.value })} />
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="employee-id">Employee ID</Label>
-                <Input id="employee-id" value={form.employeeId} placeholder="Employee ID" onChange={(event) => setForm({ ...form, employeeId: event.currentTarget.value })} />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="employee-position">Role / Position</Label>
-                  <Input id="employee-position" value={form.position} placeholder="Position" onChange={(event) => setForm({ ...form, position: event.currentTarget.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="employee-department">Department / Column</Label>
-                  <Input id="employee-department" value={form.department} placeholder="Department" onChange={(event) => setForm({ ...form, department: event.currentTarget.value })} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employee-org-group">Org Chart Group</Label>
-                <select
-                  id="employee-org-group"
-                  value={form.orgGroup}
-                  onChange={(event) =>
-                    setForm({ ...form, orgGroup: event.currentTarget.value as EmployeeRecord["orgGroup"] })
-                  }
-                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-                >
-                  {orgChartGroups.map((group) => (
-                    <option key={group.value} value={group.value}>
-                      {group.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employee-manager">Manager / Reports To</Label>
-                <select
-                  id="employee-manager"
-                  value={form.reportsTo}
-                  onChange={(event) => setForm({ ...form, reportsTo: event.currentTarget.value })}
-                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-                >
-                  <option value="">No manager</option>
-                  {activeEmployees
-                    .filter((employee) => employee.employeeId !== form.employeeId)
-                    .map((employee) => (
-                      <option key={employee.id} value={employee.employeeId}>
-                        {employee.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employee-photo">Photo URL</Label>
                 <Input
-                  id="employee-photo"
-                  value={form.photoUrl}
-                  placeholder="team/President.jpg"
-                  onChange={(event) => setForm({ ...form, photoUrl: event.currentTarget.value })}
+                  id="employee-id"
+                  value={form.employeeId}
+                  placeholder="Employee ID"
+                  readOnly={Boolean(form.id)}
+                  disabled={isSavingEmployee}
+                  aria-describedby="employee-id-help"
+                  onChange={(event) => updateEmployeeForm("employeeId", event.currentTarget.value)}
+                />
+                <p id="employee-id-help" className="text-xs text-neutral-500">
+                  {form.id
+                    ? "Employee ID is fixed after creation and is used for delete confirmation."
+                    : "This ID will be used for delete confirmation after the record is saved."}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="employee-status">Status</Label>
+                <select
+                  id="employee-status"
+                  value={form.isPublished ? "active" : "draft"}
+                  disabled={isSavingEmployee}
+                  onChange={(event) => updateEmployeeForm("isPublished", event.currentTarget.value === "active")}
+                  className="flex min-h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                </select>
+                <p className="text-xs text-neutral-500">
+                  {form.isPublished
+                    ? "Active employees appear on the public organization chart."
+                    : "Draft employees stay hidden from the public organization chart."}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="employee-position">Role / Position</Label>
+                <Input
+                  id="employee-position"
+                  value={form.position}
+                  placeholder="Position"
+                  disabled={isSavingEmployee}
+                  onChange={(event) => updateEmployeeForm("position", event.currentTarget.value)}
                 />
               </div>
-              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-                <Button type="button" variant="outline" onClick={closeEmployeeModal}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <Save className="h-4 w-4" />
-                  Save Employee
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="employee-department">Department / Column</Label>
+                <Input
+                  id="employee-department"
+                  value={form.department}
+                  placeholder="Department"
+                  disabled={isSavingEmployee}
+                  onChange={(event) => updateEmployeeForm("department", event.currentTarget.value)}
+                />
               </div>
-            </form>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="employee-org-group">Org Chart Group</Label>
+              <select
+                id="employee-org-group"
+                value={form.orgGroup}
+                disabled={isSavingEmployee}
+                onChange={(event) =>
+                  updateEmployeeForm("orgGroup", event.currentTarget.value as EmployeeRecord["orgGroup"])
+                }
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {orgChartGroups.map((group) => (
+                  <option key={group.value} value={group.value}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="employee-manager">Manager / Reports To</Label>
+              <select
+                id="employee-manager"
+                value={form.reportsTo}
+                disabled={isSavingEmployee}
+                onChange={(event) => updateEmployeeForm("reportsTo", event.currentTarget.value)}
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">No manager</option>
+                {currentEmployees
+                  .filter((employee) => employee.employeeId !== form.employeeId)
+                  .map((employee) => (
+                    <option key={employee.id} value={employee.employeeId}>
+                      {employee.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="employee-photo">Photo URL</Label>
+              <Input
+                id="employee-photo"
+                value={form.photoUrl}
+                placeholder="team/President.jpg"
+                disabled={isSavingEmployee}
+                onChange={(event) => updateEmployeeForm("photoUrl", event.currentTarget.value)}
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-neutral-200 pt-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={isSavingEmployee} onClick={closeEmployeeModal}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSavingEmployee}>
+                <Save className="h-4 w-4" />
+                {isSavingEmployee ? "Saving" : "Save Employee"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(employeePendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isSavingEmployee) closeDeleteEmployee();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+              Delete Employee
+            </p>
+            <DialogTitle className="mt-2 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              Are you sure?
+            </DialogTitle>
+            <DialogDescription className="mt-3 leading-6">
+              This removes <strong className="text-neutral-950">{employeePendingDelete?.name}</strong> from the
+              active employee records and public organization chart. There is no restore control on this screen.
+            </DialogDescription>
           </div>
-        </div>
-      ) : null}
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (isEmployeeDeleteConfirmed) void handleDeleteEmployee();
+            }}
+            className="space-y-4"
+          >
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+              <p className="text-sm text-neutral-700">Type this Employee ID to confirm:</p>
+              <code className="mt-2 block select-all font-mono text-sm font-bold text-neutral-950">
+                {employeePendingDelete?.employeeId}
+              </code>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-employee-confirmation">Employee ID</Label>
+              <Input
+                id="delete-employee-confirmation"
+                value={employeeDeleteConfirmation}
+                onChange={(event) => setEmployeeDeleteConfirmation(event.currentTarget.value)}
+                placeholder={employeePendingDelete?.employeeId}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={isSavingEmployee} onClick={closeDeleteEmployee}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className={adminActionButtonStyles.delete}
+                disabled={!isEmployeeDeleteConfirmed || isSavingEmployee}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isSavingEmployee ? "Deleting" : "Confirm Delete"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -55,22 +55,9 @@ interface ConnectorProps {
   height?: number;
 }
 
-interface DeptColProps {
-  label: string;
-  children: React.ReactNode;
-}
-
-interface DepartmentGroup {
-  department: string;
-  heads: EmployeeRecord[];
-  staff: EmployeeRecord[];
-}
-
-interface DepartmentLineProps {
-  groups: DepartmentGroup[];
-  showDepartments: boolean;
-  showStaff: boolean;
-  exitingTiers: TierVisibility;
+interface ReportingNode {
+  employee: EmployeeRecord;
+  children: ReportingNode[];
 }
 
 interface SectionLabelProps {
@@ -114,29 +101,49 @@ const AVATAR_STYLES = {
   gray: { background: "#F1EFE8", color: "#5F5E5A" },
 };
 
-const DEPARTMENT_ORDER = ["Admin", "Finance", "IT / Creative", "Technical"];
-
-function teamPhoto(fileName: string) {
-  return `${import.meta.env.BASE_URL}team/${encodeURIComponent(fileName)}`;
-}
-
-const TEAM_PHOTOS = {
-  managingDirector: teamPhoto("MANAGING DIRECTOR.png"),
-  coo: teamPhoto("COO.jpg"),
-  president: teamPhoto("President.jpg"),
-  vicePresident: teamPhoto("Vice President.jpg"),
-  executiveManager: teamPhoto("Executive Manager.jpg"),
-  technicalManager: teamPhoto("Technical Manager.jpg"),
-  operationsManager: teamPhoto("Operations Mgr.jpg"),
-  operationsManager2: teamPhoto("Operations Mgr 2.jpg"),
-  accountingSupervisor: teamPhoto("Accounting Supervisor.jpg"),
-  adminStaff: teamPhoto("Admin Staff.jpg"),
-  riderLiaison: teamPhoto("Rider Liaison.jpg"),
-  officeAid: teamPhoto("Office Aid.jpg"),
-  itSupervisor: teamPhoto("IT Supervisor.jpg"),
-  graphicDesigner: teamPhoto("Graphic Designer.jpg"),
-  itAssistant: teamPhoto("IT Assistant.jpg"),
-};
+const EXECUTIVE_MANAGER_ID = "MLR-001";
+const REPORTING_NODE_GAP = 12;
+const CORE_EMPLOYEE_ORDER = [
+  "ORG-MD-001",
+  "ORG-COO-001",
+  "ORG-PRES-001",
+  "ORG-VP-001",
+  EXECUTIVE_MANAGER_ID,
+  "24-015",
+  "26-001",
+  "ORG-OFFICEAID-001",
+  "ORG-TECH-001",
+  "ORG-OPSMGR-001",
+  "ORG-OPSMGR-002",
+  "23-003",
+  "ORG-IT-001",
+  "ORG-GRAPHIC-001",
+  "ORG-ITASSIST-001",
+] as const;
+const CORE_EMPLOYEE_ORDER_INDEX = new Map<string, number>(
+  CORE_EMPLOYEE_ORDER.map((employeeId, index) => [employeeId, index]),
+);
+const CORE_REPORTING_RELATIONSHIPS = new Map<string, string>([
+  ["ORG-PRES-001", "ORG-MD-001"],
+  ["ORG-VP-001", "ORG-PRES-001"],
+  [EXECUTIVE_MANAGER_ID, "ORG-VP-001"],
+  ["24-015", EXECUTIVE_MANAGER_ID],
+  ["26-001", EXECUTIVE_MANAGER_ID],
+  ["ORG-OFFICEAID-001", EXECUTIVE_MANAGER_ID],
+  ["ORG-TECH-001", EXECUTIVE_MANAGER_ID],
+  ["ORG-OPSMGR-001", "ORG-TECH-001"],
+  ["ORG-OPSMGR-002", "ORG-TECH-001"],
+  ["23-003", EXECUTIVE_MANAGER_ID],
+  ["ORG-IT-001", EXECUTIVE_MANAGER_ID],
+  ["ORG-GRAPHIC-001", "ORG-IT-001"],
+  ["ORG-ITASSIST-001", "ORG-IT-001"],
+]);
+const CORE_ROLE_LABELS = new Map<string, string>([
+  ["ORG-OPSMGR-001", "Operations Manager 1"],
+  ["ORG-OPSMGR-002", "Operations Manager 2"],
+  ["26-001", "Rider / Liaison"],
+  ["ORG-OFFICEAID-001", "Office Aide"],
+]);
 
 function getInitials(name: string) {
   return name
@@ -307,6 +314,7 @@ function Card({
           <button
             type="button"
             aria-label={`View details for ${name}`}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -419,78 +427,97 @@ function avatarColorForEmployee(employee: EmployeeRecord): AvatarColorType {
   return "gray";
 }
 
-function sortByReportingOrder(employees: EmployeeRecord[]) {
-  const byManager = new Map<string, EmployeeRecord[]>();
-  const byId = new Map(employees.map((employee) => [employee.employeeId, employee]));
+function displayRoleForEmployee(employee: EmployeeRecord) {
+  return CORE_ROLE_LABELS.get(employee.employeeId) ?? employee.position;
+}
+
+function employeeHierarchyOrder(employee: EmployeeRecord) {
+  return CORE_EMPLOYEE_ORDER_INDEX.get(employee.employeeId) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function sortByHierarchyOrder(employees: EmployeeRecord[]) {
+  return [...employees].sort((first, second) => {
+    const orderDifference = employeeHierarchyOrder(first) - employeeHierarchyOrder(second);
+    return orderDifference || first.name.localeCompare(second.name);
+  });
+}
+
+function reportingManagerId(employee: EmployeeRecord) {
+  return CORE_REPORTING_RELATIONSHIPS.get(employee.employeeId) ?? employee.reportsTo;
+}
+
+function buildReportingForest(employees: EmployeeRecord[], executiveManagerId: string) {
+  const reportingEmployees = employees.filter(
+    (employee) => employee.orgGroup === "dept" || employee.orgGroup === "staff",
+  );
+  const reportingEmployeeById = new Map(
+    reportingEmployees.map((employee) => [employee.employeeId, employee]),
+  );
+  const childrenByManager = new Map<string, EmployeeRecord[]>();
   const roots: EmployeeRecord[] = [];
 
-  employees.forEach((employee) => {
-    if (employee.reportsTo && byId.has(employee.reportsTo)) {
-      const reports = byManager.get(employee.reportsTo) ?? [];
-      reports.push(employee);
-      byManager.set(employee.reportsTo, reports);
+  reportingEmployees.forEach((employee) => {
+    const managerId = reportingManagerId(employee);
+    if (managerId === executiveManagerId || reportingEmployeeById.has(managerId)) {
+      const children = childrenByManager.get(managerId) ?? [];
+      children.push(employee);
+      childrenByManager.set(managerId, children);
       return;
     }
 
     roots.push(employee);
   });
 
-  const sortByName = (items: EmployeeRecord[]) =>
-    [...items].sort((first, second) => first.name.localeCompare(second.name));
-  const ordered: EmployeeRecord[] = [];
-  const visit = (employee: EmployeeRecord) => {
-    ordered.push(employee);
-    sortByName(byManager.get(employee.employeeId) ?? []).forEach(visit);
+  const visited = new Set<string>();
+  const buildNode = (employee: EmployeeRecord, ancestors: Set<string>): ReportingNode => {
+    visited.add(employee.employeeId);
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(employee.employeeId);
+    const children = sortByHierarchyOrder(childrenByManager.get(employee.employeeId) ?? [])
+      .filter((child) => !nextAncestors.has(child.employeeId))
+      .map((child) => buildNode(child, nextAncestors));
+
+    return { employee, children };
   };
+  const requestedRoots = childrenByManager.get(executiveManagerId) ?? [];
+  const requestedRootIds = new Set(requestedRoots.map((employee) => employee.employeeId));
+  const initialRoots = sortByHierarchyOrder([
+    ...requestedRoots,
+    ...roots.filter((employee) => !requestedRootIds.has(employee.employeeId)),
+  ]);
+  const forest = initialRoots.map((employee) => buildNode(employee, new Set<string>()));
 
-  sortByName(roots).forEach(visit);
-  return ordered;
-}
-
-function departmentOrderIndex(department: string) {
-  const normalized = department.trim().toLowerCase();
-
-  if (normalized.includes("admin")) return 0;
-  if (normalized.includes("finance") || normalized.includes("account")) return 1;
-  if (/\bit\b/.test(normalized) || normalized.includes("creative") || normalized.includes("information tech")) return 2;
-  if (
-    normalized.includes("technical") ||
-    normalized.includes("operations") ||
-    normalized.includes("project") ||
-    normalized.includes("engineering")
-  ) {
-    return 3;
-  }
-
-  return DEPARTMENT_ORDER.length;
-}
-
-function groupDepartments(employees: EmployeeRecord[]): DepartmentGroup[] {
-  const groups = new Map<string, { heads: EmployeeRecord[]; staff: EmployeeRecord[] }>();
-
-  employees.forEach((employee) => {
-    const department = employee.department.trim() || "Other";
-    const group = groups.get(department) ?? { heads: [], staff: [] };
-
-    if (employee.orgGroup === "dept") {
-      group.heads.push(employee);
-    } else if (employee.orgGroup === "staff") {
-      group.staff.push(employee);
+  sortByHierarchyOrder(reportingEmployees).forEach((employee) => {
+    if (!visited.has(employee.employeeId)) {
+      forest.push(buildNode(employee, new Set<string>()));
     }
-
-    groups.set(department, group);
   });
 
-  return [...groups.entries()]
-    .map(([department, group]) => ({
-      department,
-      heads: sortByReportingOrder(group.heads),
-      staff: sortByReportingOrder(group.staff),
-    }))
-    .sort((first, second) => {
-      const orderDifference = departmentOrderIndex(first.department) - departmentOrderIndex(second.department);
-      return orderDifference || first.department.localeCompare(second.department);
-    });
+  return forest;
+}
+
+function filterVisibleReportingNodes(
+  nodes: ReportingNode[],
+  visibleTiers: TierVisibility,
+): ReportingNode[] {
+  return nodes.flatMap((node) => {
+    const children = filterVisibleReportingNodes(node.children, visibleTiers);
+    if (!visibleTiers[node.employee.orgGroup]) return children;
+    return [{ ...node, children }];
+  });
+}
+
+function reportingNodeWidth(node: ReportingNode, depth = 0): number {
+  const cardWidth = depth === 0 ? 148 : 124;
+  if (node.children.length === 0) return cardWidth;
+
+  const childrenWidth =
+    node.children.reduce(
+      (total, child) => total + reportingNodeWidth(child, depth + 1),
+      0,
+    ) +
+    REPORTING_NODE_GAP * (node.children.length - 1);
+  return Math.max(cardWidth, childrenWidth);
 }
 
 function EmployeeCard({
@@ -509,7 +536,7 @@ function EmployeeCard({
   return (
     <Card
       name={employee.name}
-      role={employee.position}
+      role={displayRoleForEmployee(employee)}
       tier={tier}
       avatarColor={avatarColorForEmployee(employee)}
       badge={badgeForEmployee(employee)}
@@ -521,60 +548,109 @@ function EmployeeCard({
   );
 }
 
-function DepartmentLine({
-  groups,
-  showDepartments,
-  showStaff,
+function ReportingNodeView({
+  node,
+  depth,
+  siblingIndex,
   exitingTiers,
-}: DepartmentLineProps) {
-  const columnCount = groups.length;
-  const lineInset = `${50 / columnCount}%`;
+}: {
+  node: ReportingNode;
+  depth: number;
+  siblingIndex: number;
+  exitingTiers: TierVisibility;
+}) {
+  const width = reportingNodeWidth(node, depth);
+  const childWidths = node.children.map((child) => reportingNodeWidth(child, depth + 1));
+  const childrenWidth =
+    childWidths.reduce((total, childWidth) => total + childWidth, 0) +
+    REPORTING_NODE_GAP * Math.max(0, childWidths.length - 1);
+  const hasMultipleChildren = node.children.length > 1;
+  const firstChildCenter = (childWidths[0] ?? 0) / 2;
+  const lastChildCenter = childrenWidth - (childWidths.at(-1) ?? 0) / 2;
 
   return (
-    <div style={{ width: "100%", overflowX: "auto", paddingBottom: 8 }}>
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 940,
-          minWidth: columnCount > 1 ? columnCount * 158 : 150,
-          margin: "0 auto",
-          paddingTop: columnCount > 1 ? 24 : 0,
-        }}
-      >
-        {columnCount > 1 && (
+    <div
+      style={{
+        width,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <EmployeeCard
+        employee={node.employee}
+        tier={node.employee.orgGroup}
+        size={depth === 0 ? "md" : "sm"}
+        aosDelay={500 + depth * 180 + siblingIndex * 60}
+        isExiting={exitingTiers[node.employee.orgGroup]}
+      />
+
+      {node.children.length === 1 ? (
+        <>
+          <Connector height={18} />
+          <ul
+            aria-label={`Direct reports to ${node.employee.name}`}
+            style={{ listStyle: "none", margin: 0, padding: 0 }}
+          >
+            <li>
+              <ReportingNodeView
+                node={node.children[0]}
+                depth={depth + 1}
+                siblingIndex={0}
+                exitingTiers={exitingTiers}
+              />
+            </li>
+          </ul>
+        </>
+      ) : null}
+
+      {hasMultipleChildren ? (
+        <div
+          style={{
+            position: "relative",
+            width: childrenWidth,
+            paddingTop: 24,
+          }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 1,
+              height: 10,
+              background: "#d1d5db",
+            }}
+          />
           <div
             aria-hidden="true"
             style={{
               position: "absolute",
               top: 10,
-              left: lineInset,
-              right: lineInset,
+              left: firstChildCenter,
+              width: lastChildCenter - firstChildCenter,
               height: 1,
               background: "#d1d5db",
             }}
           />
-        )}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${columnCount}, minmax(130px, 1fr))`,
-            gap: 12,
-            alignItems: "start",
-          }}
-        >
-          {groups.map((group, groupIndex) => (
-            <div
-              key={group.department}
-              style={{
-                position: "relative",
-                display: "flex",
-                justifyContent: "center",
-                minWidth: 0,
-              }}
-            >
-              {columnCount > 1 && (
+          <ul
+            aria-label={`Direct reports to ${node.employee.name}`}
+            style={{
+              display: "grid",
+              gridTemplateColumns: childWidths.map((childWidth) => `${childWidth}px`).join(" "),
+              gap: REPORTING_NODE_GAP,
+              alignItems: "start",
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+            }}
+          >
+            {node.children.map((child, index) => (
+              <li
+                key={child.employee.id}
+                style={{ position: "relative", display: "flex", justifyContent: "center" }}
+              >
                 <div
                   aria-hidden="true"
                   style={{
@@ -586,48 +662,99 @@ function DepartmentLine({
                     background: "#d1d5db",
                   }}
                 />
-              )}
-
-              <DeptCol label={group.department}>
-                {showDepartments &&
-                  group.heads.map((employee, index) => (
-                    <div
-                      key={employee.id}
-                      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
-                    >
-                      {index > 0 && <Connector height={8} />}
-                      <EmployeeCard
-                        employee={employee}
-                        tier="dept"
-                        aosDelay={500 + groupIndex * 100 + index * 50}
-                        isExiting={exitingTiers.dept}
-                      />
-                    </div>
-                  ))}
-
-                {showDepartments && group.heads.length > 0 && showStaff && group.staff.length > 0 && (
-                  <Connector height={12} />
-                )}
-
-                {showStaff && group.staff.length > 0 && (
-                  <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
-                    {group.staff.map((employee, index) => (
-                      <EmployeeCard
-                        key={employee.id}
-                        employee={employee}
-                        tier="staff"
-                        size="sm"
-                        aosDelay={900 + groupIndex * 120 + index * 60}
-                        isExiting={exitingTiers.staff}
-                      />
-                    ))}
-                  </div>
-                )}
-              </DeptCol>
-            </div>
-          ))}
+                <ReportingNodeView
+                  node={child}
+                  depth={depth + 1}
+                  siblingIndex={index}
+                  exitingTiers={exitingTiers}
+                />
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ReportingTree({
+  nodes,
+  managerName,
+  exitingTiers,
+}: {
+  nodes: ReportingNode[];
+  managerName: string;
+  exitingTiers: TierVisibility;
+}) {
+  const nodeWidths = nodes.map((node) => reportingNodeWidth(node));
+  const width =
+    nodeWidths.reduce((total, nodeWidth) => total + nodeWidth, 0) +
+    REPORTING_NODE_GAP * Math.max(0, nodeWidths.length - 1);
+  const hasMultipleNodes = nodes.length > 1;
+  const firstNodeCenter = (nodeWidths[0] ?? 0) / 2;
+  const lastNodeCenter = width - (nodeWidths.at(-1) ?? 0) / 2;
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width,
+        margin: "0 auto",
+        paddingTop: hasMultipleNodes ? 24 : 0,
+      }}
+    >
+      {hasMultipleNodes ? (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            top: 10,
+            left: firstNodeCenter,
+            width: lastNodeCenter - firstNodeCenter,
+            height: 1,
+            background: "#d1d5db",
+          }}
+        />
+      ) : null}
+      <ul
+        aria-label={`Direct reports to ${managerName}`}
+        style={{
+          display: "grid",
+          gridTemplateColumns: nodeWidths.map((nodeWidth) => `${nodeWidth}px`).join(" "),
+          gap: REPORTING_NODE_GAP,
+          alignItems: "start",
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+        }}
+      >
+        {nodes.map((node, index) => (
+          <li
+            key={node.employee.id}
+            style={{ position: "relative", display: "flex", justifyContent: "center" }}
+          >
+            {hasMultipleNodes ? (
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  top: -14,
+                  left: "50%",
+                  width: 1,
+                  height: 14,
+                  background: "#d1d5db",
+                }}
+              />
+            ) : null}
+            <ReportingNodeView
+              node={node}
+              depth={0}
+              siblingIndex={index}
+              exitingTiers={exitingTiers}
+            />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -639,23 +766,37 @@ export default function OrgChart({
 }: OrgChartProps) {
   const showBoard = visibleTiers.board;
   const showLeadership = visibleTiers.leadership;
-  const showDepartments = visibleTiers.dept;
-  const showStaff = visibleTiers.staff;
-  const showDepartmentArea = showDepartments || showStaff;
-  const activeEmployees = employees.filter((employee) => !employee.deletedAt);
-  const boardEmployees = sortByReportingOrder(
-    activeEmployees.filter((employee) => employee.orgGroup === "board"),
-  );
-  const leadershipEmployees = sortByReportingOrder(
-    activeEmployees.filter((employee) => employee.orgGroup === "leadership"),
-  );
-  const departmentGroups = groupDepartments(activeEmployees);
-  const visibleDepartmentGroups = departmentGroups.filter(
-    (group) => (showDepartments && group.heads.length > 0) || (showStaff && group.staff.length > 0),
+  const { boardEmployees, leadershipEmployees, reportingForest, executiveManager } = useMemo(() => {
+    const activeEmployees = employees.filter(
+      (employee) => employee.isPublished && !employee.deletedAt,
+    );
+    const nextBoardEmployees = sortByHierarchyOrder(
+      activeEmployees.filter((employee) => employee.orgGroup === "board"),
+    );
+    const nextLeadershipEmployees = sortByHierarchyOrder(
+      activeEmployees.filter((employee) => employee.orgGroup === "leadership"),
+    );
+    const nextExecutiveManager =
+      nextLeadershipEmployees.find((employee) => employee.employeeId === EXECUTIVE_MANAGER_ID) ??
+      nextLeadershipEmployees.at(-1);
+
+    return {
+      boardEmployees: nextBoardEmployees,
+      leadershipEmployees: nextLeadershipEmployees,
+      executiveManager: nextExecutiveManager,
+      reportingForest: buildReportingForest(
+        activeEmployees,
+        nextExecutiveManager?.employeeId ?? EXECUTIVE_MANAGER_ID,
+      ),
+    };
+  }, [employees]);
+  const visibleReportingNodes = useMemo(
+    () => filterVisibleReportingNodes(reportingForest, visibleTiers),
+    [reportingForest, visibleTiers],
   );
   const hasBoard = boardEmployees.length > 0;
   const hasLeadership = leadershipEmployees.length > 0;
-  const hasDepartmentArea = visibleDepartmentGroups.length > 0;
+  const hasReportingArea = visibleReportingNodes.length > 0;
 
   return (
     <div
@@ -664,12 +805,12 @@ export default function OrgChart({
           '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         padding: "2rem 1rem",
         overflow: "visible",
-        minWidth: 320,
+        minWidth: 1164,
       }}
     >
       {showBoard && hasBoard && (
         <>
-          <SectionLabel>Board / Ownership</SectionLabel>
+          <SectionLabel>Managing Director / COO</SectionLabel>
           <Row>
             {boardEmployees.map((employee, index) => (
               <EmployeeCard
@@ -684,7 +825,7 @@ export default function OrgChart({
         </>
       )}
 
-      {showBoard && hasBoard && ((showLeadership && hasLeadership) || (showDepartmentArea && hasDepartmentArea)) && (
+      {showBoard && hasBoard && ((showLeadership && hasLeadership) || hasReportingArea) && (
         <Connector height={20} />
       )}
 
@@ -707,17 +848,19 @@ export default function OrgChart({
         </>
       )}
 
-      {showLeadership && hasLeadership && showDepartmentArea && hasDepartmentArea && (
+      {showLeadership && hasLeadership && hasReportingArea && (
         <Connector height={20} />
       )}
 
-      {showDepartmentArea && hasDepartmentArea && (
-        <DepartmentLine
-          groups={visibleDepartmentGroups}
-          showDepartments={showDepartments}
-          showStaff={showStaff}
-          exitingTiers={exitingTiers}
-        />
+      {hasReportingArea && (
+        <>
+          <SectionLabel>Executive Manager direct reports</SectionLabel>
+          <ReportingTree
+            nodes={visibleReportingNodes}
+            managerName={executiveManager?.name ?? "Executive Manager"}
+            exitingTiers={exitingTiers}
+          />
+        </>
       )}
     </div>
   );
@@ -752,77 +895,6 @@ function Row({ children }: RowProps) {
       }}
     >
       {children}
-    </div>
-  );
-}
-
-function DeptCol({ label, children }: DeptColProps) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        width: "100%",
-        minWidth: 130,
-        maxWidth: 260,
-      }}
-    >
-      <SectionLabel>{label}</SectionLabel>
-      {children}
-    </div>
-  );
-}
-
-function WorkerCard({
-  aosDelay,
-  isExiting,
-}: {
-  aosDelay: number;
-  isExiting: boolean;
-}) {
-  return (
-    <div
-      data-aos="fade-up"
-      data-aos-delay={aosDelay}
-      data-aos-duration="500"
-      data-aos-once="true"
-      data-aos-offset="0"
-      data-aos-anchor-placement="top-bottom"
-      style={{
-        width: 110,
-        ...(isExiting
-          ? {
-              opacity: 0,
-              transform: "translateY(14px) scale(0.97)",
-              transition:
-                "opacity 220ms ease, transform 220ms ease",
-              transitionDelay: "0ms",
-            }
-          : {}),
-      }}
-    >
-      <div
-        style={{
-          background: "#f9fafb",
-          border: "0.5px solid #e5e7eb",
-          borderRadius: 8,
-          padding: "6px 10px",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 10,
-            color: "#6b7280",
-            textTransform: "uppercase",
-            letterSpacing: "0.03em",
-          }}
-        >
-          Labor / Worker
-        </div>
-      </div>
     </div>
   );
 }

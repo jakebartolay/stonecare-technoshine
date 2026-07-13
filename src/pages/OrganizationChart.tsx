@@ -13,7 +13,7 @@ import OrgChart, {
 } from "@/components/OrgChart";
 import { useEmployees } from "@/lib/admin-store";
 
-const CHART_WIDTH = 900;
+const CHART_WIDTH = 1200;
 const DEFAULT_VISIBILITY: TierVisibility = {
   board: true,
   leadership: true,
@@ -44,7 +44,6 @@ export default function OrganizationChart() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const employees = useEmployees(true);
-  const [scale, setScale] = useState(1);
   const [visibleTiers, setVisibleTiers] =
     useState<TierVisibility>(DEFAULT_VISIBILITY);
   const [exitingTiers, setExitingTiers] =
@@ -58,26 +57,11 @@ export default function OrganizationChart() {
     const chart = chartRef.current;
     if (!viewport || !chart) return;
 
-    const fitChart = () => {
-      const availableWidth = viewport.clientWidth;
-      const availableHeight = viewport.clientHeight;
-      const chartWidth = chart.scrollWidth;
-      const chartHeight = chart.scrollHeight;
+    const frame = window.requestAnimationFrame(() => {
+      viewport.scrollLeft = Math.max(0, (chart.scrollWidth - viewport.clientWidth) / 2);
+    });
 
-      if (!availableWidth || !availableHeight || !chartWidth || !chartHeight) {
-        return;
-      }
-
-      setScale(Math.min(1, availableWidth / chartWidth, availableHeight / chartHeight));
-    };
-
-    fitChart();
-
-    const observer = new ResizeObserver(fitChart);
-    observer.observe(viewport);
-    observer.observe(chart);
-
-    return () => observer.disconnect();
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -209,16 +193,14 @@ export default function OrganizationChart() {
       >
         <div
           ref={viewportRef}
-          className="absolute inset-x-0 bottom-[220px] top-0 sm:bottom-0 sm:right-[184px]"
+          className="absolute inset-x-0 bottom-[220px] top-0 overflow-auto overscroll-contain sm:bottom-0 sm:right-[196px]"
         >
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex min-h-full min-w-max items-start justify-center px-4 py-4 sm:px-6 sm:py-6">
             <div
               ref={chartRef}
               style={{
                 width: CHART_WIDTH,
                 flexShrink: 0,
-                transform: `scale(${scale})`,
-                transformOrigin: "center",
               }}
             >
               <OrgChart

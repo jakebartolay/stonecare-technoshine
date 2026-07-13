@@ -167,6 +167,7 @@ function employeeFromRow(array $row): array
         'employeeId' => (string)$row['employee_id'],
         'reportsTo' => (string)($row['reports_to_employee_id'] ?? ''),
         'photoUrl' => (string)($row['photo_url'] ?? ''),
+        'isPublished' => ($row['status'] ?? 'active') === 'active' && empty($row['deleted_at']),
         'deletedAt' => $row['deleted_at'] ?: null,
     ];
 }
@@ -201,6 +202,35 @@ function ensureEmployeeOrgGroupColumn(PDO $pdo): void
            ELSE 'staff'
          END"
     );
+}
+
+function migrateEmployeeHierarchy(PDO $pdo): void
+{
+    $updates = [
+        ['ORG-OPSMGR-001', 'Operations Mgr', 'ORG-TECH-001', 'Operations Manager 1', 'ORG-TECH-001'],
+        ['ORG-OPSMGR-002', 'Operations Mgr', 'ORG-TECH-001', 'Operations Manager 2', 'ORG-TECH-001'],
+        ['26-001', 'Rider Liaison', '24-015', 'Rider / Liaison', 'MLR-001'],
+        ['ORG-OFFICEAID-001', 'Office Aid', '24-015', 'Office Aide', 'MLR-001'],
+        ['ORG-ITASSIST-001', 'IT Assistant', 'ORG-GRAPHIC-001', 'IT Assistant', 'ORG-IT-001'],
+    ];
+    $statement = $pdo->prepare(
+        "UPDATE employees
+         SET position = :position,
+             reports_to_employee_id = :reports_to
+         WHERE employee_id = :employee_id
+           AND position = :legacy_position
+           AND COALESCE(reports_to_employee_id, '') = :legacy_reports_to"
+    );
+
+    foreach ($updates as [$employeeId, $legacyPosition, $legacyReportsTo, $position, $reportsTo]) {
+        $statement->execute([
+            'employee_id' => $employeeId,
+            'legacy_position' => $legacyPosition,
+            'legacy_reports_to' => $legacyReportsTo,
+            'position' => $position,
+            'reports_to' => $reportsTo,
+        ]);
+    }
 }
 
 function ensureSocialReelsTable(PDO $pdo): void
@@ -351,6 +381,7 @@ function deleteManagedServiceImage(string $siteRoot, string $path): void
 try {
     $pdo = db();
     ensureEmployeeOrgGroupColumn($pdo);
+    migrateEmployeeHierarchy($pdo);
     ensureSocialReelsTable($pdo);
     $action = (string)($_GET['action'] ?? '');
     $method = $_SERVER['REQUEST_METHOD'];
@@ -525,6 +556,10 @@ try {
         if (!in_array($orgGroup, ['board', 'leadership', 'dept', 'staff'], true)) {
             $orgGroup = 'staff';
         }
+        $deletedAt = ($employee['deletedAt'] ?? '') ?: null;
+        $isPublished = array_key_exists('isPublished', $employee)
+            ? !empty($employee['isPublished'])
+            : $deletedAt === null;
 
         $statement = $pdo->prepare(
             'INSERT INTO employees
@@ -550,8 +585,8 @@ try {
             'org_group' => $orgGroup,
             'reports_to_employee_id' => ($employee['reportsTo'] ?? '') ?: null,
             'photo_url' => ($employee['photoUrl'] ?? '') ?: null,
-            'status' => empty($employee['deletedAt']) ? 'active' : 'inactive',
-            'deleted_at' => ($employee['deletedAt'] ?? '') ?: null,
+            'status' => $deletedAt === null && $isPublished ? 'active' : 'inactive',
+            'deleted_at' => $deletedAt,
         ]);
         respond(200, ['ok' => true]);
     }
@@ -559,8 +594,15 @@ try {
     if ($action === 'employees.delete' && $method === 'POST') {
         requireUser($pdo);
         $payload = body();
-        $statement = $pdo->prepare('UPDATE employees SET status = "inactive", deleted_at = NOW() WHERE id = :id');
-        $statement->execute(['id' => (int)($payload['id'] ?? 0)]);
+        $statement = $pdo->prepare(
+            'UPDATE employees
+             SET status = "inactive", deleted_at = NOW()
+             WHERE id = :id OR employee_id = :employee_id'
+        );
+        $statement->execute([
+            'id' => (int)($payload['id'] ?? 0),
+            'employee_id' => trim((string)($payload['employeeId'] ?? '')),
+        ]);
         respond(200, ['ok' => true]);
     }
 
@@ -804,10 +846,17 @@ try {
 
     if ($action === 'counts' && $method === 'GET') {
         requireUser($pdo);
+        $productCounts = $pdo->query(
+            'SELECT COUNT(*) AS total,
+                    COALESCE(SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END), 0) AS published
+             FROM products'
+        )->fetch();
         $counts = [
-            'employees' => (int)$pdo->query('SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL')->fetchColumn(),
-            'products' => (int)$pdo->query('SELECT COUNT(*) FROM products')->fetchColumn(),
-            'publishedProducts' => (int)$pdo->query('SELECT COUNT(*) FROM products WHERE is_published = 1')->fetchColumn(),
+            'employees' => (int)$pdo->query(
+                "SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL AND status = 'active'"
+            )->fetchColumn(),
+            'products' => (int)($productCounts['total'] ?? 0),
+            'publishedProducts' => (int)($productCounts['published'] ?? 0),
             'contentSections' => (int)$pdo->query('SELECT COUNT(*) FROM content_sections')->fetchColumn(),
             'services' => (int)$pdo->query('SELECT COUNT(*) FROM service_pages')->fetchColumn(),
             'reels' => (int)$pdo->query('SELECT COUNT(*) FROM social_reels')->fetchColumn(),

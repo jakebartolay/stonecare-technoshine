@@ -9,14 +9,20 @@ type TransactionToastOptions = {
 };
 
 const toneStyles: Record<TransactionTone, string> = {
-  success: "border-l-4 border-l-emerald-500",
-  danger: "border-l-4 border-l-red-500",
-  warning: "border-l-4 border-l-amber-500",
-  primary: "border-l-4 border-l-primary",
-  default: "border-l-4 border-l-neutral-400",
+  success:
+    "!border-l-[6px] !border-l-emerald-500 !bg-emerald-50/95 !text-emerald-700 !ring-emerald-200",
+  danger:
+    "!border-l-[6px] !border-l-red-500 !bg-red-50/95 !text-red-700 !ring-red-200",
+  warning:
+    "!border-l-[6px] !border-l-amber-500 !bg-amber-50/95 !text-amber-700 !ring-amber-200",
+  primary:
+    "!border-l-[6px] !border-l-primary !bg-orange-50/95 !text-primary !ring-orange-200",
+  default:
+    "!border-l-[6px] !border-l-slate-400 !bg-slate-50/95 !text-slate-600 !ring-slate-200",
 };
 
 function getErrorMessage(error: unknown, fallback = "Something went wrong. Please try again.") {
+  if (typeof error === "string" && error.trim()) return error;
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
@@ -32,9 +38,9 @@ function showTransactionToast(tone: TransactionTone, options: TransactionToastOp
     shouldShowTimeoutProgress: true,
     classNames: {
       base: [
-        toneStyles[tone],
         "z-[9999] min-h-16 overflow-hidden bg-white pr-12 text-neutral-950 shadow-[0_18px_48px_rgba(8,8,8,0.18)]",
         "ring-1 ring-black/10 backdrop-blur-md",
+        toneStyles[tone],
       ].join(" "),
       content: "!items-start !gap-x-3",
       wrapper: "!min-w-0 !gap-y-1",
@@ -57,6 +63,15 @@ export const transactionToast = {
   success(title: string, description?: string) {
     return showTransactionToast("success", { title, description });
   },
+  upload(title: string, description?: string) {
+    return showTransactionToast("success", { title, description });
+  },
+  draft(title: string, description?: string) {
+    return showTransactionToast("default", { title, description });
+  },
+  deleted(title: string, description?: string) {
+    return showTransactionToast("danger", { title, description, timeout: 5600 });
+  },
   error(title: string, error?: unknown, fallback?: string) {
     return showTransactionToast("danger", {
       title,
@@ -68,7 +83,7 @@ export const transactionToast = {
     return showTransactionToast("warning", { title, description, timeout: 5600 });
   },
   info(title: string, description?: string) {
-    return showTransactionToast("primary", { title, description });
+    return showTransactionToast("default", { title, description });
   },
   loading(title: string, description?: string) {
     return showTransactionToast("default", { title, description, timeout: 0 });
