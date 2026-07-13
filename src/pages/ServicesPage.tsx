@@ -1,19 +1,42 @@
+import { useMemo } from "react";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { Services } from "@/components/Services";
 import { SiteLayout } from "@/components/SiteLayout";
-import { serviceItems } from "@/lib/site-content";
+import { ServiceCardSkeletons } from "@/components/PageSkeletons";
+import { serviceItems, type ServiceItem } from "@/lib/site-content";
+import { useServicePagesState, type ServicePageRecord } from "@/lib/admin-store";
 
 function assetPath(path: string) {
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
   return `${import.meta.env.BASE_URL}${path}`;
 }
 
+function mergeServicePages(servicePages: ServicePageRecord[]): ServiceItem[] {
+  return serviceItems.map((service) => {
+    const page = servicePages.find((item) => item.slug === service.slug);
+    if (!page) return service;
+
+    return {
+      ...service,
+      title: page.title,
+      summary: page.summary,
+      image: page.heroImageUrl,
+      showcaseImages: page.images.map((image) => ({
+        src: image.imageUrl,
+        alt: image.altText,
+        caption: image.caption,
+      })),
+    };
+  });
+}
+
 export default function ServicesPage() {
+  const { services: servicePages, isLoading } = useServicePagesState();
+  const services = useMemo(() => mergeServicePages(servicePages), [servicePages]);
+
   return (
     <SiteLayout>
-      <Services />
-
-      <section id="service-details" className="relative bg-background py-20">
+      <section id="service-details" className="relative bg-background pb-20 pt-32 sm:pt-36">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
             <div>
@@ -32,7 +55,10 @@ export default function ServicesPage() {
           </div>
 
           <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {serviceItems.map((service) => (
+            {isLoading ? (
+              <ServiceCardSkeletons count={services.length} />
+            ) : (
+              services.map((service) => (
               <Link
                 key={service.title}
                 href={`/services/${service.slug}`}
@@ -69,7 +95,8 @@ export default function ServicesPage() {
                   </span>
                 </div>
               </Link>
-            ))}
+              ))
+            )}
           </div>
 
           <div className="mt-12 flex flex-col items-start justify-between gap-5 rounded-md border border-foreground/10 bg-foreground p-6 text-white sm:flex-row sm:items-center">

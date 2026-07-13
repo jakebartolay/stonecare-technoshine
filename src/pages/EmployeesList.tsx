@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { BadgeCheck, BriefcaseBusiness, IdCard, SearchX, ShieldAlert } from "lucide-react";
+import { BadgeCheck, BriefcaseBusiness, IdCard, SearchX, ShieldAlert, UserX } from "lucide-react";
 import { Link } from "wouter";
+import { EmployeeVerificationSkeleton } from "@/components/PageSkeletons";
 
 type Employee = {
   id: string;
@@ -72,6 +73,12 @@ function normalizeHeader(header: string) {
 
 function pickField(record: Record<string, string>, keys: string[]) {
   return keys.map((key) => record[key]).find(Boolean) ?? "";
+}
+
+function isInactiveStatus(status: string) {
+  return ["inactive", "deactivated", "former", "resigned", "terminated"].includes(
+    status.trim().toLowerCase(),
+  );
 }
 
 function getEmployeePhotoPaths(photo: string) {
@@ -183,22 +190,39 @@ export default function EmployeesList() {
   const employee = employees.find(
     (item) => item.id.toLowerCase() === employeeId.toLowerCase(),
   );
+  const isInactive =
+    loadState === "ready" && Boolean(employee) && isInactiveStatus(employee?.status ?? "");
   const isVerified =
     loadState === "ready" &&
     Boolean(employee) &&
-    employee?.status.toLowerCase() !== "inactive";
-  const title =
-    loadState === "loading"
-      ? "Checking Employee ID"
-      : isVerified
-        ? "Verified Employee ID"
-        : "Employee ID Not Found";
-  const statusText =
-    loadState === "loading"
-      ? "Checking"
-      : isVerified
-        ? "Active"
-        : "Not Verified";
+    !isInactive;
+  const title = (() => {
+    if (loadState === "loading") return "Checking Employee ID";
+    if (loadState === "error") return "Employee File Unavailable";
+    if (isInactive) return "Employee No Longer Active";
+    if (isVerified) return "Verified Employee ID";
+    return "Employee ID Not Found";
+  })();
+  const statusText = (() => {
+    if (loadState === "loading") return "Checking";
+    if (isInactive) return "Inactive";
+    if (isVerified) return "Active";
+    return "Not Verified";
+  })();
+  const statusDescription = (() => {
+    if (loadState === "loading") {
+      return "Please wait while the employee file is being checked.";
+    }
+    if (loadState === "error") {
+      return "The employee file is missing or cannot be loaded. Please check public/employees/employees.csv.";
+    }
+    if (isInactive) return "This employee is no longer connected with Technoshine.";
+    if (isVerified) return "This ID is listed in the Technoshine employee file.";
+    return "Please check the ID in the link or contact Technoshine for manual confirmation.";
+  })();
+  const employeeCard = employee && !isInactive ? employee : null;
+  const inactiveEmployee = employee && isInactive ? employee : null;
+  const showEmployeeCard = Boolean(employeeCard);
 
   return (
     <main className="min-h-screen bg-white text-foreground">
@@ -208,12 +232,12 @@ export default function EmployeesList() {
         <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
           <div
             className={`flex flex-1 items-center gap-8 py-8 lg:py-12 ${
-              employee
+              showEmployeeCard
                 ? "flex-col lg:grid lg:grid-cols-[430px_1fr]"
                 : "justify-center"
             }`}
           >
-            {employee && (
+            {employeeCard && (
               <div className="mx-auto w-full max-w-[390px]">
                 <div className="mb-4 border border-primary/30 bg-white px-4 py-3 text-center shadow-sm lg:hidden">
                   <p className="text-xs font-semibold leading-relaxed text-neutral-800 sm:text-sm">
@@ -238,10 +262,10 @@ export default function EmployeesList() {
                     className="absolute inset-0 h-full w-full object-cover"
                   />
 
-                  {employee.photoPaths.length > 0 && (
+                  {employeeCard.photoPaths.length > 0 && (
                     <EmployeePhoto
-                      sources={employee.photoPaths}
-                      alt={employee.name || employee.id}
+                      sources={employeeCard.photoPaths}
+                      alt={employeeCard.name || employeeCard.id}
                       className="absolute left-1/2 top-[31.5%] h-[34%] w-[54%] -translate-x-1/2 object-cover"
                       style={{ clipPath: "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)" }}
                     />
@@ -249,21 +273,23 @@ export default function EmployeesList() {
 
                   <div className="absolute inset-x-[8%] top-[74%] text-center">
                     <p className="text-[clamp(1rem,5vw,1.45rem)] font-black uppercase leading-tight tracking-normal text-black">
-                      {employee.name || "Employee Name"}
+                      {employeeCard.name || "Employee Name"}
                     </p>
                     <p className="mt-2 text-[clamp(0.8rem,3.4vw,1.05rem)] font-black uppercase tracking-normal text-black">
-                      {employee.position || "Position"}
+                      {employeeCard.position || "Position"}
                     </p>
                   </div>
 
-                  <div className="absolute bottom-[10%] right-[8%] text-right">
-                    <p className="text-[0.62rem] font-bold uppercase tracking-normal text-neutral-600">
-                      ID No.
-                    </p>
-                    <p className="text-lg font-black uppercase tracking-normal text-black">
-                      {employeeId || "-"}
-                    </p>
-                  </div>
+                  {!isInactive && (
+                    <div className="absolute bottom-[10%] right-[8%] text-right">
+                      <p className="text-[0.62rem] font-bold uppercase tracking-normal text-neutral-600">
+                        ID No.
+                      </p>
+                      <p className="text-lg font-black uppercase tracking-normal text-black">
+                        {employeeId || "-"}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <Link
                   href="/"
@@ -276,7 +302,7 @@ export default function EmployeesList() {
 
             <div
               className={`mx-auto w-full ${
-                employee ? "hidden max-w-xl lg:mx-0 lg:block" : "max-w-md"
+                showEmployeeCard ? "hidden max-w-xl lg:mx-0 lg:block" : "max-w-md"
               }`}
             >
               {employee && (
@@ -293,84 +319,137 @@ export default function EmployeesList() {
               <div
                 role={!employee ? "dialog" : undefined}
                 aria-modal={!employee ? "true" : undefined}
-                className={`border border-neutral-200 bg-white p-5 shadow-2xl sm:p-6 ${
-                  employee ? "mt-7" : "rounded-lg"
+                className={`border bg-white p-5 shadow-2xl sm:p-6 ${
+                  inactiveEmployee
+                    ? "mt-7 rounded-lg border-red-200"
+                    : employee
+                      ? "mt-7 border-neutral-200"
+                      : "rounded-lg border-neutral-200"
                 }`}
               >
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
-                      isVerified ? "bg-primary/10 text-primary" : "bg-neutral-100 text-neutral-500"
-                    }`}
-                  >
-                    {loadState === "error" ? (
-                      <ShieldAlert className="h-6 w-6" />
-                    ) : isVerified ? (
-                      <BadgeCheck className="h-6 w-6" />
-                    ) : (
-                      <SearchX className="h-6 w-6" />
+                {loadState === "loading" ? (
+                  <EmployeeVerificationSkeleton />
+                ) : inactiveEmployee ? (
+                  <div>
+                    <div className="text-center">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-700 ring-8 ring-red-50/60">
+                        <UserX className="h-8 w-8" />
+                      </div>
+                      <p className="mt-5 font-mono text-xs font-semibold uppercase tracking-[0.24em] text-red-700">
+                        Inactive Status
+                      </p>
+                      <h2 className="mt-2 text-3xl leading-tight text-neutral-950">
+                        Employee No Longer Active
+                      </h2>
+                      <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-neutral-600">
+                        This employee is no longer connected with Technoshine.
+                      </p>
+                    </div>
+
+                    <div className="mt-6 border border-red-200 bg-red-50/70 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-xs uppercase tracking-widest text-red-700">
+                            Record Status
+                          </p>
+                          <p className="mt-1 font-display text-2xl uppercase tracking-normal text-red-800">
+                            Inactive
+                          </p>
+                        </div>
+                        <span className="inline-flex rounded-full bg-red-700 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                          Deactivated
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 border border-neutral-200 bg-white p-4">
+                      <div className="mb-2 flex items-center gap-2 text-neutral-700">
+                        <BriefcaseBusiness className="h-4 w-4" />
+                        <p className="font-mono text-xs uppercase tracking-widest">Last Position</p>
+                      </div>
+                      <p className="text-sm font-semibold text-neutral-950">
+                        {inactiveEmployee.position || "Not provided"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                          isVerified
+                            ? "bg-primary/10 text-primary"
+                            : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {loadState === "error" ? (
+                          <ShieldAlert className="h-6 w-6" />
+                        ) : isVerified ? (
+                          <BadgeCheck className="h-6 w-6" />
+                        ) : (
+                          <SearchX className="h-6 w-6" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h2 className="text-2xl text-neutral-950">
+                          {!employee && loadState === "ready" ? "Employee ID Not Found" : title}
+                        </h2>
+                        <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                          {statusDescription}
+                        </p>
+                      </div>
+                    </div>
+
+                    {employee && (
+                      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                        <div className="border border-neutral-200 p-4">
+                          <div className="mb-2 flex items-center gap-2 text-primary">
+                            <IdCard className="h-4 w-4" />
+                            <p className="font-mono text-xs uppercase tracking-widest">
+                              ID Number
+                            </p>
+                          </div>
+                          <p className="font-display text-xl uppercase tracking-normal text-neutral-950">
+                            {employeeId || "Missing"}
+                          </p>
+                        </div>
+
+                        <div className="border border-neutral-200 p-4">
+                          <div className="mb-2 flex items-center gap-2 text-primary">
+                            <BadgeCheck className="h-4 w-4" />
+                            <p className="font-mono text-xs uppercase tracking-widest">Status</p>
+                          </div>
+                          <p className="font-display text-xl uppercase tracking-normal text-neutral-950">
+                            {statusText}
+                          </p>
+                        </div>
+
+                        <div className="border border-neutral-200 p-4">
+                          <div className="mb-2 flex items-center gap-2 text-primary">
+                            <BriefcaseBusiness className="h-4 w-4" />
+                            <p className="font-mono text-xs uppercase tracking-widest">Position</p>
+                          </div>
+                          <p className="text-sm text-neutral-950">
+                            {employee?.position || "Not provided"}
+                          </p>
+                        </div>
+                      </div>
                     )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <h2 className="text-2xl text-neutral-950">
-                      {!employee && loadState === "ready" ? "Employee ID Not Found" : title}
-                    </h2>
-                    <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                      {loadState === "loading"
-                        ? "Please wait while the employee file is being checked."
-                        : loadState === "error"
-                          ? "The employee file is missing or cannot be loaded. Please check public/employees/employees.csv."
-                          : isVerified
-                            ? "This ID is listed in the Technoshine employee file."
-                            : "Please check the ID in the link or contact Technoshine for manual confirmation."}
-                    </p>
-                  </div>
-                </div>
-
-                {employee && (
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <div className="border border-neutral-200 p-4">
-                    <div className="mb-2 flex items-center gap-2 text-primary">
-                      <IdCard className="h-4 w-4" />
-                      <p className="font-mono text-xs uppercase tracking-widest">ID Number</p>
-                    </div>
-                    <p className="font-display text-xl uppercase tracking-normal text-neutral-950">
-                      {employeeId || "Missing"}
-                    </p>
-                  </div>
-
-                  <div className="border border-neutral-200 p-4">
-                    <div className="mb-2 flex items-center gap-2 text-primary">
-                      <BadgeCheck className="h-4 w-4" />
-                      <p className="font-mono text-xs uppercase tracking-widest">Status</p>
-                    </div>
-                    <p className="font-display text-xl uppercase tracking-normal text-neutral-950">
-                      {statusText}
-                    </p>
-                  </div>
-
-                  <div className="border border-neutral-200 p-4">
-                    <div className="mb-2 flex items-center gap-2 text-primary">
-                      <BriefcaseBusiness className="h-4 w-4" />
-                      <p className="font-mono text-xs uppercase tracking-widest">Position</p>
-                    </div>
-                    <p className="text-sm text-neutral-950">
-                      {employee?.position || "Not provided"}
-                    </p>
-                  </div>
-                  </div>
+                  </>
                 )}
 
                 <Link
                   href="/"
-                  className="mt-6 inline-flex w-full items-center justify-center bg-primary px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-primary/90"
+                  className={`mt-6 inline-flex w-full items-center justify-center px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors ${
+                    inactiveEmployee ? "bg-neutral-950 hover:bg-neutral-800" : "bg-primary hover:bg-primary/90"
+                  }`}
                 >
                   Home
                 </Link>
               </div>
 
-              {employee && (
+              {showEmployeeCard && (
                 <div className="mt-4 hidden border border-primary/30 bg-white px-4 py-3 text-center shadow-sm lg:block">
                   <p className="text-sm font-semibold leading-relaxed text-neutral-800">
                     If you found this ID, please return it or call{" "}

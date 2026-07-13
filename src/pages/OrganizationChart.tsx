@@ -11,6 +11,7 @@ import OrgChart, {
   type TierType,
   type TierVisibility,
 } from "@/components/OrgChart";
+import { useEmployees } from "@/lib/admin-store";
 
 const CHART_WIDTH = 900;
 const DEFAULT_VISIBILITY: TierVisibility = {
@@ -42,6 +43,7 @@ const ORGANIZATION_PDF = `${import.meta.env.BASE_URL}org-chart.pdf`;
 export default function OrganizationChart() {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
+  const employees = useEmployees(true);
   const [scale, setScale] = useState(1);
   const [visibleTiers, setVisibleTiers] =
     useState<TierVisibility>(DEFAULT_VISIBILITY);
@@ -220,6 +222,7 @@ export default function OrganizationChart() {
               }}
             >
               <OrgChart
+                employees={employees}
                 visibleTiers={visibleTiers}
                 exitingTiers={exitingTiers}
               />

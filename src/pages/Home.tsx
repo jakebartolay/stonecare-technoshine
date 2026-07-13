@@ -4,6 +4,7 @@ import {
   AboutPreview,
   HomeContactPreview,
   ServicesPreview,
+  SocialReelsPreview,
   WorkPreview,
 } from "@/components/HomePreviews";
 import { SiteLayout } from "@/components/SiteLayout";
@@ -14,6 +15,7 @@ export default function Home() {
       <Hero />
       <Clients />
       <ServicesPreview />
+      <SocialReelsPreview />
       <AboutPreview />
       <WorkPreview />
       <HomeContactPreview />

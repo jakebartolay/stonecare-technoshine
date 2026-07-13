@@ -1,18 +1,43 @@
+import { useMemo } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { SiteLayout } from "@/components/SiteLayout";
-import { getServiceBySlug, serviceItems } from "@/lib/site-content";
+import { ServiceShowcaseSkeleton } from "@/components/PageSkeletons";
+import { serviceItems, type ServiceItem } from "@/lib/site-content";
+import { useServicePagesState, type ServicePageRecord } from "@/lib/admin-store";
 import { useSeo } from "@/lib/use-seo";
 
 function assetPath(path: string) {
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
   return `${import.meta.env.BASE_URL}${path}`;
+}
+
+function mergeServicePages(servicePages: ServicePageRecord[]): ServiceItem[] {
+  return serviceItems.map((service) => {
+    const page = servicePages.find((item) => item.slug === service.slug);
+    if (!page) return service;
+
+    return {
+      ...service,
+      title: page.title,
+      summary: page.summary,
+      image: page.heroImageUrl,
+      showcaseImages: page.images.map((image) => ({
+        src: image.imageUrl,
+        alt: image.altText,
+        caption: image.caption,
+      })),
+    };
+  });
 }
 
 export default function ServiceShowcasePage() {
   const [, params] = useRoute<{ slug: string }>("/services/:slug");
   const [, trailingParams] = useRoute<{ slug: string }>("/services/:slug/");
   const slug = params?.slug ?? trailingParams?.slug ?? "";
-  const service = getServiceBySlug(slug);
+  const { services: servicePages, isLoading } = useServicePagesState();
+  const services = useMemo(() => mergeServicePages(servicePages), [servicePages]);
+  const service = services.find((item) => item.slug === slug);
 
   useSeo({
     title: service ? `${service.title} | TECHNOSHINE Services` : "Service Not Found | TECHNOSHINE",
@@ -20,6 +45,14 @@ export default function ServiceShowcasePage() {
       ? `${service.summary} View temporary showcase images for completed TECHNOSHINE service work.`
       : "The requested TECHNOSHINE service page could not be found.",
   });
+
+  if (isLoading) {
+    return (
+      <SiteLayout>
+        <ServiceShowcaseSkeleton />
+      </SiteLayout>
+    );
+  }
 
   if (!service) {
     return (
@@ -48,7 +81,7 @@ export default function ServiceShowcasePage() {
     );
   }
 
-  const relatedServices = serviceItems.filter((item) => item.slug !== service.slug).slice(0, 3);
+  const relatedServices = services.filter((item) => item.slug !== service.slug).slice(0, 3);
 
   return (
     <SiteLayout>

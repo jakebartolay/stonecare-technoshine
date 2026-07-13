@@ -1,6 +1,7 @@
 export type ProductBadge = "Best Seller" | "New Arrival" | "Pro Grade";
 
 export interface ShopProduct {
+  id?: string;
   slug: string;
   brand: string;
   name: string;
@@ -12,6 +13,10 @@ export interface ShopProduct {
   priceLabel: string;
   stockLeft: number;
   badge?: ProductBadge;
+  imageUrl?: string;
+  isPublished?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
   description: string;
   howToUse: string[];
   shopeeUrl: string;
@@ -160,7 +165,7 @@ export const shopProducts: ShopProduct[] = [
     slug: "marble-polishing-powder-1kg",
     brand: "TECHNOSHINE",
     name: "Marble Polishing Powder 1kg",
-    category: "Powders",
+    category: "Professional Care",
     size: "1kg",
     useFor: ["Floors", "Countertops", "Tables"],
     usesLine: "For etching and light scratches on marble",
@@ -245,10 +250,14 @@ export function getShopProduct(slug: string) {
 }
 
 export function getRelatedProducts(product: ShopProduct, limit = 4) {
-  const sameCategory = shopProducts.filter(
+  return getRelatedProductsFromList(product, shopProducts, limit);
+}
+
+export function getRelatedProductsFromList(product: ShopProduct, products: ShopProduct[], limit = 4) {
+  const sameCategory = products.filter(
     (candidate) => candidate.category === product.category && candidate.slug !== product.slug,
   );
-  const fallback = shopProducts.filter((candidate) => candidate.slug !== product.slug);
+  const fallback = products.filter((candidate) => candidate.slug !== product.slug);
 
   return [...sameCategory, ...fallback]
     .filter((candidate, index, products) => products.findIndex((item) => item.slug === candidate.slug) === index)

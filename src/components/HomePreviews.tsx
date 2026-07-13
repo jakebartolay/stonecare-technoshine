@@ -1,21 +1,57 @@
+import { useCallback, useEffect, useMemo } from "react";
+import AOS from "aos";
+import useEmblaCarousel from "embla-carousel-react";
 import { Link } from "wouter";
 import {
   ArrowRight,
   Building2,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Images,
   ShieldCheck,
   Sparkles,
+  VideoOff,
 } from "lucide-react";
 import {
   galleryHighlights,
   serviceItems,
+  type ServiceItem,
 } from "@/lib/site-content";
-
-const featuredServices = serviceItems.slice(0, 4);
+import { useServicePagesState, useSocialReelsState, type ServicePageRecord } from "@/lib/admin-store";
 
 function assetPath(path: string) {
   return `${import.meta.env.BASE_URL}${path}`;
+}
+
+function facebookVideoEmbedUrl(href: string) {
+  const params = new URLSearchParams({
+    href,
+    height: "640",
+    show_text: "false",
+    width: "360",
+  });
+
+  return `https://www.facebook.com/plugins/video.php?${params.toString()}`;
+}
+
+function mergeServicePages(servicePages: ServicePageRecord[]): ServiceItem[] {
+  return serviceItems.map((service) => {
+    const page = servicePages.find((item) => item.slug === service.slug);
+    if (!page) return service;
+
+    return {
+      ...service,
+      title: page.title,
+      summary: page.summary,
+      image: page.heroImageUrl,
+      showcaseImages: page.images.map((image) => ({
+        src: image.imageUrl,
+        alt: image.altText,
+        caption: image.caption,
+      })),
+    };
+  });
 }
 
 function SectionIntro({
@@ -61,6 +97,9 @@ function RouteButton({
 }
 
 export function ServicesPreview() {
+  const { services: servicePages } = useServicePagesState();
+  const services = useMemo(() => mergeServicePages(servicePages).slice(0, 4), [servicePages]);
+
   return (
     <section id="services-preview" className="relative bg-background py-20">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -76,10 +115,10 @@ export function ServicesPreview() {
         </div>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredServices.map((service) => (
+          {services.map((service) => (
             <Link
               key={service.title}
-              href="/services"
+              href={`/services/${service.slug}`}
               className="group overflow-hidden rounded-md border border-border bg-card shadow-sm transition-all hover:border-primary hover:shadow-[0_20px_50px_rgba(8,8,8,0.1)]"
             >
               <div className="aspect-[4/3] overflow-hidden bg-neutral-100">
@@ -165,6 +204,129 @@ export function AboutPreview() {
             </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+export function SocialReelsPreview() {
+  const { reels } = useSocialReelsState(true);
+  const visibleReels = useMemo(
+    () => reels.filter((reel) => reel.isPublished && reel.href),
+    [reels],
+  );
+  const canSlide = visibleReels.length > 5;
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    containScroll: "trimSnaps",
+    dragFree: false,
+    duration: 24,
+    loop: canSlide,
+    slidesToScroll: 1,
+    watchDrag: canSlide,
+  });
+
+  useEffect(() => {
+    AOS.refreshHard();
+    emblaApi?.reInit();
+  }, [emblaApi, visibleReels.length]);
+
+  const goPrevious = useCallback(() => {
+    if (!canSlide) return;
+
+    emblaApi?.scrollPrev();
+  }, [canSlide, emblaApi]);
+
+  const goNext = useCallback(() => {
+    if (!canSlide) return;
+
+    emblaApi?.scrollNext();
+  }, [canSlide, emblaApi]);
+
+  return (
+    <section id="company-videos" className="bg-white px-4 py-16 text-neutral-950 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-10 max-w-3xl" data-aos="fade-up" data-aos-duration="650">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.22em] text-primary">
+            Company Reels
+          </p>
+          <h2 className="font-display text-3xl font-bold uppercase leading-tight tracking-normal sm:text-5xl">
+            Work moments from social
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Short vertical clips from Technoshine project work and company social updates.
+          </p>
+        </div>
+
+        {visibleReels.length === 0 ? (
+          <div
+            role="status"
+            className="flex min-h-60 flex-col items-center justify-center rounded-md border border-dashed border-neutral-300 bg-neutral-50 px-6 py-10 text-center"
+            data-aos="fade-up"
+            data-aos-delay="100"
+            data-aos-duration="700"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <VideoOff className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <h3 className="mt-4 font-display text-xl font-bold uppercase tracking-normal text-neutral-950 sm:text-2xl">
+              No video uploaded yet
+            </h3>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Published reels will appear here once they are available.
+            </p>
+          </div>
+        ) : (
+          <div className="relative" data-aos="fade-up" data-aos-delay="100" data-aos-duration="700">
+            <button
+              type="button"
+              onClick={goPrevious}
+              disabled={!canSlide}
+              className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-x-2 -translate-y-1/2 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-950 shadow-lg transition hover:border-primary hover:bg-primary hover:text-white disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-35 sm:-translate-x-5"
+              aria-label="Previous video"
+              aria-disabled={!canSlide}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            <div className="mx-auto max-w-7xl px-10">
+              <div ref={emblaRef} className="overflow-hidden">
+                <div className="flex gap-3">
+                  {visibleReels.map((reel) => (
+                    <article
+                      key={reel.id}
+                      className="w-[min(78vw,15rem)] flex-none overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-primary hover:shadow-xl sm:w-[15rem] lg:w-[14.2rem]"
+                    >
+                      <div className="relative aspect-[9/16] w-full bg-white">
+                        <iframe
+                          src={facebookVideoEmbedUrl(reel.href)}
+                          title={reel.title}
+                          width="360"
+                          height="640"
+                          loading="lazy"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="absolute inset-0 h-full w-full border-0"
+                        />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!canSlide}
+              className="absolute right-0 top-1/2 z-10 flex h-10 w-10 translate-x-2 -translate-y-1/2 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-950 shadow-lg transition hover:border-primary hover:bg-primary hover:text-white disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-35 sm:translate-x-5"
+              aria-label="Next video"
+              aria-disabled={!canSlide}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

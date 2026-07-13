@@ -1,21 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 const TOP_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo1.png`;
 const SCROLLED_LOGO_SRC = `${import.meta.env.BASE_URL}logo/companylogo2.png`;
 
-const serviceSubLinks = [
-  { name: "Tiles", href: "/services/tiles" },
-  { name: "Marble", href: "/services/marble-polishing" },
-  { name: "Granite", href: "/services/granite-care" },
-  { name: "Terrazzo", href: "/services/terrazzo-polishing" },
-];
-
 const navLinks = [
   { name: "Home", href: "/" },
-  { name: "Services", href: "/services", children: serviceSubLinks },
+  { name: "Services", href: "/services" },
   { name: "About Us", href: "/about" },
   { name: "Gallery", href: "/gallery" },
   { name: "Clients", href: "/clients" },
@@ -32,7 +25,9 @@ export function Navbar() {
   const solidNav = isScrolled || isMobileMenuOpen;
   const usesDarkTransparentNav =
     !solidNav &&
-    (normalizedLocation === "/about" || normalizedLocation === "/contact");
+    (normalizedLocation === "/about" ||
+      normalizedLocation === "/contact" ||
+      normalizedLocation === "/services");
 
   useEffect(() => {
     const preloadImages = [TOP_LOGO_SRC, SCROLLED_LOGO_SRC].map((src) => {
@@ -109,7 +104,7 @@ export function Navbar() {
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${
           solidNav
             ? "border-b border-border bg-background/95 py-[0.70rem] shadow-sm backdrop-blur-md"
-            : "bg-transparent py-5"
+            : "border-b border-border/70 bg-background/95 py-[0.70rem] shadow-sm backdrop-blur-md md:border-b-0 md:bg-transparent md:py-5 md:shadow-none md:backdrop-blur-0"
         }`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -119,19 +114,19 @@ export function Navbar() {
               onClick={() => handleLinkClick("/")}
               className="group relative z-[61] flex items-center gap-2"
             >
-              <span className="relative block h-16 w-[210px]">
+              <span className="relative block h-12 w-[170px] md:h-16 md:w-[210px]">
                 <img
                   src={TOP_LOGO_SRC}
                   alt="Technoshine"
-                  className={`absolute inset-0 h-16 w-auto max-w-none transition-opacity duration-200 ${
-                    solidNav || usesDarkTransparentNav ? "opacity-0" : "opacity-100"
+                  className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 md:h-16 ${
+                    solidNav || usesDarkTransparentNav ? "opacity-0" : "opacity-0 md:opacity-100"
                   }`}
                 />
                 <img
                   src={SCROLLED_LOGO_SRC}
                   alt="Technoshine"
-                  className={`absolute inset-0 h-16 w-auto max-w-none transition-opacity duration-200 ${
-                    solidNav || usesDarkTransparentNav ? "opacity-100" : "opacity-0"
+                  className={`absolute inset-0 h-12 w-auto max-w-none transition-opacity duration-200 md:h-16 ${
+                    solidNav || usesDarkTransparentNav ? "opacity-100" : "opacity-100 md:opacity-0"
                   }`}
                 />
               </span>
@@ -141,7 +136,7 @@ export function Navbar() {
               {navLinks.map((link) => {
                 const isActive =
                   normalizedLocation === link.href ||
-                  Boolean(link.children?.some((child) => normalizedLocation === child.href));
+                  (link.href !== "/" && normalizedLocation.startsWith(`${link.href}/`));
                 const linkTone = isActive
                   ? "text-primary"
                   : solidNav
@@ -151,52 +146,22 @@ export function Navbar() {
                       : "text-white/80 hover:text-primary";
 
                 return (
-                  <div key={link.name} className="group/nav relative">
-                    <Link
-                      href={link.href}
-                      aria-current={isActive ? "page" : undefined}
-                      onClick={() => handleLinkClick(link.href)}
-                      className={`group relative inline-flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider transition-all duration-300 ${linkTone}`}
-                    >
-                      {link.name}
-                      {link.children ? (
-                        <ChevronDown className="h-3.5 w-3.5 transition-transform group-hover/nav:rotate-180" />
-                      ) : null}
-                      <span
-                        className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${
-                          isActive
-                            ? "w-full shadow-[0_0_12px_rgba(255,107,0,0.45)]"
-                            : "w-0 group-hover:w-full"
-                        }`}
-                      />
-                    </Link>
-
-                    {link.children ? (
-                      <div className="invisible absolute left-1/2 top-full z-50 w-48 -translate-x-1/2 pt-3 opacity-0 transition duration-200 group-hover/nav:visible group-hover/nav:opacity-100 group-focus-within/nav:visible group-focus-within/nav:opacity-100">
-                        <div className="border border-border bg-background p-2 shadow-xl shadow-black/10">
-                          {link.children.map((child) => {
-                            const childActive = normalizedLocation === child.href;
-
-                            return (
-                              <Link
-                                key={child.name}
-                                href={child.href}
-                                aria-current={childActive ? "page" : undefined}
-                                onClick={() => handleLinkClick(child.href)}
-                                className={`block px-3 py-2 font-mono text-xs uppercase tracking-[0.14em] transition-colors ${
-                                  childActive
-                                    ? "bg-primary text-white"
-                                    : "text-muted-foreground hover:bg-primary hover:text-white"
-                                }`}
-                              >
-                                {child.name}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => handleLinkClick(link.href)}
+                    className={`group relative inline-flex items-center gap-1.5 text-sm font-medium uppercase tracking-wider transition-all duration-300 ${linkTone}`}
+                  >
+                    {link.name}
+                    <span
+                      className={`absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300 ${
+                        isActive
+                          ? "w-full shadow-[0_0_12px_rgba(255,107,0,0.45)]"
+                          : "w-0 group-hover:w-full"
+                      }`}
+                    />
+                  </Link>
                 );
               })}
               <Link
@@ -212,9 +177,7 @@ export function Navbar() {
               type="button"
               aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={isMobileMenuOpen}
-              className={`relative z-[61] -mr-2 p-2 transition-colors hover:text-primary md:hidden ${
-                solidNav || usesDarkTransparentNav ? "text-foreground" : "text-white"
-              }`}
+              className="relative z-[61] -mr-2 p-2 text-foreground transition-colors hover:text-primary md:hidden"
               onClick={() => setIsMobileMenuOpen((current) => !current)}
             >
               {isMobileMenuOpen ? (
@@ -238,46 +201,22 @@ export function Navbar() {
                 {navLinks.map((link) => {
                   const isActive =
                     normalizedLocation === link.href ||
-                    Boolean(link.children?.some((child) => normalizedLocation === child.href));
+                    (link.href !== "/" && normalizedLocation.startsWith(`${link.href}/`));
 
                   return (
-                    <div key={link.name}>
-                      <Link
-                        href={link.href}
-                        aria-current={isActive ? "page" : undefined}
-                        onClick={() => handleLinkClick(link.href)}
-                        className={`block py-2 font-display text-lg uppercase tracking-wider transition-colors ${
-                          isActive
-                            ? "text-primary"
-                            : "text-muted-foreground hover:text-primary"
-                        }`}
-                      >
-                        {link.name}
-                      </Link>
-                      {link.children ? (
-                        <div className="ml-4 mt-1 grid gap-2 border-l border-border pl-4">
-                          {link.children.map((child) => {
-                            const childActive = normalizedLocation === child.href;
-
-                            return (
-                              <Link
-                                key={child.name}
-                                href={child.href}
-                                aria-current={childActive ? "page" : undefined}
-                                onClick={() => handleLinkClick(child.href)}
-                                className={`py-1.5 font-mono text-xs uppercase tracking-[0.14em] transition-colors ${
-                                  childActive
-                                    ? "text-primary"
-                                    : "text-muted-foreground hover:text-primary"
-                                }`}
-                              >
-                                {child.name}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => handleLinkClick(link.href)}
+                      className={`block py-2 font-display text-lg uppercase tracking-wider transition-colors ${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-primary"
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
                   );
                 })}
                 <Link

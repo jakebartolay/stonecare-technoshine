@@ -75,7 +75,7 @@ export function Footer() {
   return (
     <footer
       id="footer"
-      className="site-footer relative flex min-h-[100svh] items-center overflow-hidden bg-background py-16 text-foreground"
+      className="site-footer relative flex min-h-[100svh] items-center overflow-hidden bg-background py-8 text-foreground md:py-16"
     >
       <div className="site-footer-content relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* DESKTOP VIEW */}
@@ -260,32 +260,32 @@ export function Footer() {
         </div>
 
         {/* PHONE VIEW */}
-        <div className="grid grid-cols-1 gap-10 md:hidden">
+        <div className="grid min-w-0 grid-cols-1 gap-6 md:hidden">
           <div className="text-center" data-aos="fade-up">
-            <Link href="/" className="mb-4 flex items-center justify-center group">
+            <Link href="/" className="group mb-2 flex items-center justify-center">
               <img
                 src="/icon.png"
                 alt="Technoshine"
                 loading="lazy"
                 decoding="async"
-                className="mx-auto h-44 w-auto"
+                className="mx-auto h-24 max-w-full w-auto"
               />
             </Link>
-            <p className="mx-auto max-w-sm text-sm font-medium text-foreground/75">
+            <p className="mx-auto max-w-sm text-xs font-medium leading-relaxed text-foreground/75">
               Premium marble and natural stone restoration specialists.
             </p>
           </div>
 
           <div className="text-center" data-aos="fade-up" data-aos-delay="100">
-            <h4 className="mb-4 text-foreground font-display uppercase tracking-widest">
+            <h4 className="mb-2 font-display text-sm uppercase tracking-widest text-foreground">
               Navigation
             </h4>
-            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <ul className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
               {quickLinks.map((item) => (
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-sm font-mono text-foreground transition-colors hover:text-primary"
+                    className="font-mono text-xs text-foreground transition-colors hover:text-primary"
                   >
                     {item.label}
                   </Link>
@@ -294,7 +294,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/company/company-profile"
-                  className="text-sm font-mono text-foreground transition-colors hover:text-primary"
+                  className="font-mono text-xs text-foreground transition-colors hover:text-primary"
                 >
                   Company Profile
                 </Link>
@@ -302,7 +302,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/company/organization-chart"
-                  className="text-sm font-mono text-foreground transition-colors hover:text-primary"
+                  className="font-mono text-xs text-foreground transition-colors hover:text-primary"
                 >
                   Organization
                 </Link>
@@ -311,23 +311,23 @@ export function Footer() {
           </div>
 
           <div className="text-center" data-aos="fade-up" data-aos-delay="180">
-            <h4 className="mb-4 text-foreground font-display uppercase tracking-widest">
+            <h4 className="mb-2 font-display text-sm uppercase tracking-widest text-foreground">
               Legal
             </h4>
-            <ul className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <ul className="mb-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
               {legalLinks.map((item) => (
                 <li key={item.label}>
-                  <Link href={item.href} className="text-sm font-mono text-foreground transition-colors hover:text-primary">
+                  <Link href={item.href} className="font-mono text-xs text-foreground transition-colors hover:text-primary">
                     {item.label}
                   </Link>
                 </li>
               ))}
             </ul>
 
-            <h4 className="mb-3 text-foreground font-display uppercase tracking-widest">
+            <h4 className="mb-2 font-display text-sm uppercase tracking-widest text-foreground">
               Our Social Links
             </h4>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-2.5">
               {socialLinks.map(({ label, href, Icon }) => (
                 <a
                   key={label}
@@ -335,16 +335,16 @@ export function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={label}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-foreground text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
           </div>
 
-          <div className="pt-8">
-            <p className="w-full text-center text-xs font-mono text-foreground/70">
+          <div className="pt-2">
+            <p className="w-full text-center font-mono text-[11px] text-foreground/70">
               &copy; {year} Technoshine. All rights reserved.
             </p>
           </div>

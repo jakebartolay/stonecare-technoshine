@@ -1,19 +1,17 @@
 import { useMemo, useState } from "react";
 import { Filter, Grid2X2, LayoutList, SlidersHorizontal, X } from "lucide-react";
 import { Link } from "wouter";
+import { Skeleton } from "@heroui/react";
+import { ProductCardSkeletons, ShopHeroPreviewSkeleton } from "@/components/PageSkeletons";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductVisual } from "@/components/shop/ProductVisual";
 import { ShopShell } from "@/components/shop/ShopShell";
-import {
-  shopCategories,
-  shopProducts,
-  shopSizes,
-  shopUseFor,
-  type ShopProduct,
-} from "@/lib/shop-products";
+import { adminProductCategories, useAdminProductsState } from "@/lib/admin-store";
+import { shopSizes, shopUseFor, type ShopProduct } from "@/lib/shop-products";
 import { useSeo } from "@/lib/use-seo";
 
-const priceRanges = ["All prices", "₱0 placeholders", "Under ₱500"];
+const shopCategories = ["All", ...adminProductCategories];
+const priceRanges = ["All prices", "PHP 0 placeholders", "Under PHP 500"];
 
 type ViewMode = "grid" | "list";
 
@@ -169,6 +167,7 @@ function productMatchesSearch(product: ShopProduct, query: string) {
 }
 
 export default function StoneCareShopPage() {
+  const { products: shopProducts, isLoading } = useAdminProductsState(true);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [priceRange, setPriceRange] = useState(priceRanges[0]);
@@ -228,7 +227,7 @@ export default function StoneCareShopPage() {
 
       return second.stockLeft - first.stockLeft;
     });
-  }, [activeCategory, priceRange, search, selectedSizes, selectedUses, sortBy]);
+  }, [activeCategory, priceRange, search, selectedSizes, selectedUses, shopProducts, sortBy]);
 
   const filters = (
     <FilterPanel
@@ -261,18 +260,22 @@ export default function StoneCareShopPage() {
             </p>
           </div>
           <div className="relative z-10 hidden min-h-56 overflow-hidden rounded-3xl border border-white/70 bg-white/70 p-6 shadow-2xl shadow-orange-100/70 backdrop-blur lg:block">
-            <div className="grid h-full grid-cols-3 items-end gap-4">
-              {shopProducts.slice(0, 3).map((product) => (
-                <div key={product.slug} className="h-44 overflow-hidden rounded-2xl bg-white p-2 shadow-xl shadow-slate-200/70">
-                  <div className="h-32 overflow-hidden rounded-xl">
-                    <ProductVisual product={product} compact />
+            {isLoading ? (
+              <ShopHeroPreviewSkeleton />
+            ) : (
+              <div className="grid h-full grid-cols-3 items-end gap-4">
+                {shopProducts.slice(0, 3).map((product) => (
+                  <div key={product.slug} className="h-44 overflow-hidden rounded-2xl bg-white p-2 shadow-xl shadow-slate-200/70">
+                    <div className="h-32 overflow-hidden rounded-xl">
+                      <ProductVisual product={product} compact />
+                    </div>
+                    <p className="mt-2 text-center text-[0.66rem] font-bold uppercase leading-tight text-[#1F1A17]">
+                      {product.name}
+                    </p>
                   </div>
-                  <p className="mt-2 text-center text-[0.66rem] font-bold uppercase leading-tight text-[#1F1A17]">
-                    {product.name}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -290,9 +293,13 @@ export default function StoneCareShopPage() {
                 <span className="mx-2 text-neutral-300">›</span>
                 <span className="text-[#1F1A17]">Shops</span>
               </nav>
-              <p className="mt-3 text-sm font-semibold text-neutral-600">
-                Showing {visibleProducts.length} of {shopProducts.length} products
-              </p>
+              {isLoading ? (
+                <Skeleton className="mt-3 h-4 w-44 rounded-sm" aria-hidden="true" />
+              ) : (
+                <p className="mt-3 text-sm font-semibold text-neutral-600">
+                  Showing {visibleProducts.length} of {shopProducts.length} products
+                </p>
+              )}
             </div>
 
             <button
@@ -353,7 +360,17 @@ export default function StoneCareShopPage() {
                 </label>
               </div>
 
-              {visibleProducts.length > 0 ? (
+              {isLoading ? (
+                <div
+                  className={
+                    viewMode === "list"
+                      ? "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-1"
+                      : "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
+                  }
+                >
+                  <ProductCardSkeletons count={viewMode === "list" ? 4 : 8} layout={viewMode} />
+                </div>
+              ) : visibleProducts.length > 0 ? (
                 <div
                   className={
                     viewMode === "list"

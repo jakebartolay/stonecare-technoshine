@@ -114,7 +114,7 @@ export function Gallery() {
           initial={{ opacity: 0, scale: 1.04, x: direction * 36 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 1.02, x: direction * -36 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
           className="gallery-bg absolute inset-0 h-full w-full object-cover"
         />
       </AnimatePresence>
@@ -126,7 +126,7 @@ export function Gallery() {
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: false, amount: 0.25 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] as const }}
           className="mx-auto max-w-4xl text-center text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]"
         >
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-primary">

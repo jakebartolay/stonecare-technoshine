@@ -1,6 +1,21 @@
+function loadHeroUITheme() {
+  try {
+    return require('@heroui/theme');
+  } catch {
+    return require('./node_modules/@heroui/react/node_modules/@heroui/theme');
+  }
+}
+
+const { heroui } = loadHeroUITheme();
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@heroui/react/node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}',
+    './node_modules/@heroui/react/node_modules/@heroui/toast/dist/**/*.{js,ts,jsx,tsx}',
+  ],
   theme: {
     extend: {
       colors: {
@@ -18,5 +33,16 @@ module.exports = {
       },
     },
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [
+    require('@tailwindcss/typography'),
+    heroui({
+      themes: {
+        light: {
+          colors: {
+            primary: '#ff6b00',
+          },
+        },
+      },
+    }),
+  ],
 };

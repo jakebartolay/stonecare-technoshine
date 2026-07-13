@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 import { Link, useRoute } from "wouter";
+import { ProductDetailSkeleton } from "@/components/PageSkeletons";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductVisual } from "@/components/shop/ProductVisual";
 import { ShopShell } from "@/components/shop/ShopShell";
-import { getRelatedProducts, getShopProduct } from "@/lib/shop-products";
+import { useAdminProductsState } from "@/lib/admin-store";
+import { getRelatedProductsFromList } from "@/lib/shop-products";
 import { useSeo } from "@/lib/use-seo";
 
 const galleryLabels = ["Front", "Detail", "Finish"];
@@ -13,7 +15,8 @@ export default function StoneCareProductPage() {
   const [, params] = useRoute<{ slug: string }>("/stone-care/shops/:slug");
   const [, trailingParams] = useRoute<{ slug: string }>("/stone-care/shops/:slug/");
   const slug = params?.slug ?? trailingParams?.slug ?? "";
-  const product = useMemo(() => getShopProduct(slug), [slug]);
+  const { products, isLoading } = useAdminProductsState(true);
+  const product = useMemo(() => products.find((item) => item.slug === slug), [products, slug]);
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
@@ -29,6 +32,14 @@ export default function StoneCareProductPage() {
       : "The requested TECHNOSHINE marble care product could not be found.",
     type: product ? "product" : "website",
   });
+
+  if (isLoading) {
+    return (
+      <ShopShell>
+        <ProductDetailSkeleton />
+      </ShopShell>
+    );
+  }
 
   if (!product) {
     return (
@@ -56,7 +67,7 @@ export default function StoneCareProductPage() {
     );
   }
 
-  const relatedProducts = getRelatedProducts(product);
+  const relatedProducts = getRelatedProductsFromList(product, products);
 
   return (
     <ShopShell>

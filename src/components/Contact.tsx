@@ -4,7 +4,7 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { ExternalLink, Send, MapPin, Phone, Mail } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { transactionToast } from "@/lib/transaction-toast";
 
 const CONTACT_ENDPOINT = `${import.meta.env.BASE_URL}contact-submit.php`;
 const PRIMARY_EMAIL = "jake.bartolay@technoshineph.com";
@@ -26,7 +26,7 @@ const formEntrance = {
     scale: 1,
     transition: {
       duration: 0.65,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };
@@ -74,7 +74,6 @@ function LocationCard() {
 }
 
 export function Contact() {
-  const { toast } = useToast();
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [shakeForm, setShakeForm] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -102,35 +101,44 @@ export function Contact() {
         body: JSON.stringify(data),
       });
       const contentType = response.headers.get("content-type") ?? "";
+      const responseText = await response.text();
 
       if (!contentType.includes("application/json")) {
         throw new Error("Contact email endpoint is not running.");
       }
 
-      const result = (await response.json()) as {
+      if (!responseText.trim()) {
+        throw new Error("Contact server returned an empty response.");
+      }
+
+      let result: {
         ok?: boolean;
         message?: string;
       };
+
+      try {
+        result = JSON.parse(responseText) as {
+          ok?: boolean;
+          message?: string;
+        };
+      } catch {
+        throw new Error("Contact server returned an invalid JSON response.");
+      }
 
       if (!response.ok || !result.ok) {
         throw new Error(result.message || "Submission failed.");
       }
 
-      toast({
-        title: "Request Sent",
-        description: "Please wait. We will contact you as soon as possible.",
-        duration: 10000,
-      });
+      transactionToast.success("Request sent", "Please wait. We will contact you as soon as possible.");
       reset();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Submission Failed",
-        description:
-          error instanceof Error && error.message.includes("endpoint")
-            ? "Email sending needs the PHP hosting server. On localhost, please test after deployment."
-            : "Something went wrong. Please email Jake directly instead.",
-      });
+      transactionToast.error(
+        "Submission failed",
+        error instanceof Error && error.message.includes("endpoint")
+          ? new Error("Email sending needs the PHP hosting server. On localhost, please test after deployment.")
+          : error,
+        "Something went wrong. Please email Jake directly instead.",
+      );
     } finally {
       setIsSending(false);
     }
@@ -143,7 +151,7 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="relative flex min-h-screen items-center overflow-hidden bg-background py-20">
+    <section id="contact" className="relative flex min-h-screen items-center overflow-hidden bg-background pb-20 pt-32 sm:pt-36 lg:py-20">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-3xl text-center" data-aos="fade-up">
           <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">Get In Touch</h2>

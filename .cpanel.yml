@@ -3,6 +3,15 @@ deployment:
     - export NODE_ENV=production
     - npm install
     - npm run build
+    - /bin/rm -rf /home/technosh/dev.technoshineph.com.__uploads_backup
+    - /bin/mkdir -p /home/technosh/dev.technoshineph.com.__uploads_backup
+    - /bin/mkdir -p /home/technosh/dev.technoshineph.com.__uploads_backup/images
+    - /bin/cp -r /home/technosh/dev.technoshineph.com/uploads /home/technosh/dev.technoshineph.com.__uploads_backup/ || true
+    - /bin/cp -r /home/technosh/dev.technoshineph.com/images/services /home/technosh/dev.technoshineph.com.__uploads_backup/images/ || true
     - /bin/rm -rf /home/technosh/dev.technoshineph.com/*
     - /bin/cp -r dist/* /home/technosh/dev.technoshineph.com/
+    - /bin/cp -r /home/technosh/dev.technoshineph.com.__uploads_backup/uploads /home/technosh/dev.technoshineph.com/uploads || true
+    - /bin/mkdir -p /home/technosh/dev.technoshineph.com/images
+    - /bin/cp -r /home/technosh/dev.technoshineph.com.__uploads_backup/images/services /home/technosh/dev.technoshineph.com/images/services || true
+    - /bin/rm -rf /home/technosh/dev.technoshineph.com.__uploads_backup
     - /bin/cp .htaccess /home/technosh/dev.technoshineph.com/ || true

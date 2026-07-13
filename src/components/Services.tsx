@@ -1,28 +1,29 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import { serviceItems } from "@/lib/site-content";
+import { serviceItems, type ServiceItem } from "@/lib/site-content";
 
 const slideDuration = 60000;
-const carouselTransition = { duration: 0.42, ease: [0.22, 1, 0.36, 1] };
+const carouselTransition = { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const };
 
 function serviceImagePath(image: string) {
   return `${import.meta.env.BASE_URL}${image}`;
 }
 
-export function Services() {
+export function Services({ items = serviceItems }: { items?: ServiceItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
+  const services = items.length > 0 ? items : serviceItems;
 
   const goToSlide = (nextIndex: number, nextDirection: number) => {
     setDirection(nextDirection);
-    setActiveIndex((nextIndex + serviceItems.length) % serviceItems.length);
+    setActiveIndex((nextIndex + services.length) % services.length);
   };
 
   const goNext = () => goToSlide(activeIndex + 1, 1);
 
   useEffect(() => {
-    const preloadImages = serviceItems.map((service) => {
+    const preloadImages = services.map((service) => {
       const image = new Image();
       image.src = serviceImagePath(service.image);
       return image;
@@ -30,14 +31,14 @@ export function Services() {
 
     const timer = window.setInterval(() => {
       setDirection(1);
-      setActiveIndex((currentIndex) => (currentIndex + 1) % serviceItems.length);
+      setActiveIndex((currentIndex) => (currentIndex + 1) % services.length);
     }, slideDuration);
 
     return () => {
       window.clearInterval(timer);
       preloadImages.length = 0;
     };
-  }, []);
+  }, [services]);
 
   return (
     <section
@@ -45,7 +46,7 @@ export function Services() {
       className="relative min-h-screen overflow-hidden bg-black"
     >
       <div className="services-carousel-bg absolute inset-0">
-        {serviceItems.map((service, index) => (
+        {services.map((service, index) => (
           <motion.img
             key={service.title}
             src={serviceImagePath(service.image)}
@@ -70,7 +71,7 @@ export function Services() {
       <div className="services-carousel-content relative z-10 mx-auto flex min-h-screen w-full max-w-[1216px] flex-col justify-end px-6 pb-16 pt-32 text-white sm:px-10 sm:pb-20 sm:pt-36 lg:px-0 lg:pt-40">
         <div className="space-y-5">
           <div className="relative min-h-[12.5rem] max-w-xl sm:min-h-[12rem]">
-            {serviceItems.map((service, index) => (
+            {services.map((service, index) => (
               <motion.div
                 key={service.title}
                 aria-hidden={index !== activeIndex}
@@ -96,7 +97,7 @@ export function Services() {
 
           <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4">
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {serviceItems.map((service, index) => (
+              {services.map((service, index) => (
                 <button
                   key={service.title}
                   type="button"
@@ -116,7 +117,7 @@ export function Services() {
             </div>
 
             <p className="font-mono text-xs text-white/85">
-              {activeIndex + 1}/{serviceItems.length}
+              {activeIndex + 1}/{services.length}
             </p>
 
             <button

@@ -1,13 +1,16 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { useEffect } from "react";
 import AOS from "aos";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import EmployeesList from "@/pages/EmployeesList";
+import AdminLogin from "@/pages/AdminLogin";
+import { AdminContent, AdminDashboard, AdminEmployees, AdminProducts, AdminReels, AdminServices } from "@/pages/AdminPanel";
 import BadRequest from "@/pages/errors/BadRequest";
+import AdminUrlError from "@/pages/errors/AdminUrlError";
 import Unauthorized from "@/pages/errors/Unauthorized";
 import Forbidden from "@/pages/errors/Forbidden";
 import ServerError from "@/pages/errors/ServerError";
@@ -38,6 +41,7 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
+      {/* Visible to public users: /, /services, /services/:slug, /about, /gallery, /clients, /contact */}
       <Route path="/" component={Home} />
       <Route path="/services/:slug" component={ServiceShowcasePage} />
       <Route path="/services/:slug/" component={ServiceShowcasePage} />
@@ -51,24 +55,54 @@ function Router() {
       <Route path="/clients/" component={ClientsPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact/" component={ContactPage} />
+
+      {/* Visible to public users: /help, /help/product-info/:productId */}
       <Route path="/help" component={HelpPage} />
       <Route path="/help/" component={HelpPage} />
       <Route path="/help/product-info/:productId" component={ProductInfoPage} />
       <Route path="/help/product-info/:productId/" component={ProductInfoPage} />
+
+      {/* Visible to public users: /stone-care/shops, /stone-care/shops/:slug */}
       <Route path="/stone-care/shops/:slug" component={StoneCareProductPage} />
       <Route path="/stone-care/shops/:slug/" component={StoneCareProductPage} />
       <Route path="/stone-care/shops" component={StoneCareShopPage} />
       <Route path="/stone-care/shops/" component={StoneCareShopPage} />
+
+      {/* Visible to public users: /employees/list */}
       <Route path="/employees/list" component={EmployeesList} />
+
+      {/* Visible to admin users: /company/admin/login, /company/admin/dashboard, /company/admin/services, /company/admin/products, /company/admin/employees, /company/admin/content */}
+      <Route path="/company/admin/login" component={AdminLogin} />
+      <Route path="/company/admin/login/" component={AdminLogin} />
+      <Route path="/company/admin/services" component={AdminServices} />
+      <Route path="/company/admin/services/" component={AdminServices} />
+      <Route path="/company/admin/reels" component={AdminReels} />
+      <Route path="/company/admin/reels/" component={AdminReels} />
+      <Route path="/company/admin/products" component={AdminProducts} />
+      <Route path="/company/admin/products/" component={AdminProducts} />
+      <Route path="/company/admin/employees" component={AdminEmployees} />
+      <Route path="/company/admin/employees/" component={AdminEmployees} />
+      <Route path="/company/admin/content" component={AdminContent} />
+      <Route path="/company/admin/content/" component={AdminContent} />
+      <Route path="/company/admin/dashboard" component={AdminDashboard} />
+      <Route path="/company/admin/dashboard/" component={AdminDashboard} />
+      <Route path="/company/admin" component={AdminUrlError} />
+      <Route path="/company/admin/" component={AdminUrlError} />
+
+      {/* Visible to public users: /error/400, /error/401, /error/403, /error/404, /error/500, /error/503 */}
       <Route path="/error/400" component={BadRequest} />
       <Route path="/error/401" component={Unauthorized} />
       <Route path="/error/403" component={Forbidden} />
       <Route path="/error/404" component={NotFound} />
       <Route path="/error/500" component={ServerError} />
       <Route path="/error/503" component={Maintenance} />
+
+      {/* Visible to public users: /privacy-policy, /terms-of-service, /cookie-policy */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/cookie-policy" component={CookiePolicy} />
+
+      {/* Visible to public users: /company/company-profile, /company/organization-chart, /company-profile, /organization-chart */}
       <Route path="/company/company-profile" component={CompanyProfile} />
       <Route path="/company/company-profile/" component={CompanyProfile} />
       <Route path="/company/organization-chart" component={OrganizationChart} />
@@ -77,6 +111,8 @@ function Router() {
       <Route path="/company-profile/" component={CompanyProfile} />
       <Route path="/organization-chart" component={OrganizationChart} />
       <Route path="/organization-chart/" component={OrganizationChart} />
+
+      {/* Fallback route: visible when no matching link exists */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -105,13 +141,25 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <ScrollToTop />
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <HeroUIProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <ScrollToTop />
+            <Router />
+          </WouterRouter>
+          <ToastProvider
+            maxVisibleToasts={4}
+            placement="top-right"
+            toastOffset={16}
+            toastProps={{
+              variant: "flat",
+              radius: "md",
+              timeout: 4600,
+              shouldShowTimeoutProgress: true,
+            }}
+          />
+        </TooltipProvider>
+      </HeroUIProvider>
     </QueryClientProvider>
   );
 }

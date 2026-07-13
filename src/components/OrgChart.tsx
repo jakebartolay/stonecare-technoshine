@@ -7,6 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { EmployeeRecord } from "@/lib/admin-store";
 
 export type TierType = "board" | "leadership" | "dept" | "staff";
 type AvatarColorType = "orange" | "blue" | "it" | "gray";
@@ -18,6 +19,7 @@ export type TierVisibility = Record<TierType, boolean>;
 interface OrgChartProps {
   visibleTiers: TierVisibility;
   exitingTiers: TierVisibility;
+  employees?: EmployeeRecord[];
 }
 
 interface BadgeProp {
@@ -56,6 +58,19 @@ interface ConnectorProps {
 interface DeptColProps {
   label: string;
   children: React.ReactNode;
+}
+
+interface DepartmentGroup {
+  department: string;
+  heads: EmployeeRecord[];
+  staff: EmployeeRecord[];
+}
+
+interface DepartmentLineProps {
+  groups: DepartmentGroup[];
+  showDepartments: boolean;
+  showStaff: boolean;
+  exitingTiers: TierVisibility;
 }
 
 interface SectionLabelProps {
@@ -98,6 +113,8 @@ const AVATAR_STYLES = {
   it: { background: "#E1F5EE", color: "#085041" },
   gray: { background: "#F1EFE8", color: "#5F5E5A" },
 };
+
+const DEPARTMENT_ORDER = ["Admin", "Finance", "IT / Creative", "Technical"];
 
 function teamPhoto(fileName: string) {
   return `${import.meta.env.BASE_URL}team/${encodeURIComponent(fileName)}`;
@@ -366,15 +383,279 @@ function Connector({ height = 20 }: ConnectorProps) {
   );
 }
 
+function employeeAssetPath(path: string) {
+  if (!path) return "";
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
+}
+
+function badgeForEmployee(employee: EmployeeRecord): BadgeProp {
+  const department = employee.department.toLowerCase();
+
+  if (employee.orgGroup === "board" || employee.orgGroup === "leadership") {
+    return { type: "exec", label: "Executive" };
+  }
+
+  if (department.includes("it") || department.includes("creative")) {
+    return { type: "it", label: employee.department || "IT" };
+  }
+
+  if (department.includes("finance") || department.includes("account")) {
+    return { type: "finance", label: employee.department || "Finance" };
+  }
+
+  if (department.includes("admin")) {
+    return { type: "admin", label: employee.department || "Admin" };
+  }
+
+  return { type: "ops", label: employee.department || "Operations" };
+}
+
+function avatarColorForEmployee(employee: EmployeeRecord): AvatarColorType {
+  const department = employee.department.toLowerCase();
+  if (employee.orgGroup === "board" || employee.orgGroup === "leadership") return "orange";
+  if (department.includes("it") || department.includes("creative")) return "it";
+  if (employee.orgGroup === "dept") return "blue";
+  return "gray";
+}
+
+function sortByReportingOrder(employees: EmployeeRecord[]) {
+  const byManager = new Map<string, EmployeeRecord[]>();
+  const byId = new Map(employees.map((employee) => [employee.employeeId, employee]));
+  const roots: EmployeeRecord[] = [];
+
+  employees.forEach((employee) => {
+    if (employee.reportsTo && byId.has(employee.reportsTo)) {
+      const reports = byManager.get(employee.reportsTo) ?? [];
+      reports.push(employee);
+      byManager.set(employee.reportsTo, reports);
+      return;
+    }
+
+    roots.push(employee);
+  });
+
+  const sortByName = (items: EmployeeRecord[]) =>
+    [...items].sort((first, second) => first.name.localeCompare(second.name));
+  const ordered: EmployeeRecord[] = [];
+  const visit = (employee: EmployeeRecord) => {
+    ordered.push(employee);
+    sortByName(byManager.get(employee.employeeId) ?? []).forEach(visit);
+  };
+
+  sortByName(roots).forEach(visit);
+  return ordered;
+}
+
+function departmentOrderIndex(department: string) {
+  const normalized = department.trim().toLowerCase();
+
+  if (normalized.includes("admin")) return 0;
+  if (normalized.includes("finance") || normalized.includes("account")) return 1;
+  if (/\bit\b/.test(normalized) || normalized.includes("creative") || normalized.includes("information tech")) return 2;
+  if (
+    normalized.includes("technical") ||
+    normalized.includes("operations") ||
+    normalized.includes("project") ||
+    normalized.includes("engineering")
+  ) {
+    return 3;
+  }
+
+  return DEPARTMENT_ORDER.length;
+}
+
+function groupDepartments(employees: EmployeeRecord[]): DepartmentGroup[] {
+  const groups = new Map<string, { heads: EmployeeRecord[]; staff: EmployeeRecord[] }>();
+
+  employees.forEach((employee) => {
+    const department = employee.department.trim() || "Other";
+    const group = groups.get(department) ?? { heads: [], staff: [] };
+
+    if (employee.orgGroup === "dept") {
+      group.heads.push(employee);
+    } else if (employee.orgGroup === "staff") {
+      group.staff.push(employee);
+    }
+
+    groups.set(department, group);
+  });
+
+  return [...groups.entries()]
+    .map(([department, group]) => ({
+      department,
+      heads: sortByReportingOrder(group.heads),
+      staff: sortByReportingOrder(group.staff),
+    }))
+    .sort((first, second) => {
+      const orderDifference = departmentOrderIndex(first.department) - departmentOrderIndex(second.department);
+      return orderDifference || first.department.localeCompare(second.department);
+    });
+}
+
+function EmployeeCard({
+  employee,
+  tier,
+  size = "md",
+  aosDelay,
+  isExiting,
+}: {
+  employee: EmployeeRecord;
+  tier: TierType;
+  size?: CardSize;
+  aosDelay: number;
+  isExiting: boolean;
+}) {
+  return (
+    <Card
+      name={employee.name}
+      role={employee.position}
+      tier={tier}
+      avatarColor={avatarColorForEmployee(employee)}
+      badge={badgeForEmployee(employee)}
+      photo={employeeAssetPath(employee.photoUrl)}
+      size={size}
+      aosDelay={aosDelay}
+      isExiting={isExiting}
+    />
+  );
+}
+
+function DepartmentLine({
+  groups,
+  showDepartments,
+  showStaff,
+  exitingTiers,
+}: DepartmentLineProps) {
+  const columnCount = groups.length;
+  const lineInset = `${50 / columnCount}%`;
+
+  return (
+    <div style={{ width: "100%", overflowX: "auto", paddingBottom: 8 }}>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 940,
+          minWidth: columnCount > 1 ? columnCount * 158 : 150,
+          margin: "0 auto",
+          paddingTop: columnCount > 1 ? 24 : 0,
+        }}
+      >
+        {columnCount > 1 && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 10,
+              left: lineInset,
+              right: lineInset,
+              height: 1,
+              background: "#d1d5db",
+            }}
+          />
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columnCount}, minmax(130px, 1fr))`,
+            gap: 12,
+            alignItems: "start",
+          }}
+        >
+          {groups.map((group, groupIndex) => (
+            <div
+              key={group.department}
+              style={{
+                position: "relative",
+                display: "flex",
+                justifyContent: "center",
+                minWidth: 0,
+              }}
+            >
+              {columnCount > 1 && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: -14,
+                    left: "50%",
+                    width: 1,
+                    height: 14,
+                    background: "#d1d5db",
+                  }}
+                />
+              )}
+
+              <DeptCol label={group.department}>
+                {showDepartments &&
+                  group.heads.map((employee, index) => (
+                    <div
+                      key={employee.id}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+                    >
+                      {index > 0 && <Connector height={8} />}
+                      <EmployeeCard
+                        employee={employee}
+                        tier="dept"
+                        aosDelay={500 + groupIndex * 100 + index * 50}
+                        isExiting={exitingTiers.dept}
+                      />
+                    </div>
+                  ))}
+
+                {showDepartments && group.heads.length > 0 && showStaff && group.staff.length > 0 && (
+                  <Connector height={12} />
+                )}
+
+                {showStaff && group.staff.length > 0 && (
+                  <div style={{ display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+                    {group.staff.map((employee, index) => (
+                      <EmployeeCard
+                        key={employee.id}
+                        employee={employee}
+                        tier="staff"
+                        size="sm"
+                        aosDelay={900 + groupIndex * 120 + index * 60}
+                        isExiting={exitingTiers.staff}
+                      />
+                    ))}
+                  </div>
+                )}
+              </DeptCol>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrgChart({
   visibleTiers,
   exitingTiers,
+  employees = [],
 }: OrgChartProps) {
   const showBoard = visibleTiers.board;
   const showLeadership = visibleTiers.leadership;
   const showDepartments = visibleTiers.dept;
   const showStaff = visibleTiers.staff;
   const showDepartmentArea = showDepartments || showStaff;
+  const activeEmployees = employees.filter((employee) => !employee.deletedAt);
+  const boardEmployees = sortByReportingOrder(
+    activeEmployees.filter((employee) => employee.orgGroup === "board"),
+  );
+  const leadershipEmployees = sortByReportingOrder(
+    activeEmployees.filter((employee) => employee.orgGroup === "leadership"),
+  );
+  const departmentGroups = groupDepartments(activeEmployees);
+  const visibleDepartmentGroups = departmentGroups.filter(
+    (group) => (showDepartments && group.heads.length > 0) || (showStaff && group.staff.length > 0),
+  );
+  const hasBoard = boardEmployees.length > 0;
+  const hasLeadership = leadershipEmployees.length > 0;
+  const hasDepartmentArea = visibleDepartmentGroups.length > 0;
 
   return (
     <div
@@ -386,235 +667,57 @@ export default function OrgChart({
         minWidth: 320,
       }}
     >
-      {showBoard && (
+      {showBoard && hasBoard && (
         <>
           <SectionLabel>Board / Ownership</SectionLabel>
           <Row>
-            <Card
-              name="Erwin Torrefiel"
-              role="Managing Director"
-              tier="board"
-              avatarColor="orange"
-              badge={{ type: "exec", label: "Executive" }}
-              photo={TEAM_PHOTOS.managingDirector}
-              aosDelay={0}
-              isExiting={exitingTiers.board}
-            />
-            <Card
-              name="Jo Torrefiel"
-              role="COO"
-              tier="board"
-              avatarColor="orange"
-              badge={{ type: "exec", label: "Executive" }}
-              photo={TEAM_PHOTOS.coo}
-              aosDelay={100}
-              isExiting={exitingTiers.board}
-            />
+            {boardEmployees.map((employee, index) => (
+              <EmployeeCard
+                key={employee.id}
+                employee={employee}
+                tier="board"
+                aosDelay={index * 100}
+                isExiting={exitingTiers.board}
+              />
+            ))}
           </Row>
         </>
       )}
 
-      {showBoard && (showLeadership || showDepartmentArea) && (
+      {showBoard && hasBoard && ((showLeadership && hasLeadership) || (showDepartmentArea && hasDepartmentArea)) && (
         <Connector height={20} />
       )}
 
-      {showLeadership && (
+      {showLeadership && hasLeadership && (
         <>
           <SectionLabel>Leadership</SectionLabel>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <Card
-              name="Rich Nicollie Torrefiel"
-              role="President"
-              tier="leadership"
-              avatarColor="orange"
-              badge={{ type: "exec", label: "Executive" }}
-              photo={TEAM_PHOTOS.president}
-              aosDelay={200}
-              isExiting={exitingTiers.leadership}
-            />
-            <Connector height={14} />
-            <Card
-              name="Dexter Piolo Torrefiel"
-              role="Vice President"
-              tier="leadership"
-              avatarColor="orange"
-              badge={{ type: "exec", label: "Executive" }}
-              photo={TEAM_PHOTOS.vicePresident}
-              aosDelay={300}
-              isExiting={exitingTiers.leadership}
-            />
-            <Connector height={14} />
-            <Card
-              name="Mary-Lou Robellon"
-              role="Executive Manager"
-              tier="leadership"
-              avatarColor="blue"
-              badge={{ type: "ops", label: "Operations" }}
-              photo={TEAM_PHOTOS.executiveManager}
-              aosDelay={400}
-              isExiting={exitingTiers.leadership}
-            />
+            {leadershipEmployees.map((employee, index) => (
+              <div key={employee.id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                {index > 0 && <Connector height={14} />}
+                <EmployeeCard
+                  employee={employee}
+                  tier="leadership"
+                  aosDelay={200 + index * 100}
+                  isExiting={exitingTiers.leadership}
+                />
+              </div>
+            ))}
           </div>
         </>
       )}
 
-      {showLeadership && showDepartmentArea && <Connector height={20} />}
+      {showLeadership && hasLeadership && showDepartmentArea && hasDepartmentArea && (
+        <Connector height={20} />
+      )}
 
-      {/* Department columns */}
-      {showDepartmentArea && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <DeptCol label="Technical">
-            {showDepartments && (
-              <Card
-                name="Mark Antony Daga"
-                role="Technical Manager"
-                tier="dept"
-                avatarColor="blue"
-                badge={{ type: "ops", label: "Operations" }}
-                photo={TEAM_PHOTOS.technicalManager}
-                aosDelay={500}
-                isExiting={exitingTiers.dept}
-              />
-            )}
-            {showDepartments && showStaff && <Connector height={12} />}
-            {showStaff && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <Card
-                    name="Henry Cadorna"
-                    role="Operations Mgr"
-                    tier="staff"
-                    size="sm"
-                    photo={TEAM_PHOTOS.operationsManager}
-                    aosDelay={900}
-                    isExiting={exitingTiers.staff}
-                  />
-                  <Connector height={8} />
-                  <WorkerCard
-                    aosDelay={1500}
-                    isExiting={exitingTiers.staff}
-                  />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <Card
-                    name="Renato Aducal"
-                    role="Operations Mgr"
-                    tier="staff"
-                    size="sm"
-                    photo={TEAM_PHOTOS.operationsManager2}
-                    aosDelay={1000}
-                    isExiting={exitingTiers.staff}
-                  />
-                  <Connector height={8} />
-                  <WorkerCard
-                    aosDelay={1600}
-                    isExiting={exitingTiers.staff}
-                  />
-                </div>
-              </div>
-            )}
-          </DeptCol>
-
-          {showDepartments && (
-            <DeptCol label="Finance">
-              <Card
-                name="Romalyn Tabuzo"
-                role="Accounting Supervisor"
-                tier="dept"
-                avatarColor="blue"
-                badge={{ type: "finance", label: "Finance" }}
-                photo={TEAM_PHOTOS.accountingSupervisor}
-                aosDelay={600}
-                isExiting={exitingTiers.dept}
-              />
-            </DeptCol>
-          )}
-
-          <DeptCol label="Admin">
-            {showDepartments && (
-              <Card
-                name="Monica Mangilit"
-                role="Admin Staff"
-                tier="dept"
-                avatarColor="blue"
-                badge={{ type: "admin", label: "Admin" }}
-                photo={TEAM_PHOTOS.adminStaff}
-                aosDelay={700}
-                isExiting={exitingTiers.dept}
-              />
-            )}
-            {showDepartments && showStaff && <Connector height={12} />}
-            {showStaff && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <Card
-                  name="Nonito Regino Guiao Jr"
-                  role="Rider Liaison"
-                  tier="staff"
-                  size="sm"
-                  photo={TEAM_PHOTOS.riderLiaison}
-                  aosDelay={1100}
-                  isExiting={exitingTiers.staff}
-                />
-                <Card
-                  name="Winks Morales Balala"
-                  role="Office Aid"
-                  tier="staff"
-                  size="sm"
-                  photo={TEAM_PHOTOS.officeAid}
-                  aosDelay={1200}
-                  isExiting={exitingTiers.staff}
-                />
-              </div>
-            )}
-          </DeptCol>
-
-          <DeptCol label="IT / Creative">
-            {showDepartments && (
-              <Card
-                name="Aljhan Linga"
-                role="IT Supervisor"
-                tier="dept"
-                avatarColor="it"
-                badge={{ type: "it", label: "IT" }}
-                photo={TEAM_PHOTOS.itSupervisor}
-                aosDelay={800}
-                isExiting={exitingTiers.dept}
-              />
-            )}
-            {showDepartments && showStaff && <Connector height={12} />}
-            {showStaff && (
-              <>
-                <Card
-                  name="Darwin John Canda"
-                  role="Graphic Designer"
-                  tier="staff"
-                  size="sm"
-                  photo={TEAM_PHOTOS.graphicDesigner}
-                  aosDelay={1300}
-                  isExiting={exitingTiers.staff}
-                />
-                <Connector height={8} />
-                <Card
-                  name="Jake Bartolay"
-                  role="IT Assistant"
-                  tier="staff"
-                  size="sm"
-                  photo={TEAM_PHOTOS.itAssistant}
-                  aosDelay={1400}
-                  isExiting={exitingTiers.staff}
-                />
-              </>
-            )}
-          </DeptCol>
-        </div>
+      {showDepartmentArea && hasDepartmentArea && (
+        <DepartmentLine
+          groups={visibleDepartmentGroups}
+          showDepartments={showDepartments}
+          showStaff={showStaff}
+          exitingTiers={exitingTiers}
+        />
       )}
     </div>
   );
@@ -660,7 +763,9 @@ function DeptCol({ label, children }: DeptColProps) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        width: "100%",
         minWidth: 130,
+        maxWidth: 260,
       }}
     >
       <SectionLabel>{label}</SectionLabel>
