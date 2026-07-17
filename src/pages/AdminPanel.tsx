@@ -4686,6 +4686,28 @@ export function AdminContent() {
     });
   }
 
+  function upsertSectionByKey(
+    sections: ContentSection[],
+    key: string,
+    updates: Partial<ContentSection>,
+  ) {
+    const existingSection = sections.find((section) => section.key === key);
+    if (existingSection) {
+      return sections.map((section) => (section.key === key ? { ...section, ...updates } : section));
+    }
+
+    return [
+      ...sections,
+      {
+        id: key.replace(/[^a-z0-9]+/gi, "-").toLowerCase(),
+        key,
+        title: updates.title ?? "Homepage Hero Background",
+        body: updates.body ?? "",
+        updatedAt: updates.updatedAt ?? new Date().toISOString(),
+      },
+    ];
+  }
+
   function addSection() {
     const id = `section-${Date.now()}`;
     setDrafts((current) => [
@@ -4700,12 +4722,15 @@ export function AdminContent() {
     setIsUploadingHeroBackground(true);
     try {
       const imageUrl = await uploadContentImageFile(file, homepageHeroBackgroundContentKey, heroBackgroundUrl);
-      updateSectionByKey(homepageHeroBackgroundContentKey, {
+      const timestamp = new Date().toISOString();
+      const nextDrafts = upsertSectionByKey(drafts, homepageHeroBackgroundContentKey, {
         title: "Homepage Hero Background",
         body: imageUrl,
-        updatedAt: new Date().toISOString(),
+        updatedAt: timestamp,
       });
-      transactionToast.upload("Homepage background uploaded", "Click Save All to apply it to the live homepage.");
+      await saveContentSections(nextDrafts.map((section) => ({ ...section, updatedAt: timestamp })));
+      setDrafts(nextDrafts);
+      transactionToast.success("Homepage background updated", "The live homepage will use the uploaded background.");
     } catch (error) {
       transactionToast.error("Homepage background upload failed", error);
     } finally {
@@ -4830,7 +4855,7 @@ export function AdminContent() {
                 {isUploadingHeroBackground ? "Uploading" : "Upload Background"}
               </Label>
               <p className="mt-3 text-xs leading-5 text-neutral-500">
-                Large JPG, PNG, and WEBP files are accepted then optimized on upload. Click Save All after uploading.
+                Large JPG, PNG, and WEBP files are accepted, optimized, and saved as the live homepage background.
               </p>
             </div>
           </div>
