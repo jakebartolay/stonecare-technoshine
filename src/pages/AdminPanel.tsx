@@ -4716,12 +4716,81 @@ export function AdminContent() {
     ]);
   }
 
+  async function compressHomepageBackground(file: File) {
+    const targetBytes = 7 * 1024 * 1024;
+    const maxInputBytes = 200 * 1024 * 1024;
+    const maxDimension = 2400;
+
+    if (file.size <= targetBytes) return file;
+    if (file.size > maxInputBytes) {
+      throw new Error("Files 200MB+ are not accepted. Please reduce the image first.");
+    }
+
+    const imageUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error("Unable to read the selected image."));
+        nextImage.src = imageUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("Image compression is unavailable in this browser.");
+      }
+
+      let baseScale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      let quality = 0.86;
+      let lastBlob: Blob | null = null;
+
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const attemptScale = baseScale * Math.pow(0.88, attempt);
+        canvas.width = Math.max(1, Math.round(image.width * attemptScale));
+        canvas.height = Math.max(1, Math.round(image.height * attemptScale));
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        // eslint-disable-next-line no-await-in-loop
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob(resolve, "image/jpeg", quality);
+        });
+        if (!blob) {
+          throw new Error("Image compression failed.");
+        }
+
+        lastBlob = blob;
+        if (blob.size <= targetBytes) break;
+        quality = Math.max(0.56, quality - 0.08);
+      }
+
+      if (!lastBlob) {
+        throw new Error("Image compression failed.");
+      }
+
+      return new File(
+        [lastBlob],
+        file.name.replace(/\.[^.]+$/, ".jpg") || "homepage-background.jpg",
+        { type: "image/jpeg" },
+      );
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
+  }
+
   async function uploadHomepageBackground(file: File | undefined) {
     if (!file) return;
 
     setIsUploadingHeroBackground(true);
     try {
-      const imageUrl = await uploadContentImageFile(file, homepageHeroBackgroundContentKey, heroBackgroundUrl);
+      let uploadFile = file;
+      if (file.size > 8 * 1024 * 1024) {
+        transactionToast.info("Compressing background", "Reducing image size before upload.");
+        uploadFile = await compressHomepageBackground(file);
+      }
+
+      const imageUrl = await uploadContentImageFile(uploadFile, homepageHeroBackgroundContentKey, heroBackgroundUrl);
       const timestamp = new Date().toISOString();
       const nextDrafts = upsertSectionByKey(drafts, homepageHeroBackgroundContentKey, {
         title: "Homepage Hero Background",
