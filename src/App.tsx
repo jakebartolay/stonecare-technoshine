@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import EmployeesList from "@/pages/EmployeesList";
 import AdminLogin from "@/pages/AdminLogin";
-import { AdminContent, AdminDashboard, AdminEmployees, AdminProducts, AdminReels, AdminServices } from "@/pages/AdminPanel";
+import { AdminContent, AdminDashboard, AdminEmployees, AdminGallery, AdminProducts, AdminReels, AdminReviews, AdminServices } from "@/pages/AdminPanel";
 import BadRequest from "@/pages/errors/BadRequest";
 import AdminUrlError from "@/pages/errors/AdminUrlError";
 import Unauthorized from "@/pages/errors/Unauthorized";
@@ -17,17 +17,19 @@ import ServerError from "@/pages/errors/ServerError";
 import Maintenance from "@/pages/errors/Maintenance";
 import { CookiePolicy, PrivacyPolicy, TermsOfService } from "@/pages/Legal";
 import CompanyProfile from "@/pages/CompanyProfile";
+import CompanyProfilePreview from "@/pages/CompanyProfilePreview";
 import OrganizationChart from "@/pages/OrganizationChart";
 import AboutPage from "@/pages/AboutPage";
 import ClientsPage from "@/pages/ClientsPage";
 import ContactPage from "@/pages/ContactPage";
-import GalleryPage from "@/pages/GalleryPage";
+import GalleryRedesignPage from "@/pages/GalleryRedesignPage";
 import ServiceShowcasePage from "@/pages/ServiceShowcasePage";
 import ServicesPage from "@/pages/ServicesPage";
 import HelpPage from "@/pages/HelpPage";
 import ProductInfoPage from "@/pages/ProductInfoPage";
 import StoneCareProductPage from "@/pages/StoneCareProductPage";
 import StoneCareShopPage from "@/pages/StoneCareShopPage";
+import { heartbeatIntervalMs, trackSiteVisitor } from "@/lib/site-analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,8 +51,13 @@ function Router() {
       <Route path="/services/" component={ServicesPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/about/" component={AboutPage} />
-      <Route path="/gallery" component={GalleryPage} />
-      <Route path="/gallery/" component={GalleryPage} />
+      <Route path="/gallery" component={GalleryRedesignPage} />
+      <Route path="/gallery/" component={GalleryRedesignPage} />
+
+      {/* Legacy preview URL kept active for existing shared links */}
+      <Route path="/gallery/preview" component={GalleryRedesignPage} />
+      <Route path="/gallery/preview/" component={GalleryRedesignPage} />
+
       <Route path="/clients" component={ClientsPage} />
       <Route path="/clients/" component={ClientsPage} />
       <Route path="/contact" component={ContactPage} />
@@ -76,8 +83,12 @@ function Router() {
       <Route path="/company/admin/login/" component={AdminLogin} />
       <Route path="/company/admin/services" component={AdminServices} />
       <Route path="/company/admin/services/" component={AdminServices} />
+      <Route path="/company/admin/gallery" component={AdminGallery} />
+      <Route path="/company/admin/gallery/" component={AdminGallery} />
       <Route path="/company/admin/reels" component={AdminReels} />
       <Route path="/company/admin/reels/" component={AdminReels} />
+      <Route path="/company/admin/reviews" component={AdminReviews} />
+      <Route path="/company/admin/reviews/" component={AdminReviews} />
       <Route path="/company/admin/products" component={AdminProducts} />
       <Route path="/company/admin/products/" component={AdminProducts} />
       <Route path="/company/admin/employees" component={AdminEmployees} />
@@ -102,15 +113,21 @@ function Router() {
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/cookie-policy" component={CookiePolicy} />
 
-      {/* Visible to public users: /company/company-profile, /company/organization-chart, /company-profile, /organization-chart */}
+      {/* Visible to public users: /company/company-profile, /company/company-client, /company/organization-chart, /company-profile, /organization-chart */}
       <Route path="/company/company-profile" component={CompanyProfile} />
       <Route path="/company/company-profile/" component={CompanyProfile} />
+      <Route path="/company/company-client" component={CompanyProfilePreview} />
+      <Route path="/company/company-client/" component={CompanyProfilePreview} />
       <Route path="/company/organization-chart" component={OrganizationChart} />
       <Route path="/company/organization-chart/" component={OrganizationChart} />
       <Route path="/company-profile" component={CompanyProfile} />
       <Route path="/company-profile/" component={CompanyProfile} />
       <Route path="/organization-chart" component={OrganizationChart} />
       <Route path="/organization-chart/" component={OrganizationChart} />
+
+      {/* Client-facing 2026 landscape company profile */}
+      <Route path="/company-profile/preview" component={CompanyProfilePreview} />
+      <Route path="/company-profile/preview/" component={CompanyProfilePreview} />
 
       {/* Fallback route: visible when no matching link exists */}
       <Route component={NotFound} />
@@ -123,6 +140,29 @@ function ScrollToTop() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0 });
+  }, [location]);
+
+  return null;
+}
+
+function VisitorHeartbeat() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    trackSiteVisitor();
+
+    const intervalId = window.setInterval(trackSiteVisitor, heartbeatIntervalMs);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        trackSiteVisitor();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [location]);
 
   return null;
@@ -145,6 +185,7 @@ function App() {
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <ScrollToTop />
+            <VisitorHeartbeat />
             <Router />
           </WouterRouter>
           <ToastProvider

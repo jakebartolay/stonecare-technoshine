@@ -4,6 +4,7 @@ import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import {
+  Activity,
   Boxes,
   ChevronLeft,
   BriefcaseBusiness,
@@ -11,9 +12,11 @@ import {
   Download,
   Edit3,
   FileText,
+  ImageOff,
   Images,
   LayoutDashboard,
   LogOut,
+  MessageSquareQuote,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -55,16 +58,25 @@ import {
   adminProductCategories,
   createBlankProduct,
   deleteEmployee,
+  deleteGalleryImage,
   deleteProduct,
+  deleteTestimonial,
+  defaultHomepageHeroBackground,
   formDataToProduct,
+  getContentSectionBody,
+  homepageHeroBackgroundContentKey,
   logoutAdmin,
   orgChartGroups,
   productToFormData,
   saveContentSections,
   saveEmployees,
+  saveGalleryImage,
   saveSocialReels,
   saveServicePages,
+  saveTestimonial,
   saveAdminProducts,
+  uploadContentImageFile,
+  uploadGalleryImageFile,
   uploadServiceImage,
   upsertProduct,
   useAdminCountsState,
@@ -72,17 +84,21 @@ import {
   useAdminSession,
   useContentSections,
   useEmployees,
+  useGalleryImagesState,
   useServicePagesState,
   useSocialReels,
+  useTestimonialsState,
   validateProduct,
   type AdminProduct,
   type ContentSection,
   type EmployeeRecord,
+  type GalleryImageRecord,
   type ProductFormData,
   type ProductValidationErrors,
   type ServiceImageRecord,
   type ServicePageRecord,
   type SocialReelRecord,
+  type TestimonialRecord,
 } from "@/lib/admin-store";
 import { shopSizes } from "@/lib/shop-products";
 import { transactionToast } from "@/lib/transaction-toast";
@@ -152,7 +168,9 @@ const AdminDashboardChart = lazy(loadAdminDashboardChart);
 const navItems = [
   { label: "Dashboard", href: "/company/admin/dashboard", icon: LayoutDashboard },
   { label: "Services", href: "/company/admin/services", icon: Images },
+  { label: "Gallery", href: "/company/admin/gallery", icon: Images },
   { label: "Reels", href: "/company/admin/reels", icon: Video },
+  { label: "Reviews", href: "/company/admin/reviews", icon: MessageSquareQuote },
   { label: "Products", href: "/company/admin/products", icon: ShoppingBag },
   { label: "Employees", href: "/company/admin/employees", icon: Users },
   { label: "Content", href: "/company/admin/content", icon: FileText },
@@ -527,7 +545,7 @@ function MetricCard({
               {value === null && loading ? (
                 <span className="mt-3 block h-9 w-14 motion-safe:animate-pulse rounded bg-neutral-200" />
               ) : (
-                <p className="mt-2 font-display text-4xl font-bold text-neutral-950">{value ?? "—"}</p>
+                <p className="mt-2 font-display text-4xl font-bold text-neutral-950">{value ?? "--"}</p>
               )}
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-neutral-950">
@@ -633,7 +651,14 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout title="Admin Dashboard" eyebrow="Company Admin">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          href="/company/admin/dashboard"
+          label="Live Viewers"
+          loading={isLoading}
+          value={metricCounts?.liveVisitors ?? null}
+          icon={Activity}
+        />
         <MetricCard
           href="/company/admin/employees"
           label="Employees"
@@ -649,11 +674,25 @@ export function AdminDashboard() {
           icon={Images}
         />
         <MetricCard
+          href="/company/admin/gallery"
+          label="Gallery Images"
+          loading={isLoading}
+          value={metricCounts?.galleryImages ?? null}
+          icon={Images}
+        />
+        <MetricCard
           href="/company/admin/reels"
           label="Reels"
           loading={isLoading}
           value={metricCounts?.reels ?? null}
           icon={Video}
+        />
+        <MetricCard
+          href="/company/admin/reviews"
+          label="Reviews"
+          loading={isLoading}
+          value={metricCounts?.testimonials ?? null}
+          icon={MessageSquareQuote}
         />
         <MetricCard
           href="/company/admin/products"
@@ -895,6 +934,103 @@ function createSocialReelId(title: string, reels: SocialReelRecord[]) {
   }
 
   return `${baseId.slice(0, 60)}-${suffix}`;
+}
+
+function createTestimonialId(clientName: string, testimonials: TestimonialRecord[]) {
+  const normalizedClientName = clientName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/g, "");
+  const baseId = normalizedClientName || "testimonial";
+  const usedIds = new Set(testimonials.map((testimonial) => testimonial.id));
+
+  if (!usedIds.has(baseId)) return baseId;
+
+  let suffix = 2;
+  while (usedIds.has(`${baseId.slice(0, 58)}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseId.slice(0, 58)}-${suffix}`;
+}
+
+function createBlankTestimonial(nextOrder: number): TestimonialRecord {
+  const timestamp = new Date().toISOString();
+
+  return {
+    id: "",
+    quote: "",
+    clientName: "",
+    rating: 5,
+    sortOrder: nextOrder,
+    isPublished: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function testimonialMatchesSearch(testimonial: TestimonialRecord, query: string) {
+  const search = query.trim().toLowerCase();
+  if (!search) return true;
+
+  return [testimonial.id, testimonial.quote, testimonial.clientName]
+    .join(" ")
+    .toLowerCase()
+    .includes(search);
+}
+
+function createGalleryImageId(title: string, images: GalleryImageRecord[]) {
+  const normalizedTitle = title
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/g, "");
+  const baseId = normalizedTitle || "gallery-image";
+  const usedIds = new Set(images.map((image) => image.id));
+
+  if (!usedIds.has(baseId)) return baseId;
+
+  let suffix = 2;
+  while (usedIds.has(`${baseId.slice(0, 58)}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseId.slice(0, 58)}-${suffix}`;
+}
+
+function createBlankGalleryImage(nextOrder: number): GalleryImageRecord {
+  const timestamp = new Date().toISOString();
+
+  return {
+    id: "",
+    title: "",
+    location: "",
+    imageUrl: "",
+    altText: "",
+    sortOrder: nextOrder,
+    isFeatured: false,
+    isHero: false,
+    isPublished: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function galleryImageMatchesSearch(image: GalleryImageRecord, query: string) {
+  const search = query.trim().toLowerCase();
+  if (!search) return true;
+
+  return [image.id, image.title, image.location, image.altText]
+    .join(" ")
+    .toLowerCase()
+    .includes(search);
 }
 
 function AdminServicesUnavailable({
@@ -1926,6 +2062,1078 @@ export function AdminServices() {
           </Dialog>
         </div>
       </div>
+    </AdminLayout>
+  );
+}
+
+export function AdminGallery() {
+  const { images, isLoading, error } = useGalleryImagesState(false);
+  const [drafts, setDrafts] = useState<GalleryImageRecord[]>(images);
+  const [query, setQuery] = useState("");
+  const [form, setForm] = useState<GalleryImageRecord>(() => createBlankGalleryImage(images.length + 1));
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [imagePendingDelete, setImagePendingDelete] = useState<GalleryImageRecord | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+
+  useEffect(() => {
+    setDrafts(images);
+  }, [images]);
+
+  const filteredImages = useMemo(
+    () => drafts.filter((image) => galleryImageMatchesSearch(image, query)),
+    [drafts, query],
+  );
+  const galleryPagination = getTablePagination(filteredImages.length, page);
+  const paginatedImages = filteredImages.slice(
+    galleryPagination.startIndex,
+    galleryPagination.endIndex,
+  );
+  const generatedImageId = form.id || createGalleryImageId(form.title || "gallery-image", drafts);
+  const isDeleteConfirmed = Boolean(
+    imagePendingDelete && deleteConfirmation === imagePendingDelete.id,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, galleryPagination.pageCount));
+  }, [galleryPagination.pageCount]);
+
+  function openNewImage() {
+    setForm(createBlankGalleryImage(drafts.length + 1));
+    setIsEditorOpen(true);
+  }
+
+  function openEditImage(image: GalleryImageRecord) {
+    setForm(image);
+    setIsEditorOpen(true);
+  }
+
+  function openDeleteImage(image: GalleryImageRecord) {
+    setDeleteConfirmation("");
+    setImagePendingDelete(image);
+  }
+
+  function closeDeleteImage() {
+    setDeleteConfirmation("");
+    setImagePendingDelete(null);
+  }
+
+  function updateGalleryForm<K extends keyof GalleryImageRecord>(key: K, value: GalleryImageRecord[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function uploadSelectedGalleryImage(file: File | undefined) {
+    if (!file) return;
+
+    const fallbackTitle = fileNameToCaption(file.name) || "Gallery Image";
+    const title = form.title.trim() || fallbackTitle;
+    const galleryId = form.id || createGalleryImageId(title, drafts);
+
+    setIsUploading(true);
+    try {
+      const imageUrl = await uploadGalleryImageFile(file, galleryId, form.imageUrl);
+      setForm((current) => ({
+        ...current,
+        id: galleryId,
+        title: current.title.trim() || title,
+        altText: current.altText.trim() || title,
+        imageUrl,
+      }));
+      transactionToast.upload("Image uploaded", "Save the gallery item to publish the new image.");
+    } catch (uploadError) {
+      transactionToast.error("Gallery upload failed", uploadError);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function handleSaveGalleryImage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const title = form.title.trim();
+    const imageUrl = form.imageUrl.trim();
+
+    if (!title) {
+      transactionToast.warning("Missing title", "Add a short title for this gallery image.");
+      return;
+    }
+
+    if (!imageUrl) {
+      transactionToast.warning("Missing image", "Upload an image before saving this gallery item.");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const nextImage: GalleryImageRecord = {
+      ...form,
+      id: form.id || createGalleryImageId(title, drafts),
+      title,
+      location: form.location.trim(),
+      imageUrl,
+      altText: form.altText.trim() || title,
+      sortOrder: Number(form.sortOrder) || drafts.length + 1,
+      createdAt: form.createdAt || timestamp,
+      updatedAt: timestamp,
+    };
+
+    setIsSaving(true);
+    try {
+      await saveGalleryImage(nextImage);
+      const exists = drafts.some((image) => image.id === nextImage.id);
+      const nextDrafts = exists
+        ? drafts.map((image) => (image.id === nextImage.id ? nextImage : image))
+        : [...drafts, nextImage];
+      setDrafts([...nextDrafts].sort((first, second) => first.sortOrder - second.sortOrder));
+      transactionToast.success(
+        nextImage.isPublished ? "Gallery image saved" : "Gallery image saved as draft",
+        nextImage.isPublished
+          ? "Published gallery images appear on the website."
+          : "Draft images stay hidden from the public gallery.",
+      );
+      setIsEditorOpen(false);
+    } catch (saveError) {
+      transactionToast.error("Gallery save failed", saveError);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteGalleryImage() {
+    if (!imagePendingDelete || deleteConfirmation !== imagePendingDelete.id) return;
+
+    setIsSaving(true);
+    try {
+      await deleteGalleryImage(imagePendingDelete.id);
+      setDrafts((current) => current.filter((image) => image.id !== imagePendingDelete.id));
+      transactionToast.deleted("Gallery image deleted", "The image was removed from the module.");
+      closeDeleteImage();
+    } catch (deleteError) {
+      transactionToast.error("Gallery delete failed", deleteError);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <AdminLayout
+      title="Gallery Images"
+      eyebrow="Gallery Module"
+      actions={
+        <Button type="button" onClick={openNewImage}>
+          <Plus className="h-4 w-4" />
+          Add Image
+        </Button>
+      }
+    >
+      {error ? (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Gallery API is unavailable right now. Cached images are shown until the server responds again.
+        </div>
+      ) : null}
+
+      <section className="overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-200 p-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_22rem] lg:items-end">
+            <div>
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Website Gallery
+              </p>
+              <h2 className="mt-1 text-2xl leading-tight text-neutral-950">
+                Image Table
+              </h2>
+              <div className="mt-3 grid gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 sm:grid-cols-3">
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  {drafts.length} total images
+                </span>
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  {drafts.filter((image) => image.isPublished).length} published
+                </span>
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  {drafts.filter((image) => image.isFeatured).length} homepage
+                </span>
+              </div>
+            </div>
+
+            <label className="flex min-h-11 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 focus-within:border-primary">
+              <Search className="h-4 w-4 shrink-0 text-primary" />
+              <span className="sr-only">Search gallery images</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                placeholder="Search images"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-primary"
+                  aria-label="Clear gallery search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <caption className="sr-only">Gallery images</caption>
+            <thead className="bg-neutral-950 text-xs uppercase tracking-wide text-white">
+              <tr>
+                <th scope="col" className="w-16 px-4 py-3 font-semibold">No.</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Image</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Placement</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedImages.map((image, index) => (
+                <tr key={image.id} className="border-t border-neutral-200 transition hover:bg-neutral-50">
+                  <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                    {galleryPagination.startIndex + index + 1}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100">
+                        {image.imageUrl ? (
+                          <img
+                            src={adminAssetPath(image.imageUrl)}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-neutral-400">
+                            <ImageOff className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-display text-base font-bold uppercase tracking-normal text-neutral-950">
+                          {image.title}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-neutral-500">{image.id}</p>
+                        {image.location ? (
+                          <p className="mt-1 truncate text-xs text-neutral-500">{image.location}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-neutral-700">
+                        Order {image.sortOrder}
+                      </span>
+                      {image.isFeatured ? (
+                        <span className="rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+                          Homepage
+                        </span>
+                      ) : null}
+                      {image.isHero ? (
+                        <span className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-sky-700">
+                          Hero
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={[
+                        "inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide",
+                        image.isPublished
+                          ? "border border-emerald-200 bg-emerald-100 text-emerald-800"
+                          : "border border-slate-300 bg-slate-100 text-slate-700",
+                      ].join(" ")}
+                    >
+                      {image.isPublished ? "Published" : "Draft"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={adminActionButtonStyles.edit}
+                        onClick={() => openEditImage(image)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className={adminActionButtonStyles.delete}
+                        onClick={() => openDeleteImage(image)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredImages.length === 0 ? (
+          <div className="border-t border-neutral-200 p-8 text-center">
+            <ImageOff className="mx-auto h-10 w-10 text-neutral-400" />
+            <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              {query ? "No images found" : "No images uploaded yet"}
+            </h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              {query ? "Try a different search term." : "Upload a gallery image to show it on the website."}
+            </p>
+          </div>
+        ) : null}
+
+        <PaginationControls
+          currentPage={galleryPagination.currentPage}
+          firstItem={galleryPagination.firstItem}
+          itemLabel="gallery images"
+          lastItem={galleryPagination.lastItem}
+          onPageChange={setPage}
+          pageCount={galleryPagination.pageCount}
+          totalItems={filteredImages.length}
+        />
+      </section>
+
+      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <DialogContent className="max-h-[92vh] max-w-[min(68rem,96vw)] overflow-y-auto p-0 sm:rounded-lg">
+          <section className="overflow-hidden bg-white">
+            <div className="border-b border-neutral-200 p-4 pr-12">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Gallery Module
+              </p>
+              <DialogTitle className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+                {form.id ? "Edit Gallery Image" : "Add Gallery Image"}
+              </DialogTitle>
+            </div>
+
+            <form onSubmit={handleSaveGalleryImage} className="grid gap-5 p-4 lg:grid-cols-[1fr_24rem]">
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="gallery-title">Title</Label>
+                    <Input
+                      id="gallery-title"
+                      value={form.title}
+                      onChange={(event) => updateGalleryForm("title", event.currentTarget.value)}
+                      placeholder="Hotel Lobby Restoration"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gallery-location">Detail / Label</Label>
+                    <Input
+                      id="gallery-location"
+                      value={form.location}
+                      onChange={(event) => updateGalleryForm("location", event.currentTarget.value)}
+                      placeholder="Premium floor finish"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gallery-alt">Alt Text</Label>
+                  <Input
+                    id="gallery-alt"
+                    value={form.altText}
+                    onChange={(event) => updateGalleryForm("altText", event.currentTarget.value)}
+                    placeholder="Describe the image for accessibility"
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="gallery-id">Image ID</Label>
+                    <Input id="gallery-id" value={generatedImageId} readOnly />
+                    <p className="text-xs text-neutral-500">
+                      Used for delete confirmation.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gallery-sort-order">Sort Order</Label>
+                    <Input
+                      id="gallery-sort-order"
+                      type="number"
+                      min={1}
+                      value={form.sortOrder}
+                      onChange={(event) => updateGalleryForm("sortOrder", Number(event.currentTarget.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Label
+                    htmlFor="gallery-published"
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-700"
+                  >
+                    <input
+                      id="gallery-published"
+                      type="checkbox"
+                      checked={form.isPublished}
+                      className="h-4 w-4 rounded border-neutral-300 accent-primary"
+                      onChange={(event) => updateGalleryForm("isPublished", event.currentTarget.checked)}
+                    />
+                    Published
+                  </Label>
+                  <Label
+                    htmlFor="gallery-featured"
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-700"
+                  >
+                    <input
+                      id="gallery-featured"
+                      type="checkbox"
+                      checked={form.isFeatured}
+                      className="h-4 w-4 rounded border-neutral-300 accent-primary"
+                      onChange={(event) => updateGalleryForm("isFeatured", event.currentTarget.checked)}
+                    />
+                    Homepage
+                  </Label>
+                  <Label
+                    htmlFor="gallery-hero"
+                    className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-700"
+                  >
+                    <input
+                      id="gallery-hero"
+                      type="checkbox"
+                      checked={form.isHero}
+                      className="h-4 w-4 rounded border-neutral-300 accent-primary"
+                      onChange={(event) => updateGalleryForm("isHero", event.currentTarget.checked)}
+                    />
+                    Hero slide
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gallery-image-url">Image URL</Label>
+                  <Input
+                    id="gallery-image-url"
+                    value={form.imageUrl}
+                    onChange={(event) => updateGalleryForm("imageUrl", event.currentTarget.value)}
+                    placeholder="uploads/gallery/image.jpg"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 border-t border-neutral-200 pt-4">
+                  <Button type="submit" disabled={isSaving || isUploading}>
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving" : "Save"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setIsEditorOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                  Preview
+                </p>
+                <div className="aspect-[4/3] overflow-hidden rounded-md border border-neutral-200 bg-white">
+                  {form.imageUrl ? (
+                    <img
+                      src={adminAssetPath(form.imageUrl)}
+                      alt={form.altText || form.title || "Gallery preview"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center p-6 text-center text-sm font-semibold text-neutral-500">
+                      <ImageOff className="mb-3 h-8 w-8 text-neutral-400" />
+                      No image uploaded yet
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  id="gallery-file-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const selectedFile = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    void uploadSelectedGalleryImage(selectedFile);
+                  }}
+                />
+                <Label
+                  htmlFor="gallery-file-upload"
+                  className={`mt-3 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary bg-primary px-4 py-2 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-neutral-950 ${
+                    isUploading ? "pointer-events-none opacity-60" : ""
+                  }`}
+                  aria-disabled={isUploading}
+                >
+                  <Upload className="h-4 w-4" />
+                  {isUploading ? "Uploading" : form.imageUrl ? "Replace Image" : "Upload Image"}
+                </Label>
+                <p className="mt-3 text-xs leading-5 text-neutral-500">
+                  JPG, PNG, and WEBP files are optimized to a smaller JPG when uploaded.
+                </p>
+              </div>
+            </form>
+          </section>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(imagePendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isSaving) closeDeleteImage();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+              Delete Gallery Image
+            </p>
+            <DialogTitle className="mt-2 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              Are you sure?
+            </DialogTitle>
+            <DialogDescription className="mt-3 leading-6">
+              This permanently deletes <strong className="text-neutral-950">{imagePendingDelete?.title}</strong>.
+              This action cannot be undone.
+            </DialogDescription>
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (isDeleteConfirmed) void handleDeleteGalleryImage();
+            }}
+            className="space-y-4"
+          >
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+              <p className="text-sm text-neutral-700">Type this Image ID to confirm:</p>
+              <code className="mt-2 block select-all font-mono text-sm font-bold text-neutral-950">
+                {imagePendingDelete?.id}
+              </code>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-gallery-confirmation">Image ID</Label>
+              <Input
+                id="delete-gallery-confirmation"
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.currentTarget.value)}
+                placeholder={imagePendingDelete?.id}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={isSaving} onClick={closeDeleteImage}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className={adminActionButtonStyles.delete}
+                disabled={!isDeleteConfirmed || isSaving}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isSaving ? "Deleting" : "Confirm Delete"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
+}
+
+export function AdminReviews() {
+  const { testimonials, error } = useTestimonialsState(false);
+  const [drafts, setDrafts] = useState<TestimonialRecord[]>(testimonials);
+  const [query, setQuery] = useState("");
+  const [form, setForm] = useState<TestimonialRecord>(() => createBlankTestimonial(testimonials.length + 1));
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [testimonialPendingDelete, setTestimonialPendingDelete] = useState<TestimonialRecord | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+
+  useEffect(() => {
+    setDrafts(testimonials);
+  }, [testimonials]);
+
+  const filteredTestimonials = useMemo(
+    () => drafts.filter((testimonial) => testimonialMatchesSearch(testimonial, query)),
+    [drafts, query],
+  );
+  const testimonialPagination = getTablePagination(filteredTestimonials.length, page);
+  const paginatedTestimonials = filteredTestimonials.slice(
+    testimonialPagination.startIndex,
+    testimonialPagination.endIndex,
+  );
+  const generatedTestimonialId = form.id || createTestimonialId(form.clientName || "testimonial", drafts);
+  const isDeleteConfirmed = Boolean(
+    testimonialPendingDelete && deleteConfirmation === testimonialPendingDelete.id,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, testimonialPagination.pageCount));
+  }, [testimonialPagination.pageCount]);
+
+  function openNewTestimonial() {
+    setForm(createBlankTestimonial(drafts.length + 1));
+    setIsEditorOpen(true);
+  }
+
+  function openEditTestimonial(testimonial: TestimonialRecord) {
+    setForm(testimonial);
+    setIsEditorOpen(true);
+  }
+
+  function openDeleteTestimonial(testimonial: TestimonialRecord) {
+    setDeleteConfirmation("");
+    setTestimonialPendingDelete(testimonial);
+  }
+
+  function closeDeleteTestimonial() {
+    setDeleteConfirmation("");
+    setTestimonialPendingDelete(null);
+  }
+
+  function updateTestimonialForm<K extends keyof TestimonialRecord>(
+    key: K,
+    value: TestimonialRecord[K],
+  ) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSaveTestimonial(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const quote = form.quote.trim();
+    const clientName = form.clientName.trim();
+
+    if (!quote) {
+      transactionToast.warning("Missing review", "Add the testimonial text before saving.");
+      return;
+    }
+
+    if (!clientName) {
+      transactionToast.warning("Missing client name", "Add the client label or name for this testimonial.");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const nextTestimonial: TestimonialRecord = {
+      ...form,
+      id: form.id || createTestimonialId(clientName, drafts),
+      quote,
+      clientName,
+      rating: Math.min(5, Math.max(1, Number(form.rating) || 5)),
+      sortOrder: Number(form.sortOrder) || drafts.length + 1,
+      createdAt: form.createdAt || timestamp,
+      updatedAt: timestamp,
+    };
+
+    setIsSaving(true);
+    try {
+      await saveTestimonial(nextTestimonial);
+      const exists = drafts.some((testimonial) => testimonial.id === nextTestimonial.id);
+      const nextDrafts = exists
+        ? drafts.map((testimonial) =>
+            testimonial.id === nextTestimonial.id ? nextTestimonial : testimonial,
+          )
+        : [...drafts, nextTestimonial];
+      setDrafts([...nextDrafts].sort((first, second) => first.sortOrder - second.sortOrder));
+      transactionToast.success(
+        nextTestimonial.isPublished ? "Review saved" : "Review saved as draft",
+        nextTestimonial.isPublished
+          ? "Published reviews appear on the Testimonials section."
+          : "Draft reviews stay hidden from the public website.",
+      );
+      setIsEditorOpen(false);
+    } catch (saveError) {
+      transactionToast.error("Review save failed", saveError);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteTestimonial() {
+    if (!testimonialPendingDelete || deleteConfirmation !== testimonialPendingDelete.id) return;
+
+    setIsSaving(true);
+    try {
+      await deleteTestimonial(testimonialPendingDelete.id);
+      setDrafts((current) =>
+        current.filter((testimonial) => testimonial.id !== testimonialPendingDelete.id),
+      );
+      transactionToast.deleted("Review deleted", "The testimonial was removed from the module.");
+      closeDeleteTestimonial();
+    } catch (deleteError) {
+      transactionToast.error("Review delete failed", deleteError);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <AdminLayout
+      title="Client Reviews"
+      eyebrow="Testimonials Module"
+      actions={
+        <Button type="button" onClick={openNewTestimonial}>
+          <Plus className="h-4 w-4" />
+          Add Review
+        </Button>
+      }
+    >
+      {error ? (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Reviews API is unavailable right now. Cached testimonials are shown until the server responds again.
+        </div>
+      ) : null}
+
+      <section className="overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm">
+        <div className="border-b border-neutral-200 p-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_22rem] lg:items-end">
+            <div>
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Website Testimonials
+              </p>
+              <h2 className="mt-1 text-2xl leading-tight text-neutral-950">
+                Reviews Table
+              </h2>
+              <div className="mt-3 grid gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500 sm:grid-cols-2">
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  {drafts.length} total reviews
+                </span>
+                <span className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+                  {drafts.filter((testimonial) => testimonial.isPublished).length} published
+                </span>
+              </div>
+            </div>
+
+            <label className="flex min-h-11 items-center gap-2 rounded-md border border-neutral-200 bg-white px-3 focus-within:border-primary">
+              <Search className="h-4 w-4 shrink-0 text-primary" />
+              <span className="sr-only">Search reviews</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                placeholder="Search reviews"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-neutral-100 hover:text-primary"
+                  aria-label="Clear review search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <caption className="sr-only">Client testimonials</caption>
+            <thead className="bg-neutral-950 text-xs uppercase tracking-wide text-white">
+              <tr>
+                <th scope="col" className="w-16 px-4 py-3 font-semibold">No.</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Review</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Rating</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTestimonials.map((testimonial, index) => (
+                <tr key={testimonial.id} className="border-t border-neutral-200 transition hover:bg-neutral-50">
+                  <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                    {testimonialPagination.startIndex + index + 1}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <MessageSquareQuote className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-display text-base font-bold uppercase tracking-normal text-neutral-950">
+                          {testimonial.clientName}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-600">
+                          {testimonial.quote}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-neutral-500">{testimonial.id}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+                      {testimonial.rating}/5
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={[
+                        "inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide",
+                        testimonial.isPublished
+                          ? "border border-emerald-200 bg-emerald-100 text-emerald-800"
+                          : "border border-slate-300 bg-slate-100 text-slate-700",
+                      ].join(" ")}
+                    >
+                      {testimonial.isPublished ? "Published" : "Draft"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className={adminActionButtonStyles.edit}
+                        onClick={() => openEditTestimonial(testimonial)}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        className={adminActionButtonStyles.delete}
+                        onClick={() => openDeleteTestimonial(testimonial)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredTestimonials.length === 0 ? (
+          <div className="border-t border-neutral-200 p-8 text-center">
+            <MessageSquareQuote className="mx-auto h-10 w-10 text-neutral-400" />
+            <h2 className="mt-3 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              {query ? "No reviews found" : "No testimonials uploaded yet"}
+            </h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              {query ? "Try a different search term." : "Add a testimonial to show it on the website."}
+            </p>
+          </div>
+        ) : null}
+
+        <PaginationControls
+          currentPage={testimonialPagination.currentPage}
+          firstItem={testimonialPagination.firstItem}
+          itemLabel="reviews"
+          lastItem={testimonialPagination.lastItem}
+          onPageChange={setPage}
+          pageCount={testimonialPagination.pageCount}
+          totalItems={filteredTestimonials.length}
+        />
+      </section>
+
+      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <DialogContent className="max-h-[92vh] max-w-[min(62rem,96vw)] overflow-y-auto p-0 sm:rounded-lg">
+          <section className="overflow-hidden bg-white">
+            <div className="border-b border-neutral-200 p-4 pr-12">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Testimonials Module
+              </p>
+              <DialogTitle className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+                {form.id ? "Edit Review" : "Add Review"}
+              </DialogTitle>
+            </div>
+
+            <form onSubmit={handleSaveTestimonial} className="grid gap-5 p-4 lg:grid-cols-[1fr_20rem]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="testimonial-quote">Review</Label>
+                  <textarea
+                    id="testimonial-quote"
+                    value={form.quote}
+                    onChange={(event) => updateTestimonialForm("quote", event.currentTarget.value)}
+                    placeholder="Paste the client testimonial here"
+                    className="min-h-36 w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="testimonial-client">Client Name / Label</Label>
+                    <Input
+                      id="testimonial-client"
+                      value={form.clientName}
+                      onChange={(event) => updateTestimonialForm("clientName", event.currentTarget.value)}
+                      placeholder="Hotel Lobby Client"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="testimonial-rating">Rating</Label>
+                    <select
+                      id="testimonial-rating"
+                      value={form.rating}
+                      onChange={(event) => updateTestimonialForm("rating", Number(event.currentTarget.value))}
+                      className="flex min-h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      {[5, 4, 3, 2, 1].map((rating) => (
+                        <option key={rating} value={rating}>
+                          {rating} star{rating === 1 ? "" : "s"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="testimonial-id">Review ID</Label>
+                    <Input id="testimonial-id" value={generatedTestimonialId} readOnly />
+                    <p className="text-xs text-neutral-500">Used for delete confirmation.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="testimonial-sort-order">Sort Order</Label>
+                    <Input
+                      id="testimonial-sort-order"
+                      type="number"
+                      min={1}
+                      value={form.sortOrder}
+                      onChange={(event) => updateTestimonialForm("sortOrder", Number(event.currentTarget.value))}
+                    />
+                  </div>
+                </div>
+
+                <Label
+                  htmlFor="testimonial-published"
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-700"
+                >
+                  <input
+                    id="testimonial-published"
+                    type="checkbox"
+                    checked={form.isPublished}
+                    className="h-4 w-4 rounded border-neutral-300 accent-primary"
+                    onChange={(event) => updateTestimonialForm("isPublished", event.currentTarget.checked)}
+                  />
+                  Published on website
+                </Label>
+
+                <div className="flex flex-wrap gap-2 border-t border-neutral-200 pt-4">
+                  <Button type="submit" disabled={isSaving}>
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving" : "Save"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setIsEditorOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
+                <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                  Preview
+                </p>
+                <article className="rounded-md border border-neutral-200 bg-white p-4 shadow-sm">
+                  <div className="flex gap-1 text-primary">
+                    {Array.from({ length: Math.min(5, Math.max(1, Number(form.rating) || 5)) }).map((_, index) => (
+                      <span key={index} aria-hidden="true">*</span>
+                    ))}
+                  </div>
+                  <blockquote className="mt-4 text-sm leading-6 text-neutral-700">
+                    "{form.quote || "Client testimonial preview"}"
+                  </blockquote>
+                  <p className="mt-4 font-display text-sm font-bold uppercase tracking-normal text-neutral-950">
+                    {form.clientName || "Client Name"}
+                  </p>
+                </article>
+              </div>
+            </form>
+          </section>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(testimonialPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isSaving) closeDeleteTestimonial();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+              Delete Review
+            </p>
+            <DialogTitle className="mt-2 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              Are you sure?
+            </DialogTitle>
+            <DialogDescription className="mt-3 leading-6">
+              This permanently deletes <strong className="text-neutral-950">{testimonialPendingDelete?.clientName}</strong>.
+              This action cannot be undone.
+            </DialogDescription>
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (isDeleteConfirmed) void handleDeleteTestimonial();
+            }}
+            className="space-y-4"
+          >
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+              <p className="text-sm text-neutral-700">Type this Review ID to confirm:</p>
+              <code className="mt-2 block select-all font-mono text-sm font-bold text-neutral-950">
+                {testimonialPendingDelete?.id}
+              </code>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-testimonial-confirmation">Review ID</Label>
+              <Input
+                id="delete-testimonial-confirmation"
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.currentTarget.value)}
+                placeholder={testimonialPendingDelete?.id}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={isSaving} onClick={closeDeleteTestimonial}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className={adminActionButtonStyles.delete}
+                disabled={!isDeleteConfirmed || isSaving}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isSaving ? "Deleting" : "Confirm Delete"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
@@ -3442,13 +4650,40 @@ export function AdminEmployees() {
 export function AdminContent() {
   const sections = useContentSections();
   const [drafts, setDrafts] = useState<ContentSection[]>(sections);
+  const [isUploadingHeroBackground, setIsUploadingHeroBackground] = useState(false);
 
   useEffect(() => {
     setDrafts(sections);
   }, [sections]);
 
+  const heroBackgroundUrl = getContentSectionBody(
+    drafts,
+    homepageHeroBackgroundContentKey,
+    defaultHomepageHeroBackground,
+  );
+
   function updateSection(id: string, updates: Partial<ContentSection>) {
     setDrafts((current) => current.map((section) => (section.id === id ? { ...section, ...updates } : section)));
+  }
+
+  function updateSectionByKey(key: string, updates: Partial<ContentSection>) {
+    setDrafts((current) => {
+      const existingSection = current.find((section) => section.key === key);
+      if (existingSection) {
+        return current.map((section) => (section.key === key ? { ...section, ...updates } : section));
+      }
+
+      return [
+        ...current,
+        {
+          id: key.replace(/[^a-z0-9]+/gi, "-").toLowerCase(),
+          key,
+          title: updates.title ?? "Homepage Hero Background",
+          body: updates.body ?? "",
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+    });
   }
 
   function addSection() {
@@ -3457,6 +4692,25 @@ export function AdminContent() {
       ...current,
       { id, key: "custom.section", title: "New Section", body: "", updatedAt: new Date().toISOString() },
     ]);
+  }
+
+  async function uploadHomepageBackground(file: File | undefined) {
+    if (!file) return;
+
+    setIsUploadingHeroBackground(true);
+    try {
+      const imageUrl = await uploadContentImageFile(file, homepageHeroBackgroundContentKey, heroBackgroundUrl);
+      updateSectionByKey(homepageHeroBackgroundContentKey, {
+        title: "Homepage Hero Background",
+        body: imageUrl,
+        updatedAt: new Date().toISOString(),
+      });
+      transactionToast.upload("Homepage background uploaded", "Click Save All to apply it to the live homepage.");
+    } catch (error) {
+      transactionToast.error("Homepage background upload failed", error);
+    } finally {
+      setIsUploadingHeroBackground(false);
+    }
   }
 
   async function saveAll() {
@@ -3486,7 +4740,103 @@ export function AdminContent() {
       }
     >
       <div className="grid gap-4">
-        {drafts.map((section) => (
+        <section className="overflow-hidden rounded-md border border-neutral-200 bg-white shadow-sm">
+          <div className="grid gap-4 p-4 lg:grid-cols-[1fr_22rem]">
+            <div className="space-y-4">
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  Homepage
+                </p>
+                <h2 className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+                  Hero Background
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">
+                  Upload or paste the image path used behind the main homepage hero.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="homepage-hero-background">Background Image URL</Label>
+                <Input
+                  id="homepage-hero-background"
+                  value={heroBackgroundUrl}
+                  placeholder={defaultHomepageHeroBackground}
+                  onChange={(event) =>
+                    updateSectionByKey(homepageHeroBackgroundContentKey, {
+                      title: "Homepage Hero Background",
+                      body: event.currentTarget.value,
+                      updatedAt: new Date().toISOString(),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    updateSectionByKey(homepageHeroBackgroundContentKey, {
+                      title: "Homepage Hero Background",
+                      body: defaultHomepageHeroBackground,
+                      updatedAt: new Date().toISOString(),
+                    })
+                  }
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reset Default
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
+              <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                Preview
+              </p>
+              <div className="aspect-[16/10] overflow-hidden rounded-md border border-neutral-200 bg-white">
+                {heroBackgroundUrl ? (
+                  <img
+                    src={adminAssetPath(heroBackgroundUrl)}
+                    alt="Homepage background preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center p-6 text-center text-sm font-semibold text-neutral-500">
+                    <ImageOff className="mb-3 h-8 w-8 text-neutral-400" />
+                    No homepage background set
+                  </div>
+                )}
+              </div>
+
+              <input
+                id="homepage-background-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => {
+                  const selectedFile = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  void uploadHomepageBackground(selectedFile);
+                }}
+              />
+              <Label
+                htmlFor="homepage-background-upload"
+                className={`mt-3 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-primary bg-primary px-4 py-2 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-neutral-950 ${
+                  isUploadingHeroBackground ? "pointer-events-none opacity-60" : ""
+                }`}
+                aria-disabled={isUploadingHeroBackground}
+              >
+                <Upload className="h-4 w-4" />
+                {isUploadingHeroBackground ? "Uploading" : "Upload Background"}
+              </Label>
+              <p className="mt-3 text-xs leading-5 text-neutral-500">
+                Large JPG, PNG, and WEBP files are accepted then optimized on upload. Click Save All after uploading.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {drafts.filter((section) => section.key !== homepageHeroBackgroundContentKey).map((section) => (
           <section key={section.id} className="border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="grid gap-3 md:grid-cols-[16rem_1fr]">
               <div className="space-y-3">

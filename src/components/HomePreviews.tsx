@@ -8,20 +8,20 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Images,
+  ImageOff,
   ShieldCheck,
   Sparkles,
   VideoOff,
 } from "lucide-react";
 import {
-  galleryHighlights,
   serviceItems,
   type ServiceItem,
 } from "@/lib/site-content";
-import { useServicePagesState, useSocialReelsState, type ServicePageRecord } from "@/lib/admin-store";
+import { useGalleryImagesState, useServicePagesState, useSocialReelsState, type ServicePageRecord } from "@/lib/admin-store";
 
 function assetPath(path: string) {
-  return `${import.meta.env.BASE_URL}${path}`;
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
 }
 
 function facebookVideoEmbedUrl(href: string) {
@@ -179,10 +179,10 @@ export function AboutPreview() {
           <div className="mt-8 flex flex-wrap gap-3">
             <RouteButton href="/about">About Technoshine</RouteButton>
             <Link
-              href="/company/company-profile"
+              href="/company/company-client"
               className="inline-flex min-h-11 items-center justify-center border border-foreground/20 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
             >
-              Company Profile
+              Client Profile
             </Link>
           </div>
         </div>
@@ -333,6 +333,13 @@ export function SocialReelsPreview() {
 }
 
 export function WorkPreview() {
+  const { images } = useGalleryImagesState(true);
+  const galleryHighlights = useMemo(() => {
+    const publishedImages = images.filter((image) => image.isPublished && image.imageUrl);
+    const featuredImages = publishedImages.filter((image) => image.isFeatured);
+    return (featuredImages.length > 0 ? featuredImages : publishedImages).slice(0, 3);
+  }, [images]);
+
   return (
     <section id="gallery-preview" className="relative bg-background py-20">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -353,32 +360,44 @@ export function WorkPreview() {
           </div>
         </div>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {galleryHighlights.map((item) => (
-            <Link
-              key={item.title}
-              href="/gallery"
-              className="group relative min-h-[320px] overflow-hidden rounded-md border border-border bg-black"
-            >
-              <img
-                src={assetPath(item.image)}
-                alt={item.title}
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/76 via-black/16 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                <p className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-primary">
-                  {item.label}
-                </p>
-                <h3 className="font-display text-2xl font-bold uppercase tracking-normal">
-                  {item.title}
-                </h3>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {galleryHighlights.length === 0 ? (
+          <div className="mt-12 flex min-h-60 flex-col items-center justify-center rounded-md border border-dashed border-border bg-card px-6 py-10 text-center">
+            <ImageOff className="h-10 w-10 text-primary" aria-hidden="true" />
+            <h3 className="mt-4 font-display text-2xl font-bold uppercase tracking-normal text-foreground">
+              No images uploaded yet
+            </h3>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Published homepage gallery images will appear here once they are available.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            {galleryHighlights.map((item) => (
+              <Link
+                key={item.id}
+                href="/gallery"
+                className="group relative min-h-[320px] overflow-hidden rounded-md border border-border bg-black"
+              >
+                <img
+                  src={assetPath(item.imageUrl)}
+                  alt={item.altText || item.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/76 via-black/16 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                  <p className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-primary">
+                    {item.location || "Project gallery"}
+                  </p>
+                  <h3 className="font-display text-2xl font-bold uppercase tracking-normal">
+                    {item.title}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

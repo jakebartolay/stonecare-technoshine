@@ -11,6 +11,8 @@ const employeeStorageKey = "technoshine-admin-employees";
 const contentStorageKey = "technoshine-admin-content";
 const serviceStorageKey = "technoshine-admin-services";
 const socialReelStorageKey = "technoshine-admin-social-reels";
+const galleryImageStorageKey = "technoshine-admin-gallery-images";
+const testimonialStorageKey = "technoshine-admin-testimonials";
 const sessionStorageKey = "technoshine-admin-session";
 const loginPreferenceStorageKey = "technoshine-admin-login-preferences-v1";
 let hasVerifiedAdminSession = false;
@@ -53,6 +55,9 @@ export interface AdminCounts {
   contentSections: number;
   services: number;
   reels: number;
+  galleryImages: number;
+  testimonials: number;
+  liveVisitors: number;
 }
 
 export interface AdminProduct extends ShopProduct {
@@ -86,6 +91,9 @@ export interface ContentSection {
   updatedAt: string;
 }
 
+export const homepageHeroBackgroundContentKey = "homepage.hero.background";
+export const defaultHomepageHeroBackground = "images/hero-marble-floor-stair.jpg";
+
 export interface ServiceImageRecord {
   id: string;
   imageUrl: string;
@@ -108,6 +116,31 @@ export interface SocialReelRecord {
   id: string;
   title: string;
   href: string;
+  sortOrder: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GalleryImageRecord {
+  id: string;
+  title: string;
+  location: string;
+  imageUrl: string;
+  altText: string;
+  sortOrder: number;
+  isFeatured: boolean;
+  isHero: boolean;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TestimonialRecord {
+  id: string;
+  quote: string;
+  clientName: string;
+  rating: number;
   sortOrder: number;
   isPublished: boolean;
   createdAt: string;
@@ -321,7 +354,49 @@ export async function uploadServiceImage(
     credentials: "include",
     body: formData,
   });
-  const payload = await parseApiResponse<{ ok: boolean; url: string }>(response);
+  const payload = await parseApiResponse<{ ok: boolean; url: string; optimizedBytes?: number }>(response);
+  return payload.url;
+}
+
+export async function uploadGalleryImageFile(
+  file: File,
+  galleryId: string,
+  previousImageUrl = "",
+) {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("galleryId", galleryId);
+  if (previousImageUrl) {
+    formData.append("previousImageUrl", previousImageUrl);
+  }
+
+  const response = await fetch(adminApiUrl("gallery.upload-image"), {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  const payload = await parseApiResponse<{ ok: boolean; url: string; optimizedBytes?: number }>(response);
+  return payload.url;
+}
+
+export async function uploadContentImageFile(
+  file: File,
+  contentKey: string,
+  previousImageUrl = "",
+) {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("contentKey", contentKey);
+  if (previousImageUrl) {
+    formData.append("previousImageUrl", previousImageUrl);
+  }
+
+  const response = await fetch(adminApiUrl("content.upload-image"), {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  const payload = await parseApiResponse<{ ok: boolean; url: string; optimizedBytes?: number }>(response);
   return payload.url;
 }
 
@@ -966,6 +1041,13 @@ const seedContentSections: ContentSection[] = [
     updatedAt: now(),
   },
   {
+    id: "homepage-hero-background",
+    key: homepageHeroBackgroundContentKey,
+    title: "Homepage Hero Background",
+    body: defaultHomepageHeroBackground,
+    updatedAt: now(),
+  },
+  {
     id: "services",
     key: "services.summary",
     title: "Services Summary",
@@ -981,22 +1063,61 @@ const seedContentSections: ContentSection[] = [
   },
 ];
 
+function mergeContentSectionDefaults(sections: ContentSection[]) {
+  const timestamp = now();
+  const byKey = new Map<string, ContentSection>();
+
+  seedContentSections.forEach((section) => {
+    byKey.set(section.key, { ...section, updatedAt: section.updatedAt || timestamp });
+  });
+  sections.forEach((section) => {
+    byKey.set(section.key, {
+      ...section,
+      body: section.body ?? "",
+      updatedAt: section.updatedAt || timestamp,
+    });
+  });
+
+  const seededKeys = new Set(seedContentSections.map((section) => section.key));
+  return [
+    ...seedContentSections.map((section) => byKey.get(section.key)!),
+    ...sections.filter((section) => !seededKeys.has(section.key)).map((section) => byKey.get(section.key)!),
+  ];
+}
+
 export function getContentSections() {
-  return readJson<ContentSection[]>(contentStorageKey, seedContentSections);
+  return mergeContentSectionDefaults(readJson<ContentSection[]>(contentStorageKey, seedContentSections));
 }
 
 export async function saveContentSections(sections: ContentSection[]) {
+  const nextSections = mergeContentSectionDefaults(sections);
   await apiRequest("content.save", {
     method: "POST",
-    body: JSON.stringify({ sections }),
+    body: JSON.stringify({ sections: nextSections }),
   });
-  writeJson(contentStorageKey, sections);
+  writeJson(contentStorageKey, nextSections);
 }
 
 async function loadContentSections() {
   const payload = await apiRequest<{ ok: boolean; sections: ContentSection[] }>("content");
-  writeJson(contentStorageKey, payload.sections);
-  return payload.sections;
+  const sections = mergeContentSectionDefaults(payload.sections);
+  writeJson(contentStorageKey, sections);
+  return sections;
+}
+
+async function loadPublicContentSections() {
+  const payload = await apiRequest<{ ok: boolean; sections: ContentSection[] }>("content.public");
+  const sections = mergeContentSectionDefaults(payload.sections);
+  writeJson(contentStorageKey, sections);
+  return sections;
+}
+
+export function getContentSectionBody(
+  sections: ContentSection[],
+  key: string,
+  fallback = "",
+) {
+  return sections.find((section) => section.key === key)?.body.trim() || fallback;
 }
 
 export function useContentSections() {
@@ -1007,6 +1128,31 @@ export function useContentSections() {
     const refreshFromApi = async () => {
       try {
         setSections(await loadContentSections());
+      } catch {
+        refresh();
+      }
+    };
+
+    void refreshFromApi();
+    window.addEventListener(adminStoreEvent, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(adminStoreEvent, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  return sections;
+}
+
+export function usePublicContentSections() {
+  const [sections, setSections] = useState(() => getContentSections());
+
+  useEffect(() => {
+    const refresh = () => setSections(getContentSections());
+    const refreshFromApi = async () => {
+      try {
+        setSections(await loadPublicContentSections());
       } catch {
         refresh();
       }
@@ -1263,6 +1409,430 @@ export function useSocialReels(publishedOnly = false) {
   return useSocialReelsState(publishedOnly).reels;
 }
 
+const seedGalleryImages: GalleryImageRecord[] = [
+  {
+    id: "gallery-1",
+    title: "Marble Floor Polish",
+    location: "Polished stone surface",
+    imageUrl: "images/client-images/gallery-1.jpg",
+    altText: "Marble Floor Polish",
+    sortOrder: 1,
+    isFeatured: true,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-2",
+    title: "Commercial Hallway",
+    location: "High-traffic stone care",
+    imageUrl: "images/client-images/gallery-2.jpg",
+    altText: "Commercial Hallway",
+    sortOrder: 2,
+    isFeatured: true,
+    isHero: true,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-3",
+    title: "Hotel Lobby Restoration",
+    location: "Premium floor finish",
+    imageUrl: "images/client-images/gallery-3.jpg",
+    altText: "Hotel Lobby Restoration",
+    sortOrder: 3,
+    isFeatured: true,
+    isHero: true,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-9",
+    title: "Interior Floor Care",
+    location: "Detail cleaning",
+    imageUrl: "images/client-images/gallery-9.jpg",
+    altText: "Interior Floor Care",
+    sortOrder: 4,
+    isFeatured: false,
+    isHero: true,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-10",
+    title: "Detail Cleaning",
+    location: "Natural stone polishing",
+    imageUrl: "images/client-images/gallery-10.jpg",
+    altText: "Detail Cleaning",
+    sortOrder: 5,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-11",
+    title: "Natural Stone Polishing",
+    location: "Premium floor finish",
+    imageUrl: "images/client-images/gallery-11.jpg",
+    altText: "Natural Stone Polishing",
+    sortOrder: 6,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-12",
+    title: "Premium Floor Finish",
+    location: "Restored stone shine",
+    imageUrl: "images/client-images/gallery-12.jpg",
+    altText: "Premium Floor Finish",
+    sortOrder: 7,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-13",
+    title: "Gloss Recovery",
+    location: "Surface refinishing",
+    imageUrl: "images/client-images/gallery-13.jpg",
+    altText: "Gloss Recovery",
+    sortOrder: 8,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-14",
+    title: "Surface Refinishing",
+    location: "Protected polished floor",
+    imageUrl: "images/client-images/gallery-14.jpg",
+    altText: "Surface Refinishing",
+    sortOrder: 9,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "gallery-15",
+    title: "Protected Finish",
+    location: "Polished stone surface",
+    imageUrl: "images/client-images/gallery-15.jpg",
+    altText: "Protected Finish",
+    sortOrder: 10,
+    isFeatured: false,
+    isHero: false,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+];
+
+function normalizeGalleryImage(image: GalleryImageRecord, index: number): GalleryImageRecord {
+  const timestamp = image.createdAt || now();
+
+  return {
+    id: image.id || `gallery-${Date.now()}-${index + 1}`,
+    title: image.title?.trim() || `Gallery Image ${index + 1}`,
+    location: image.location?.trim() || "",
+    imageUrl: image.imageUrl?.trim() || "",
+    altText: image.altText?.trim() || image.title?.trim() || `Gallery Image ${index + 1}`,
+    sortOrder: Number.isFinite(Number(image.sortOrder)) ? Number(image.sortOrder) : index + 1,
+    isFeatured: image.isFeatured ?? false,
+    isHero: image.isHero ?? false,
+    isPublished: image.isPublished ?? true,
+    createdAt: timestamp,
+    updatedAt: image.updatedAt || timestamp,
+  };
+}
+
+function sortGalleryImages(images: GalleryImageRecord[]) {
+  return images
+    .map(normalizeGalleryImage)
+    .sort((first, second) => first.sortOrder - second.sortOrder || first.title.localeCompare(second.title))
+    .map((image, index) => ({ ...image, sortOrder: index + 1 }));
+}
+
+export function getGalleryImages() {
+  return sortGalleryImages(readJson<GalleryImageRecord[]>(galleryImageStorageKey, seedGalleryImages));
+}
+
+export function getPublishedGalleryImages() {
+  return getGalleryImages().filter((image) => image.isPublished && image.imageUrl);
+}
+
+async function loadGalleryImages(publishedOnly = false) {
+  const payload = await apiRequest<{ ok: boolean; images: GalleryImageRecord[] }>(
+    publishedOnly ? "gallery.public" : "gallery",
+  );
+  const images = sortGalleryImages(payload.images);
+  if (!publishedOnly) {
+    writeJson(galleryImageStorageKey, images);
+  }
+  return images;
+}
+
+export async function saveGalleryImage(image: GalleryImageRecord) {
+  const normalizedImage = normalizeGalleryImage(image, 0);
+  await apiRequest("gallery.save", {
+    method: "POST",
+    body: JSON.stringify(normalizedImage),
+  });
+
+  const currentImages = getGalleryImages();
+  const exists = currentImages.some((item) => item.id === normalizedImage.id);
+  const nextImages = sortGalleryImages(
+    exists
+      ? currentImages.map((item) => (item.id === normalizedImage.id ? normalizedImage : item))
+      : [...currentImages, normalizedImage],
+  );
+  writeJson(galleryImageStorageKey, nextImages);
+  return normalizedImage;
+}
+
+export async function deleteGalleryImage(imageId: string) {
+  await apiRequest("gallery.delete", {
+    method: "POST",
+    body: JSON.stringify({ id: imageId }),
+  });
+  writeJson(
+    galleryImageStorageKey,
+    getGalleryImages().filter((image) => image.id !== imageId),
+  );
+}
+
+export function useGalleryImagesState(publishedOnly = false) {
+  const [images, setImages] = useState(() =>
+    publishedOnly ? [] : getGalleryImages(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    const refresh = () => setImages(publishedOnly ? getPublishedGalleryImages() : getGalleryImages());
+    const refreshFromApi = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const nextImages = await loadGalleryImages(publishedOnly);
+        if (!isActive) return;
+        setImages(publishedOnly ? nextImages.filter((image) => image.isPublished) : nextImages);
+      } catch (loadError) {
+        if (!isActive) return;
+        setError(loadError);
+        refresh();
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    };
+
+    void refreshFromApi();
+    window.addEventListener(adminStoreEvent, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(adminStoreEvent, refresh);
+      window.removeEventListener("storage", refresh);
+      isActive = false;
+    };
+  }, [publishedOnly]);
+
+  return { images, isLoading, error };
+}
+
+export function useGalleryImages(publishedOnly = false) {
+  return useGalleryImagesState(publishedOnly).images;
+}
+
+const seedTestimonials: TestimonialRecord[] = [
+  {
+    id: "hotel-lobby-client",
+    quote:
+      "The lobby floor looked dull before the service. After polishing, the shine came back and the space looked ready for guests again.",
+    clientName: "Hotel Lobby Client",
+    rating: 5,
+    sortOrder: 1,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "marble-restoration-client",
+    quote:
+      "Technoshine explained the process clearly, protected the area, and finished the marble restoration with a clean glossy result.",
+    clientName: "Marble Restoration Client",
+    rating: 5,
+    sortOrder: 2,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "commercial-tile-client",
+    quote:
+      "Our tiles had heavy stains from daily traffic. The team cleaned the surface well and made the floor much easier to maintain.",
+    clientName: "Commercial Tile Client",
+    rating: 5,
+    sortOrder: 3,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "granite-care-client",
+    quote:
+      "The granite counters looked newer after treatment. We appreciated the careful work and the simple maintenance advice after the job.",
+    clientName: "Granite Care Client",
+    rating: 5,
+    sortOrder: 4,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: "property-admin-client",
+    quote:
+      "The before and after difference was easy to see. We would recommend Technoshine for clients who need professional stone care.",
+    clientName: "Property Admin Client",
+    rating: 5,
+    sortOrder: 5,
+    isPublished: true,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+];
+
+function normalizeTestimonial(testimonial: TestimonialRecord, index: number): TestimonialRecord {
+  const timestamp = testimonial.createdAt || now();
+
+  return {
+    id: testimonial.id || `testimonial-${Date.now()}-${index + 1}`,
+    quote: testimonial.quote?.trim() || "",
+    clientName: testimonial.clientName?.trim() || `Client ${index + 1}`,
+    rating: Math.min(5, Math.max(1, Number(testimonial.rating) || 5)),
+    sortOrder: Number.isFinite(Number(testimonial.sortOrder)) ? Number(testimonial.sortOrder) : index + 1,
+    isPublished: testimonial.isPublished ?? true,
+    createdAt: timestamp,
+    updatedAt: testimonial.updatedAt || timestamp,
+  };
+}
+
+function sortTestimonials(testimonials: TestimonialRecord[]) {
+  return testimonials
+    .map(normalizeTestimonial)
+    .sort((first, second) => first.sortOrder - second.sortOrder || first.clientName.localeCompare(second.clientName))
+    .map((testimonial, index) => ({ ...testimonial, sortOrder: index + 1 }));
+}
+
+export function getTestimonials() {
+  return sortTestimonials(readJson<TestimonialRecord[]>(testimonialStorageKey, seedTestimonials));
+}
+
+export function getPublishedTestimonials() {
+  return getTestimonials().filter((testimonial) => testimonial.isPublished && testimonial.quote);
+}
+
+async function loadTestimonials(publishedOnly = false) {
+  const payload = await apiRequest<{ ok: boolean; testimonials: TestimonialRecord[] }>(
+    publishedOnly ? "testimonials.public" : "testimonials",
+  );
+  const testimonials = sortTestimonials(payload.testimonials);
+  if (!publishedOnly) {
+    writeJson(testimonialStorageKey, testimonials);
+  }
+  return testimonials;
+}
+
+export async function saveTestimonial(testimonial: TestimonialRecord) {
+  const normalizedTestimonial = normalizeTestimonial(testimonial, 0);
+  await apiRequest("testimonials.save", {
+    method: "POST",
+    body: JSON.stringify(normalizedTestimonial),
+  });
+
+  const currentTestimonials = getTestimonials();
+  const exists = currentTestimonials.some((item) => item.id === normalizedTestimonial.id);
+  const nextTestimonials = sortTestimonials(
+    exists
+      ? currentTestimonials.map((item) => (item.id === normalizedTestimonial.id ? normalizedTestimonial : item))
+      : [...currentTestimonials, normalizedTestimonial],
+  );
+  writeJson(testimonialStorageKey, nextTestimonials);
+  return normalizedTestimonial;
+}
+
+export async function deleteTestimonial(testimonialId: string) {
+  await apiRequest("testimonials.delete", {
+    method: "POST",
+    body: JSON.stringify({ id: testimonialId }),
+  });
+  writeJson(
+    testimonialStorageKey,
+    getTestimonials().filter((testimonial) => testimonial.id !== testimonialId),
+  );
+}
+
+export function useTestimonialsState(publishedOnly = false) {
+  const [testimonials, setTestimonials] = useState(() =>
+    publishedOnly ? [] : getTestimonials(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    const refresh = () => setTestimonials(publishedOnly ? getPublishedTestimonials() : getTestimonials());
+    const refreshFromApi = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const nextTestimonials = await loadTestimonials(publishedOnly);
+        if (!isActive) return;
+        setTestimonials(
+          publishedOnly
+            ? nextTestimonials.filter((testimonial) => testimonial.isPublished)
+            : nextTestimonials,
+        );
+      } catch (loadError) {
+        if (!isActive) return;
+        setError(loadError);
+        refresh();
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    };
+
+    void refreshFromApi();
+    window.addEventListener(adminStoreEvent, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(adminStoreEvent, refresh);
+      window.removeEventListener("storage", refresh);
+      isActive = false;
+    };
+  }, [publishedOnly]);
+
+  return { testimonials, isLoading, error };
+}
+
+export function useTestimonials(publishedOnly = false) {
+  return useTestimonialsState(publishedOnly).testimonials;
+}
+
 const adminCountsQueryKey = ["admin", "counts"] as const;
 const emptyAdminCounts: AdminCounts = {
   employees: 0,
@@ -1271,6 +1841,9 @@ const emptyAdminCounts: AdminCounts = {
   contentSections: 0,
   services: 0,
   reels: 0,
+  galleryImages: 0,
+  testimonials: 0,
+  liveVisitors: 0,
 };
 const adminCountStorageKeys = new Set([
   productStorageKey,
@@ -1278,6 +1851,8 @@ const adminCountStorageKeys = new Set([
   contentStorageKey,
   serviceStorageKey,
   socialReelStorageKey,
+  galleryImageStorageKey,
+  testimonialStorageKey,
 ]);
 
 function normalizeAdminCount(value: unknown, field: string) {
@@ -1305,6 +1880,9 @@ async function loadAdminCounts(signal?: AbortSignal): Promise<AdminCounts> {
     contentSections: normalizeAdminCount(payload.counts.contentSections, "contentSections"),
     services: normalizeAdminCount(payload.counts.services, "services"),
     reels: normalizeAdminCount(payload.counts.reels, "reels"),
+    galleryImages: normalizeAdminCount(payload.counts.galleryImages, "galleryImages"),
+    testimonials: normalizeAdminCount(payload.counts.testimonials, "testimonials"),
+    liveVisitors: normalizeAdminCount(payload.counts.liveVisitors, "liveVisitors"),
   };
 }
 

@@ -34,6 +34,32 @@ h2, h3, h4, h5, h6 {
 }
 
 @layer utilities {
+  .org-chart-viewport {
+    scrollbar-color: hsl(var(--primary)) rgb(255 255 255 / 0.7);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+
+  .org-chart-viewport::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  .org-chart-viewport::-webkit-scrollbar-track {
+    background: rgb(255 255 255 / 0.78);
+    border-left: 1px solid rgb(0 0 0 / 0.08);
+  }
+
+  .org-chart-viewport::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.88);
+    border: 3px solid rgb(255 255 255 / 0.78);
+    border-radius: 999px;
+  }
+
+  .org-chart-viewport::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary));
+  }
+
   .home-page-shell {
     background:
       linear-gradient(180deg, #ffffff 0%, #f5f6f6 44%, #ffffff 100%);
@@ -44,7 +70,7 @@ h2, h3, h4, h5, h6 {
     isolation: isolate;
   }
 
-  .home-flow > section[id]:not(#clients) {
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews) {
     isolation: isolate;
     overflow: hidden;
     background:
@@ -54,7 +80,7 @@ h2, h3, h4, h5, h6 {
       inset 0 -1px 0 rgb(8 8 8 / 0.05);
   }
 
-  .home-flow > section[id]:not(#clients)::before {
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -79,7 +105,7 @@ h2, h3, h4, h5, h6 {
       );
   }
 
-  .home-flow > section[id]:not(#clients)::after {
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::after {
     content: "";
     position: absolute;
     z-index: 1;
@@ -103,7 +129,7 @@ h2, h3, h4, h5, h6 {
     transform: rotate(-13deg);
   }
 
-  .home-flow > section[id]:not(#clients) > * {
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews) > * {
     position: relative;
     z-index: 2;
   }
@@ -145,11 +171,11 @@ h2, h3, h4, h5, h6 {
   }
 
   @media (max-width: 767px) {
-    .home-flow > section[id]:not(#clients)::after {
+    .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::after {
       display: none;
     }
 
-    .home-flow > section[id]:not(#clients)::before {
+    .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::before {
       background:
         linear-gradient(
           116deg,
@@ -627,6 +653,167 @@ h2, h3, h4, h5, h6 {
     }
   }
 
+  /* Client-facing landscape company profile. Kept separate from
+     .company-profile-* above so the existing profile is never touched. */
+  .company-profile-preview-shell {
+    isolation: isolate;
+    background:
+      linear-gradient(180deg, #fbfbfa 0%, #ecefed 58%, #f7f7f5 100%);
+  }
+
+  .company-profile-preview-book-shell {
+    position: relative;
+    overflow: visible;
+    max-height: 100%;
+    clip-path: inset(-90px -180px -180px -180px);
+    -webkit-clip-path: inset(-90px -180px -180px -180px);
+  }
+
+  .company-profile-preview-reader-shell {
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .company-profile-preview-reader-shell::before {
+    display: none;
+  }
+
+  .company-profile-preview-book,
+  .company-profile-preview-book .stf__wrapper,
+  .company-profile-preview-book .stf__block {
+    overflow: visible !important;
+  }
+
+  .company-profile-preview-book .stf__item {
+    overflow: hidden !important;
+  }
+
+  .company-profile-preview-book-stage {
+    /* Landscape pages: peek height is shorter than width (inverse of the
+       portrait 1.414 ratio used by the existing company profile). */
+    --peek-width: clamp(6.5rem, 16vw, 10.25rem);
+    --peek-height: calc(var(--peek-width) * 0.707);
+    isolation: isolate;
+  }
+
+  .company-profile-preview-page-peek {
+    position: absolute;
+    z-index: 95;
+    width: var(--peek-width);
+    height: var(--peek-height);
+    overflow: hidden;
+    pointer-events: none;
+    background: #fff;
+    border: 1px solid rgb(255 255 255 / 0.8);
+    border-radius: 2px;
+    box-shadow:
+      0 18px 34px rgb(0 0 0 / 0.38),
+      inset 0 0 0 1px rgb(255 255 255 / 0.85);
+  }
+
+  .company-profile-preview-page-peek::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 0.62), transparent 36%),
+      linear-gradient(315deg, rgb(0 0 0 / 0.26), transparent 58%);
+  }
+
+  .company-profile-preview-page-peek img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    object-position: top center;
+    user-select: none;
+  }
+
+  .company-profile-preview-page-peek[data-peek="next-top"] {
+    top: 0;
+    right: -0.5rem;
+    transform: rotate(-5deg);
+    transform-origin: 100% 0;
+  }
+
+  .company-profile-preview-page-peek[data-peek="next-bottom"] {
+    right: -0.5rem;
+    bottom: -0.5rem;
+    transform: rotate(5deg);
+    transform-origin: 100% 100%;
+  }
+
+  .company-profile-preview-page-peek[data-peek="previous-top"] {
+    top: 0;
+    left: -0.5rem;
+    transform: rotate(5deg);
+    transform-origin: 0 0;
+  }
+
+  .company-profile-preview-page-peek[data-peek="previous-bottom"] {
+    bottom: -0.5rem;
+    left: -0.5rem;
+    transform: rotate(-5deg);
+    transform-origin: 0 100%;
+  }
+
+  .company-profile-preview-page-peek[data-peek="next-bottom"] img,
+  .company-profile-preview-page-peek[data-peek="previous-bottom"] img {
+    object-position: bottom center;
+  }
+
+  .company-profile-preview-book .stf__wrapper {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    perspective: 2000px;
+    transform-style: preserve-3d;
+  }
+
+  .company-profile-preview-book .stf__item {
+    background: #fff;
+    opacity: 1 !important;
+    box-shadow: 0 18px 38px rgb(0 0 0 / 0.28);
+  }
+
+  .company-profile-preview-book .stf__item.--soft,
+  .company-profile-preview-book .stf__item.--hard,
+  .company-profile-preview-book .stf__item.--left,
+  .company-profile-preview-book .stf__item.--right {
+    opacity: 1 !important;
+  }
+
+  .company-profile-preview-book .stf__outerShadow,
+  .company-profile-preview-book .stf__innerShadow {
+    opacity: 0.72 !important;
+  }
+
+  .company-profile-preview-page img {
+    display: block;
+    user-select: none;
+    background: #fff;
+    pointer-events: none;
+  }
+
+  @media (max-height: 760px) {
+    .company-profile-preview-book-shell {
+      clip-path: inset(-70px -160px -120px -160px);
+      -webkit-clip-path: inset(-70px -160px -120px -160px);
+    }
+  }
+
+  @media (max-height: 640px) {
+    .company-profile-preview-controls {
+      gap: 0.35rem;
+    }
+
+    .company-profile-preview-controls button {
+      height: 2.25rem;
+      padding-inline: 0.75rem;
+    }
+  }
+
   @media (max-width: 767px) {
     .company-profile-shell::after {
       display: none;
@@ -775,15 +962,15 @@ h2, h3, h4, h5, h6 {
   }
 
   .home-page-shell,
-  .home-flow > section[id]:not(#clients),
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews),
   .employee-verification-shell,
   .company-profile-shell,
   .site-footer {
     background: #ffffff;
   }
 
-  .home-flow > section[id]:not(#clients)::before,
-  .home-flow > section[id]:not(#clients)::after,
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::before,
+  .home-flow > section[id]:not(#clients):not(#gallery-hero):not(#inquiry):not(#reviews)::after,
   .employee-verification-shell::before,
   .employee-verification-shell::after,
   .company-profile-shell::before,

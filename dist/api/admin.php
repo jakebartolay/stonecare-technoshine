@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 const SESSION_COOKIE = 'technoshine_session';
+const MAX_IMAGE_UPLOAD_BYTES = 50 * 1024 * 1024;
+const OPTIMIZED_IMAGE_TARGET_BYTES = 3 * 1024 * 1024;
+const OPTIMIZED_IMAGE_MAX_DIMENSION = 2400;
+const OPTIMIZED_IMAGE_START_QUALITY = 84;
+const OPTIMIZED_IMAGE_MIN_QUALITY = 62;
 
 function respond(int $statusCode, array $payload): void
 {
@@ -285,6 +290,170 @@ function ensureSocialReelsTable(PDO $pdo): void
     }
 }
 
+function ensureGalleryImagesTable(PDO $pdo): void
+{
+    $database = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+    $exists = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = :database
+           AND TABLE_NAME = 'gallery_images'"
+    );
+    $exists->execute(['database' => $database]);
+    $tableAlreadyExists = (int)$exists->fetchColumn() > 0;
+
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS gallery_images (
+          id VARCHAR(80) NOT NULL,
+          title VARCHAR(190) NOT NULL,
+          location VARCHAR(190) NOT NULL DEFAULT '',
+          image_url VARCHAR(500) NOT NULL,
+          alt_text VARCHAR(255) NOT NULL DEFAULT '',
+          sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+          is_featured TINYINT(1) NOT NULL DEFAULT 0,
+          is_hero TINYINT(1) NOT NULL DEFAULT 0,
+          is_published TINYINT(1) NOT NULL DEFAULT 1,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY gallery_images_sort_order_index (sort_order),
+          KEY gallery_images_is_published_index (is_published),
+          KEY gallery_images_is_featured_index (is_featured),
+          KEY gallery_images_is_hero_index (is_hero)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
+    if ($tableAlreadyExists) {
+        return;
+    }
+
+    $statement = $pdo->prepare(
+        'INSERT INTO gallery_images
+          (id, title, location, image_url, alt_text, sort_order, is_featured, is_hero, is_published)
+         VALUES
+          (:id, :title, :location, :image_url, :alt_text, :sort_order, :is_featured, :is_hero, :is_published)'
+    );
+
+    $seedImages = [
+        ['gallery-1', 'Marble Floor Polish', 'Polished stone surface', 'images/client-images/gallery-1.jpg', 1, 0],
+        ['gallery-2', 'Commercial Hallway', 'High-traffic stone care', 'images/client-images/gallery-2.jpg', 2, 1],
+        ['gallery-3', 'Hotel Lobby Restoration', 'Premium floor finish', 'images/client-images/gallery-3.jpg', 3, 1],
+        ['gallery-9', 'Interior Floor Care', 'Detail cleaning', 'images/client-images/gallery-9.jpg', 4, 1],
+        ['gallery-10', 'Detail Cleaning', 'Natural stone polishing', 'images/client-images/gallery-10.jpg', 5, 0],
+        ['gallery-11', 'Natural Stone Polishing', 'Premium floor finish', 'images/client-images/gallery-11.jpg', 6, 0],
+        ['gallery-12', 'Premium Floor Finish', 'Restored stone shine', 'images/client-images/gallery-12.jpg', 7, 0],
+        ['gallery-13', 'Gloss Recovery', 'Surface refinishing', 'images/client-images/gallery-13.jpg', 8, 0],
+        ['gallery-14', 'Surface Refinishing', 'Protected polished floor', 'images/client-images/gallery-14.jpg', 9, 0],
+        ['gallery-15', 'Protected Finish', 'Polished stone surface', 'images/client-images/gallery-15.jpg', 10, 0],
+    ];
+
+    foreach ($seedImages as [$id, $title, $location, $imageUrl, $sortOrder, $isHero]) {
+        $statement->execute([
+            'id' => $id,
+            'title' => $title,
+            'location' => $location,
+            'image_url' => $imageUrl,
+            'alt_text' => $title,
+            'sort_order' => $sortOrder,
+            'is_featured' => $sortOrder <= 3 ? 1 : 0,
+            'is_hero' => $isHero,
+            'is_published' => 1,
+        ]);
+    }
+}
+
+function ensureVisitorSessionsTable(PDO $pdo): void
+{
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS visitor_sessions (
+          visitor_id VARCHAR(80) NOT NULL,
+          last_path VARCHAR(500) NOT NULL DEFAULT '/',
+          user_agent_hash CHAR(64) NULL,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (visitor_id),
+          KEY visitor_sessions_last_seen_index (last_seen_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+function ensureTestimonialsTable(PDO $pdo): void
+{
+    $database = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+    $exists = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = :database
+           AND TABLE_NAME = 'testimonials'"
+    );
+    $exists->execute(['database' => $database]);
+    $tableAlreadyExists = (int)$exists->fetchColumn() > 0;
+
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS testimonials (
+          id VARCHAR(80) NOT NULL,
+          quote_text TEXT NOT NULL,
+          client_name VARCHAR(190) NOT NULL,
+          rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
+          sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+          is_published TINYINT(1) NOT NULL DEFAULT 1,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY testimonials_sort_order_index (sort_order),
+          KEY testimonials_is_published_index (is_published)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
+    if ($tableAlreadyExists) {
+        return;
+    }
+
+    $statement = $pdo->prepare(
+        'INSERT INTO testimonials (id, quote_text, client_name, rating, sort_order, is_published)
+         VALUES (:id, :quote_text, :client_name, :rating, :sort_order, :is_published)'
+    );
+
+    $seedTestimonials = [
+        [
+            'hotel-lobby-client',
+            'The lobby floor looked dull before the service. After polishing, the shine came back and the space looked ready for guests again.',
+            'Hotel Lobby Client',
+        ],
+        [
+            'marble-restoration-client',
+            'Technoshine explained the process clearly, protected the area, and finished the marble restoration with a clean glossy result.',
+            'Marble Restoration Client',
+        ],
+        [
+            'commercial-tile-client',
+            'Our tiles had heavy stains from daily traffic. The team cleaned the surface well and made the floor much easier to maintain.',
+            'Commercial Tile Client',
+        ],
+        [
+            'granite-care-client',
+            'The granite counters looked newer after treatment. We appreciated the careful work and the simple maintenance advice after the job.',
+            'Granite Care Client',
+        ],
+        [
+            'property-admin-client',
+            'The before and after difference was easy to see. We would recommend Technoshine for clients who need professional stone care.',
+            'Property Admin Client',
+        ],
+    ];
+
+    foreach ($seedTestimonials as $index => [$id, $quote, $clientName]) {
+        $statement->execute([
+            'id' => $id,
+            'quote_text' => $quote,
+            'client_name' => $clientName,
+            'rating' => 5,
+            'sort_order' => $index + 1,
+            'is_published' => 1,
+        ]);
+    }
+}
+
 function contentFromRow(array $row): array
 {
     return [
@@ -333,10 +502,41 @@ function socialReelFromRow(array $row): array
     ];
 }
 
+function galleryImageFromRow(array $row): array
+{
+    return [
+        'id' => (string)$row['id'],
+        'title' => (string)$row['title'],
+        'location' => (string)($row['location'] ?? ''),
+        'imageUrl' => (string)$row['image_url'],
+        'altText' => (string)($row['alt_text'] ?? ''),
+        'sortOrder' => (int)$row['sort_order'],
+        'isFeatured' => (bool)$row['is_featured'],
+        'isHero' => (bool)$row['is_hero'],
+        'isPublished' => (bool)$row['is_published'],
+        'createdAt' => (string)$row['created_at'],
+        'updatedAt' => (string)$row['updated_at'],
+    ];
+}
+
+function testimonialFromRow(array $row): array
+{
+    return [
+        'id' => (string)$row['id'],
+        'quote' => (string)$row['quote_text'],
+        'clientName' => (string)$row['client_name'],
+        'rating' => (int)$row['rating'],
+        'sortOrder' => (int)$row['sort_order'],
+        'isPublished' => (bool)$row['is_published'],
+        'createdAt' => (string)$row['created_at'],
+        'updatedAt' => (string)$row['updated_at'],
+    ];
+}
+
 function uploadErrorMessage(int $error): string
 {
     return match ($error) {
-        UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded image is too large.',
+        UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Uploaded image exceeded the server upload limit before it could be optimized.',
         UPLOAD_ERR_PARTIAL => 'Image upload was interrupted. Please try again.',
         UPLOAD_ERR_NO_FILE => 'Choose an image to upload.',
         default => 'Image upload failed.',
@@ -347,6 +547,109 @@ function uploadSafeSegment(string $value): string
 {
     $segment = strtolower(trim((string)preg_replace('/[^a-z0-9]+/i', '-', $value), '-'));
     return $segment !== '' ? $segment : 'image';
+}
+
+function uploadedImageResource(string $path, string $mimeType)
+{
+    if (!extension_loaded('gd')) {
+        throw new RuntimeException('Image optimizer is unavailable on this server.');
+    }
+
+    $image = match ($mimeType) {
+        'image/jpeg' => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($path) : false,
+        'image/png' => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : false,
+        'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+        default => false,
+    };
+
+    if (!$image) {
+        throw new RuntimeException('Uploaded image could not be opened for optimization.');
+    }
+
+    return $image;
+}
+
+function createOptimizedUpload(string $sourcePath, string $mimeType, string $targetPath): string
+{
+    $source = uploadedImageResource($sourcePath, $mimeType);
+    $sourceWidth = imagesx($source);
+    $sourceHeight = imagesy($source);
+
+    if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+        imagedestroy($source);
+        throw new RuntimeException('Uploaded image dimensions are invalid.');
+    }
+
+    $scale = min(1, OPTIMIZED_IMAGE_MAX_DIMENSION / max($sourceWidth, $sourceHeight));
+    $targetWidth = max(1, (int)round($sourceWidth * $scale));
+    $targetHeight = max(1, (int)round($sourceHeight * $scale));
+    $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+
+    if (!$canvas) {
+        imagedestroy($source);
+        throw new RuntimeException('Image optimizer could not prepare the image.');
+    }
+
+    $background = imagecolorallocate($canvas, 255, 255, 255);
+    imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $background);
+    imagecopyresampled(
+        $canvas,
+        $source,
+        0,
+        0,
+        0,
+        0,
+        $targetWidth,
+        $targetHeight,
+        $sourceWidth,
+        $sourceHeight
+    );
+    imageinterlace($canvas, true);
+
+    $temporaryTarget = $targetPath . '.tmp-' . bin2hex(random_bytes(4));
+    $quality = OPTIMIZED_IMAGE_START_QUALITY;
+
+    while ($quality >= OPTIMIZED_IMAGE_MIN_QUALITY) {
+        if (!imagejpeg($canvas, $temporaryTarget, $quality)) {
+            imagedestroy($canvas);
+            imagedestroy($source);
+            @unlink($temporaryTarget);
+            throw new RuntimeException('Optimized image could not be written.');
+        }
+
+        clearstatcache(true, $temporaryTarget);
+        $optimizedSize = is_file($temporaryTarget) ? filesize($temporaryTarget) : 0;
+        if ($optimizedSize > 0 && $optimizedSize <= OPTIMIZED_IMAGE_TARGET_BYTES) {
+            break;
+        }
+
+        $quality -= 8;
+    }
+
+    imagedestroy($canvas);
+    imagedestroy($source);
+
+    if (!is_file($temporaryTarget) || filesize($temporaryTarget) <= 0) {
+        @unlink($temporaryTarget);
+        throw new RuntimeException('Optimized image is empty.');
+    }
+
+    return $temporaryTarget;
+}
+
+function moveOptimizedUpload(string $optimizedPath, string $targetPath): int
+{
+    if (is_file($targetPath)) {
+        @unlink($targetPath);
+    }
+
+    if (!@rename($optimizedPath, $targetPath)) {
+        @unlink($optimizedPath);
+        throw new RuntimeException('Optimized image could not be saved.');
+    }
+
+    clearstatcache(true, $targetPath);
+    return (int)filesize($targetPath);
 }
 
 function relativeImagePath(string $path): string
@@ -378,11 +681,97 @@ function deleteManagedServiceImage(string $siteRoot, string $path): void
     }
 }
 
+function deleteManagedGalleryImage(string $siteRoot, string $path): void
+{
+    $relativePath = relativeImagePath($path);
+    if (!str_starts_with($relativePath, 'uploads/gallery/')) {
+        return;
+    }
+
+    $rootPath = realpath($siteRoot);
+    $targetPath = realpath($siteRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+    if (!$rootPath || !$targetPath || !str_starts_with($targetPath, $rootPath . DIRECTORY_SEPARATOR)) {
+        return;
+    }
+
+    if (is_file($targetPath)) {
+        @unlink($targetPath);
+    }
+}
+
+function deleteManagedContentImage(string $siteRoot, string $path): void
+{
+    $relativePath = relativeImagePath($path);
+    if (!str_starts_with($relativePath, 'uploads/content/')) {
+        return;
+    }
+
+    $rootPath = realpath($siteRoot);
+    $targetPath = realpath($siteRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+    if (!$rootPath || !$targetPath || !str_starts_with($targetPath, $rootPath . DIRECTORY_SEPARATOR)) {
+        return;
+    }
+
+    if (is_file($targetPath)) {
+        @unlink($targetPath);
+    }
+}
+
+function ensureDefaultContentSections(PDO $pdo): void
+{
+    $statement = $pdo->prepare(
+        'INSERT IGNORE INTO content_sections (section_key, title, body_json, body_text)
+         VALUES (:section_key, :title, :body_json, :body_text)'
+    );
+    $defaults = [
+        [
+            'homepage.hero',
+            'Homepage Hero',
+            json_encode([
+                'headline' => 'Stone care and marble restoration',
+                'subheadline' => 'Professional surface care for hotels, homes, and commercial spaces.',
+            ]),
+            'Stone care and marble restoration for hotels, homes, and commercial spaces.',
+        ],
+        [
+            'homepage.hero.background',
+            'Homepage Hero Background',
+            json_encode(['imageUrl' => 'images/hero-marble-floor-stair.jpg']),
+            'images/hero-marble-floor-stair.jpg',
+        ],
+        [
+            'services.summary',
+            'Services Summary',
+            json_encode(['services' => ['Cleaning', 'Polishing', 'Sealing', 'Restoration']]),
+            'Cleaning, polishing, sealing, restoration, and maintenance for marble, granite, terrazzo, and tile.',
+        ],
+        [
+            'contact.quote',
+            'Contact / Quote Info',
+            json_encode(['phone' => '0917 824 1220', 'email' => 'contactus@technoshineph.com']),
+            'For service quotes, call 0917 824 1220 or email contactus@technoshineph.com.',
+        ],
+    ];
+
+    foreach ($defaults as [$sectionKey, $title, $bodyJson, $bodyText]) {
+        $statement->execute([
+            'section_key' => $sectionKey,
+            'title' => $title,
+            'body_json' => $bodyJson,
+            'body_text' => $bodyText,
+        ]);
+    }
+}
+
 try {
     $pdo = db();
     ensureEmployeeOrgGroupColumn($pdo);
     migrateEmployeeHierarchy($pdo);
+    ensureDefaultContentSections($pdo);
     ensureSocialReelsTable($pdo);
+    ensureGalleryImagesTable($pdo);
+    ensureVisitorSessionsTable($pdo);
+    ensureTestimonialsTable($pdo);
     $action = (string)($_GET['action'] ?? '');
     $method = $_SERVER['REQUEST_METHOD'];
 
@@ -460,6 +849,47 @@ try {
                 'expiresAt' => utcDateTime((string)$user['expires_at']),
             ] : null,
         ]);
+    }
+
+    if ($action === 'visitors.track' && $method === 'POST') {
+        $payload = body();
+        $visitorId = trim((string)($payload['visitorId'] ?? ''));
+        if ($visitorId === '') {
+            $visitorId = bin2hex(random_bytes(16));
+        }
+
+        $visitorId = substr((string)preg_replace('/[^a-zA-Z0-9_-]/', '', $visitorId), 0, 80);
+        if ($visitorId === '') {
+            $visitorId = bin2hex(random_bytes(16));
+        }
+
+        $path = trim((string)($payload['path'] ?? '/'));
+        if ($path === '') {
+            $path = '/';
+        }
+        $path = substr($path, 0, 500);
+        $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+
+        $pdo->exec("DELETE FROM visitor_sessions WHERE last_seen_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)");
+        $statement = $pdo->prepare(
+            'INSERT INTO visitor_sessions (visitor_id, last_path, user_agent_hash, last_seen_at)
+             VALUES (:visitor_id, :last_path, :user_agent_hash, UTC_TIMESTAMP())
+             ON DUPLICATE KEY UPDATE
+              last_path = VALUES(last_path),
+              user_agent_hash = VALUES(user_agent_hash),
+              last_seen_at = UTC_TIMESTAMP()'
+        );
+        $statement->execute([
+            'visitor_id' => $visitorId,
+            'last_path' => $path,
+            'user_agent_hash' => $userAgent !== '' ? hash('sha256', $userAgent) : null,
+        ]);
+
+        $activeVisitors = (int)$pdo->query(
+            "SELECT COUNT(*) FROM visitor_sessions WHERE last_seen_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 MINUTE)"
+        )->fetchColumn();
+
+        respond(200, ['ok' => true, 'visitorId' => $visitorId, 'activeVisitors' => $activeVisitors]);
     }
 
     if ($action === 'products' && $method === 'GET') {
@@ -606,8 +1036,10 @@ try {
         respond(200, ['ok' => true]);
     }
 
-    if ($action === 'content' && $method === 'GET') {
-        requireUser($pdo);
+    if (($action === 'content.public' || $action === 'content') && $method === 'GET') {
+        if ($action === 'content') {
+            requireUser($pdo);
+        }
         $rows = $pdo->query('SELECT * FROM content_sections ORDER BY section_key ASC')->fetchAll();
         respond(200, ['ok' => true, 'sections' => array_map('contentFromRow', $rows)]);
     }
@@ -635,6 +1067,68 @@ try {
             ]);
         }
         respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'content.upload-image' && $method === 'POST') {
+        requireUser($pdo);
+
+        $file = $_FILES['image'] ?? null;
+        if (!is_array($file)) {
+            respond(400, ['ok' => false, 'message' => 'Choose an image to upload.']);
+        }
+
+        $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            respond(400, ['ok' => false, 'message' => uploadErrorMessage($uploadError)]);
+        }
+
+        $fileSize = (int)($file['size'] ?? 0);
+        if ($fileSize <= 0) {
+            respond(400, ['ok' => false, 'message' => 'Uploaded image is empty.']);
+        }
+        if ($fileSize > MAX_IMAGE_UPLOAD_BYTES) {
+            respond(413, ['ok' => false, 'message' => 'Uploaded image must be 50MB or smaller before optimization.']);
+        }
+
+        $temporaryPath = (string)($file['tmp_name'] ?? '');
+        if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+            respond(400, ['ok' => false, 'message' => 'Uploaded image could not be verified.']);
+        }
+
+        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($temporaryPath) ?: '';
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+
+        if (!isset($allowedTypes[$mimeType])) {
+            respond(415, ['ok' => false, 'message' => 'Only JPG, PNG, and WEBP images are allowed.']);
+        }
+
+        $contentKey = uploadSafeSegment((string)($_POST['contentKey'] ?? 'content'));
+        $fileBaseName = $contentKey . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $fileName = $fileBaseName . '.jpg';
+        $siteRoot = dirname(__DIR__);
+        $uploadDirectory = $siteRoot . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'content';
+
+        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0755, true) && !is_dir($uploadDirectory)) {
+            respond(500, ['ok' => false, 'message' => 'Upload directory could not be created.']);
+        }
+
+        $targetPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
+        try {
+            $optimizedPath = createOptimizedUpload($temporaryPath, $mimeType, $targetPath);
+            $optimizedSize = moveOptimizedUpload($optimizedPath, $targetPath);
+        } catch (Throwable $error) {
+            respond(500, ['ok' => false, 'message' => $error->getMessage()]);
+        }
+
+        respond(200, [
+            'ok' => true,
+            'url' => 'uploads/content/' . $fileName,
+            'optimizedBytes' => $optimizedSize,
+        ]);
     }
 
     if ($action === 'reels' && $method === 'GET') {
@@ -690,6 +1184,216 @@ try {
 
         $pdo->commit();
         respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'testimonials' && $method === 'GET') {
+        requireUser($pdo);
+        $rows = $pdo->query(
+            'SELECT * FROM testimonials
+             ORDER BY sort_order ASC, updated_at DESC, id ASC'
+        )->fetchAll();
+        respond(200, ['ok' => true, 'testimonials' => array_map('testimonialFromRow', $rows)]);
+    }
+
+    if ($action === 'testimonials.public' && $method === 'GET') {
+        $rows = $pdo->query(
+            'SELECT * FROM testimonials
+             WHERE is_published = 1
+             ORDER BY sort_order ASC, updated_at DESC, id ASC'
+        )->fetchAll();
+        respond(200, ['ok' => true, 'testimonials' => array_map('testimonialFromRow', $rows)]);
+    }
+
+    if ($action === 'testimonials.save' && $method === 'POST') {
+        requireUser($pdo);
+        $testimonial = body();
+        $id = uploadSafeSegment((string)($testimonial['id'] ?? ''));
+        $quote = trim((string)($testimonial['quote'] ?? ''));
+        $clientName = trim((string)($testimonial['clientName'] ?? ''));
+        $rating = min(5, max(1, (int)($testimonial['rating'] ?? 5)));
+
+        if ($id === '' || $quote === '' || $clientName === '') {
+            respond(400, ['ok' => false, 'message' => 'Testimonial needs an ID, quote, and client name.']);
+        }
+
+        $statement = $pdo->prepare(
+            'INSERT INTO testimonials (id, quote_text, client_name, rating, sort_order, is_published)
+             VALUES (:id, :quote_text, :client_name, :rating, :sort_order, :is_published)
+             ON DUPLICATE KEY UPDATE
+              quote_text = VALUES(quote_text),
+              client_name = VALUES(client_name),
+              rating = VALUES(rating),
+              sort_order = VALUES(sort_order),
+              is_published = VALUES(is_published),
+              updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            'id' => $id,
+            'quote_text' => $quote,
+            'client_name' => $clientName,
+            'rating' => $rating,
+            'sort_order' => max(1, (int)($testimonial['sortOrder'] ?? 1)),
+            'is_published' => !empty($testimonial['isPublished']) ? 1 : 0,
+        ]);
+
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'testimonials.delete' && $method === 'POST') {
+        requireUser($pdo);
+        $payload = body();
+        $id = trim((string)($payload['id'] ?? ''));
+        if ($id === '') {
+            respond(400, ['ok' => false, 'message' => 'Testimonial ID is required.']);
+        }
+
+        $statement = $pdo->prepare('DELETE FROM testimonials WHERE id = :id');
+        $statement->execute(['id' => $id]);
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'gallery' && $method === 'GET') {
+        requireUser($pdo);
+        $rows = $pdo->query(
+            'SELECT * FROM gallery_images
+             ORDER BY sort_order ASC, updated_at DESC, id ASC'
+        )->fetchAll();
+        respond(200, ['ok' => true, 'images' => array_map('galleryImageFromRow', $rows)]);
+    }
+
+    if ($action === 'gallery.public' && $method === 'GET') {
+        $rows = $pdo->query(
+            'SELECT * FROM gallery_images
+             WHERE is_published = 1
+             ORDER BY sort_order ASC, updated_at DESC, id ASC'
+        )->fetchAll();
+        respond(200, ['ok' => true, 'images' => array_map('galleryImageFromRow', $rows)]);
+    }
+
+    if ($action === 'gallery.save' && $method === 'POST') {
+        requireUser($pdo);
+        $image = body();
+        $id = uploadSafeSegment((string)($image['id'] ?? ''));
+        $title = trim((string)($image['title'] ?? ''));
+        $imageUrl = trim((string)($image['imageUrl'] ?? ''));
+
+        if ($id === '' || $title === '' || $imageUrl === '') {
+            respond(400, ['ok' => false, 'message' => 'Gallery image needs an ID, title, and image file.']);
+        }
+
+        $statement = $pdo->prepare(
+            'INSERT INTO gallery_images
+              (id, title, location, image_url, alt_text, sort_order, is_featured, is_hero, is_published)
+             VALUES
+              (:id, :title, :location, :image_url, :alt_text, :sort_order, :is_featured, :is_hero, :is_published)
+             ON DUPLICATE KEY UPDATE
+              title = VALUES(title),
+              location = VALUES(location),
+              image_url = VALUES(image_url),
+              alt_text = VALUES(alt_text),
+              sort_order = VALUES(sort_order),
+              is_featured = VALUES(is_featured),
+              is_hero = VALUES(is_hero),
+              is_published = VALUES(is_published),
+              updated_at = CURRENT_TIMESTAMP'
+        );
+        $statement->execute([
+            'id' => $id,
+            'title' => $title,
+            'location' => trim((string)($image['location'] ?? '')),
+            'image_url' => $imageUrl,
+            'alt_text' => trim((string)($image['altText'] ?? $title)),
+            'sort_order' => max(1, (int)($image['sortOrder'] ?? 1)),
+            'is_featured' => !empty($image['isFeatured']) ? 1 : 0,
+            'is_hero' => !empty($image['isHero']) ? 1 : 0,
+            'is_published' => !empty($image['isPublished']) ? 1 : 0,
+        ]);
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'gallery.delete' && $method === 'POST') {
+        requireUser($pdo);
+        $payload = body();
+        $id = trim((string)($payload['id'] ?? ''));
+        if ($id === '') {
+            respond(400, ['ok' => false, 'message' => 'Gallery image ID is required.']);
+        }
+
+        $select = $pdo->prepare('SELECT image_url FROM gallery_images WHERE id = :id LIMIT 1');
+        $select->execute(['id' => $id]);
+        $imageUrl = $select->fetchColumn();
+
+        $statement = $pdo->prepare('DELETE FROM gallery_images WHERE id = :id');
+        $statement->execute(['id' => $id]);
+
+        if (is_string($imageUrl) && $imageUrl !== '') {
+            deleteManagedGalleryImage(dirname(__DIR__), $imageUrl);
+        }
+
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'gallery.upload-image' && $method === 'POST') {
+        requireUser($pdo);
+
+        $file = $_FILES['image'] ?? null;
+        if (!is_array($file)) {
+            respond(400, ['ok' => false, 'message' => 'Choose an image to upload.']);
+        }
+
+        $uploadError = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            respond(400, ['ok' => false, 'message' => uploadErrorMessage($uploadError)]);
+        }
+
+        $fileSize = (int)($file['size'] ?? 0);
+        if ($fileSize <= 0) {
+            respond(400, ['ok' => false, 'message' => 'Uploaded image is empty.']);
+        }
+        if ($fileSize > MAX_IMAGE_UPLOAD_BYTES) {
+            respond(413, ['ok' => false, 'message' => 'Uploaded image must be 50MB or smaller before optimization.']);
+        }
+
+        $temporaryPath = (string)($file['tmp_name'] ?? '');
+        if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+            respond(400, ['ok' => false, 'message' => 'Uploaded image could not be verified.']);
+        }
+
+        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($temporaryPath) ?: '';
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+
+        if (!isset($allowedTypes[$mimeType])) {
+            respond(415, ['ok' => false, 'message' => 'Only JPG, PNG, and WEBP images are allowed.']);
+        }
+
+        $galleryId = uploadSafeSegment((string)($_POST['galleryId'] ?? 'gallery'));
+        $fileBaseName = $galleryId . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $fileName = $fileBaseName . '.jpg';
+        $siteRoot = dirname(__DIR__);
+        $uploadDirectory = $siteRoot . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'gallery';
+
+        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0755, true) && !is_dir($uploadDirectory)) {
+            respond(500, ['ok' => false, 'message' => 'Upload directory could not be created.']);
+        }
+
+        $targetPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
+        try {
+            $optimizedPath = createOptimizedUpload($temporaryPath, $mimeType, $targetPath);
+            $optimizedSize = moveOptimizedUpload($optimizedPath, $targetPath);
+            deleteManagedGalleryImage($siteRoot, (string)($_POST['previousImageUrl'] ?? ''));
+        } catch (Throwable $error) {
+            respond(500, ['ok' => false, 'message' => $error->getMessage()]);
+        }
+
+        respond(200, [
+            'ok' => true,
+            'url' => 'uploads/gallery/' . $fileName,
+            'optimizedBytes' => $optimizedSize,
+        ]);
     }
 
     if ($action === 'services' && $method === 'GET') {
@@ -794,8 +1498,8 @@ try {
         if ($fileSize <= 0) {
             respond(400, ['ok' => false, 'message' => 'Uploaded image is empty.']);
         }
-        if ($fileSize > 10 * 1024 * 1024) {
-            respond(413, ['ok' => false, 'message' => 'Uploaded image must be 10MB or smaller.']);
+        if ($fileSize > MAX_IMAGE_UPLOAD_BYTES) {
+            respond(413, ['ok' => false, 'message' => 'Uploaded image must be 50MB or smaller before optimization.']);
         }
 
         $temporaryPath = (string)($file['tmp_name'] ?? '');
@@ -816,14 +1520,20 @@ try {
 
         $serviceSlug = uploadSafeSegment((string)($_POST['serviceSlug'] ?? 'service'));
         $slot = uploadSafeSegment((string)($_POST['slot'] ?? 'image'));
-        $extension = $allowedTypes[$mimeType];
         $fileBaseName = $serviceSlug . '-' . $slot;
-        $fileName = $fileBaseName . '.' . $extension;
+        $fileName = $fileBaseName . '.jpg';
         $siteRoot = dirname(__DIR__);
         $uploadDirectory = $siteRoot . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'services';
 
         if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0755, true) && !is_dir($uploadDirectory)) {
             respond(500, ['ok' => false, 'message' => 'Upload directory could not be created.']);
+        }
+
+        $targetPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
+        try {
+            $optimizedPath = createOptimizedUpload($temporaryPath, $mimeType, $targetPath);
+        } catch (Throwable $error) {
+            respond(500, ['ok' => false, 'message' => $error->getMessage()]);
         }
 
         deleteManagedServiceImage($siteRoot, (string)($_POST['previousImageUrl'] ?? ''));
@@ -833,14 +1543,16 @@ try {
             }
         }
 
-        $targetPath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
-        if (!move_uploaded_file($temporaryPath, $targetPath)) {
-            respond(500, ['ok' => false, 'message' => 'Image could not be saved.']);
+        try {
+            $optimizedSize = moveOptimizedUpload($optimizedPath, $targetPath);
+        } catch (Throwable $error) {
+            respond(500, ['ok' => false, 'message' => $error->getMessage()]);
         }
 
         respond(200, [
             'ok' => true,
             'url' => 'images/services/' . $fileName . '?v=' . date('YmdHis') . bin2hex(random_bytes(2)),
+            'optimizedBytes' => $optimizedSize,
         ]);
     }
 
@@ -860,6 +1572,11 @@ try {
             'contentSections' => (int)$pdo->query('SELECT COUNT(*) FROM content_sections')->fetchColumn(),
             'services' => (int)$pdo->query('SELECT COUNT(*) FROM service_pages')->fetchColumn(),
             'reels' => (int)$pdo->query('SELECT COUNT(*) FROM social_reels')->fetchColumn(),
+            'galleryImages' => (int)$pdo->query('SELECT COUNT(*) FROM gallery_images')->fetchColumn(),
+            'testimonials' => (int)$pdo->query('SELECT COUNT(*) FROM testimonials')->fetchColumn(),
+            'liveVisitors' => (int)$pdo->query(
+                "SELECT COUNT(*) FROM visitor_sessions WHERE last_seen_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 MINUTE)"
+            )->fetchColumn(),
         ];
         respond(200, ['ok' => true, 'counts' => $counts]);
     }

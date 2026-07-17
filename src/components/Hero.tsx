@@ -1,11 +1,30 @@
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Link } from "wouter";
+import {
+  defaultHomepageHeroBackground,
+  getContentSectionBody,
+  homepageHeroBackgroundContentKey,
+  usePublicContentSections,
+} from "@/lib/admin-store";
 
 const heroServices =
   "Tiles Cleaning | Marble Restoration | Granite Care | Terrazzo Polishing | Floor Maintenance";
 
+function heroAssetPath(path: string) {
+  if (!path) return "";
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
+}
+
 export function Hero() {
+  const contentSections = usePublicContentSections();
+  const heroBackgroundImage = getContentSectionBody(
+    contentSections,
+    homepageHeroBackgroundContentKey,
+    defaultHomepageHeroBackground,
+  );
+
   const scrollToServices = () => {
     const element = document.querySelector("#services-preview");
     if (!element) return;
@@ -25,7 +44,7 @@ export function Hero() {
         <div className="absolute inset-0 z-10 bg-black/45" />
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/25 via-black/10 to-black/70" />
         <img
-          src={`${import.meta.env.BASE_URL}images/hero-marble-floor-stair.jpg`}
+          src={heroAssetPath(heroBackgroundImage)}
           alt="Polished marble floor"
           className="h-full w-full scale-[1.02] object-cover object-bottom opacity-85"
         />

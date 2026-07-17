@@ -12,14 +12,16 @@ import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 
 const BASE_URL = import.meta.env.BASE_URL;
+const PROFILE_FOLDER = "company-profile/pages/2024-2025%20company%20profile";
+const PROFILE_PAGE_COUNT = 30;
 const PROFILE_PAGES = Array.from(
-  { length: 30 },
+  { length: PROFILE_PAGE_COUNT },
   (_, index) =>
-    `${BASE_URL}company-profile/pages/page-${String(index + 1).padStart(2, "0")}.jpg`,
+    `${BASE_URL}${PROFILE_FOLDER}/page-${String(index + 1).padStart(2, "0")}.jpg`,
 );
 const ICON_URL = `${BASE_URL}icon.png`;
-const PAGE_WIDTH = 420;
-const PAGE_HEIGHT = 594;
+const PAGE_WIDTH = 560;
+const PAGE_HEIGHT = 792;
 const MIN_PAGE_WIDTH = 96;
 const MIN_PAGE_HEIGHT = Math.round((MIN_PAGE_WIDTH * PAGE_HEIGHT) / PAGE_WIDTH);
 const BOOK_FRAME_INSET = 12;
@@ -218,7 +220,7 @@ export default function CompanyProfile() {
   const [bookSize, setBookSize] = useState<BookSize>(() =>
     getContainedBookSize(
       typeof window === "undefined" ? PAGE_WIDTH * 2 : window.innerWidth - 32,
-      typeof window === "undefined" ? PAGE_HEIGHT : window.innerHeight - 190,
+      typeof window === "undefined" ? PAGE_HEIGHT : window.innerHeight - 104,
     ),
   );
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -391,31 +393,20 @@ export default function CompanyProfile() {
     <main className="company-profile-shell relative h-screen h-[100dvh] overflow-hidden bg-background text-foreground">
       <Link
         href="/"
-        className="absolute left-4 top-4 z-[140] inline-flex h-10 items-center gap-2 border border-black/10 bg-white/90 px-3 font-mono text-xs uppercase tracking-[0.16em] text-black/70 shadow-sm backdrop-blur transition-colors hover:border-primary hover:text-primary sm:left-6 sm:top-6"
+        className="absolute left-1/2 top-3 z-[140] inline-flex h-10 -translate-x-1/2 items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 font-display text-xs font-bold uppercase tracking-wider text-black/70 shadow-sm backdrop-blur transition-colors hover:border-primary hover:text-primary sm:top-5"
         aria-label="Back to home"
+        title="Back to home"
       >
         <Home className="h-4 w-4" />
-        Home
+        Back to home
       </Link>
       <div className="relative z-10 flex h-full min-h-0 flex-col">
-        <section className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-4 pb-4 pt-5 sm:justify-start sm:px-6 sm:pt-6 lg:px-8">
-          <div className="company-profile-heading mx-auto flex w-full max-w-[1180px] shrink-0 flex-col items-center pb-2 text-center sm:pb-4">
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">
-              Company Profile
-            </p>
-            <h1 className="mx-auto mt-1 max-w-xs text-center text-xl leading-tight text-black sm:max-w-none sm:text-3xl">
-              Technoshine Profile
-            </h1>
-            <p className="mx-auto mt-2 hidden max-w-2xl text-sm leading-relaxed text-black/60 sm:block">
-              Stone restoration, polishing, and surface care credentials for residential and commercial projects.
-            </p>
-          </div>
-
+        <section className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-3 pb-16 pt-16 sm:px-5 sm:pb-20 sm:pt-20 lg:px-8">
           <div
             ref={bookFrameRef}
-            className="relative mx-auto flex h-[68vh] min-h-[430px] w-full flex-none items-center justify-center overflow-visible text-center sm:h-auto sm:min-h-0 sm:flex-1"
+            className="relative mx-auto flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-visible text-center"
           >
-            <div className="relative mx-auto flex w-full max-w-[1040px] items-center justify-center overflow-visible">
+            <div className="relative mx-auto flex w-full max-w-[1240px] items-center justify-center overflow-visible">
             <button
               type="button"
               onClick={goPrev}
@@ -508,18 +499,18 @@ export default function CompanyProfile() {
             </div>
           </div>
 
-          <div className="company-profile-controls mx-auto mt-1 flex w-full max-w-[1040px] shrink-0 flex-wrap items-center justify-center gap-2 pt-1 text-center sm:mt-3 sm:justify-between sm:gap-3 sm:border-t sm:border-black/10 sm:pt-3">
+          <div className="company-profile-controls pointer-events-none absolute inset-x-0 bottom-3 z-[130] mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-center gap-2 px-3 text-center sm:bottom-5 sm:gap-3">
             <button
               type="button"
               onClick={goPrev}
               disabled={!canGoPrev}
-              className="order-2 inline-flex h-11 items-center justify-center gap-2 border border-black/10 bg-white px-4 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
+              className="pointer-events-auto order-2 inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 font-display text-xs font-bold uppercase tracking-wider text-black shadow-sm backdrop-blur transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
             </button>
 
-            <p className="order-1 w-full text-center font-mono text-xs uppercase tracking-[0.18em] text-black/60 sm:order-none sm:w-auto">
+            <p className="pointer-events-auto order-1 rounded-full border border-black/10 bg-white/85 px-3 py-2 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-black/60 shadow-sm backdrop-blur sm:order-none">
               {currentLabel}
             </p>
 
@@ -527,7 +518,7 @@ export default function CompanyProfile() {
               type="button"
               onClick={goNext}
               disabled={!canGoNext}
-              className="order-3 inline-flex h-11 items-center justify-center gap-2 border border-black/10 bg-white px-4 font-display text-xs font-bold uppercase tracking-wider text-black transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
+              className="pointer-events-auto order-3 inline-flex h-11 items-center justify-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 font-display text-xs font-bold uppercase tracking-wider text-black shadow-sm backdrop-blur transition-colors hover:border-primary hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:text-black/25 sm:order-none lg:hidden"
             >
               Next
               <ChevronRight className="h-4 w-4" />

@@ -1,77 +1,38 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const slides = [
-  {
-    src: "client-images/gallery-1.jpg",
-    title: "Marble Floor",
-    location: "Polished stone surface",
-  },
-  {
-    src: "client-images/gallery-2.jpg",
-    title: "Marble Floor",
-    location: "Commercial hallway finish",
-  },
-  {
-    src: "client-images/gallery-3.jpg",
-    title: "Marble Floor",
-    location: "Hotel lobby restoration",
-  },
-  {
-    src: "client-images/gallery-9.jpg",
-    title: "Marble Floor",
-    location: "Interior floor care",
-  },
-  {
-    src: "client-images/gallery-10.jpg",
-    title: "Marble Floor",
-    location: "Detail cleaning",
-  },
-  {
-    src: "client-images/gallery-11.jpg",
-    title: "Marble Floor",
-    location: "Natural stone polishing",
-  },
-  {
-    src: "client-images/gallery-12.jpg",
-    title: "Marble Floor",
-    location: "Premium floor finish",
-  },
-  {
-    src: "client-images/gallery-13.jpg",
-    title: "Marble Floor",
-    location: "Restored stone shine",
-  },
-  {
-    src: "client-images/gallery-14.jpg",
-    title: "Marble Floor",
-    location: "Surface refinishing",
-  },
-  {
-    src: "client-images/gallery-15.jpg",
-    title: "Marble Floor",
-    location: "Protected polished floor",
-  },
-];
+import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { useGalleryImagesState } from "@/lib/admin-store";
 
 const slideDuration = 60000;
 
+function galleryAssetPath(path: string) {
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, "")}`;
+}
+
 export function Gallery() {
+  const { images } = useGalleryImagesState(true);
+  const slides = useMemo(
+    () => images.filter((image) => image.isPublished && image.imageUrl),
+    [images],
+  );
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
-  const base = import.meta.env.BASE_URL;
+  const activeSlide = slides[activeIndex] ?? slides[0];
+  const activeImageSrc = activeSlide ? galleryAssetPath(activeSlide.imageUrl) : "";
 
-  const activeSlide = slides[activeIndex];
-  const activeImageSrc = useMemo(
-    () => `${base}images/${activeSlide.src}`,
-    [activeSlide.src, base],
+  useEffect(() => {
+    setActiveIndex((current) => Math.min(current, Math.max(slides.length - 1, 0)));
+  }, [slides.length]);
+
+  const goToSlide = useCallback(
+    (nextIndex: number, nextDirection: number) => {
+      if (slides.length === 0) return;
+      setDirection(nextDirection);
+      setActiveIndex((nextIndex + slides.length) % slides.length);
+    },
+    [slides.length],
   );
-
-  const goToSlide = useCallback((nextIndex: number, nextDirection: number) => {
-    setDirection(nextDirection);
-    setActiveIndex((nextIndex + slides.length) % slides.length);
-  }, []);
 
   const goPrevious = useCallback(() => goToSlide(activeIndex - 1, -1), [activeIndex, goToSlide]);
   const goNext = useCallback(() => goToSlide(activeIndex + 1, 1), [activeIndex, goToSlide]);
@@ -92,13 +53,34 @@ export function Gallery() {
   }, [goNext, goPrevious]);
 
   useEffect(() => {
+    if (slides.length === 0) return undefined;
+
     const timer = window.setInterval(() => {
       setDirection(1);
       setActiveIndex((currentIndex) => (currentIndex + 1) % slides.length);
     }, slideDuration);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [slides.length]);
+
+  if (!activeSlide) {
+    return (
+      <section
+        id="gallery"
+        className="relative flex min-h-screen items-center justify-center bg-black px-4 text-center text-white"
+      >
+        <div>
+          <ImageOff className="mx-auto h-12 w-12 text-primary" aria-hidden="true" />
+          <h3 className="mt-4 font-display text-4xl font-bold uppercase tracking-normal">
+            No images uploaded yet
+          </h3>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/70">
+            Published gallery images will appear here once they are available.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -107,10 +89,10 @@ export function Gallery() {
     >
       <AnimatePresence custom={direction} mode="wait">
         <motion.img
-          key={activeSlide.src}
+          key={activeSlide.id}
           custom={direction}
           src={activeImageSrc}
-          alt={activeSlide.location}
+          alt={activeSlide.altText || activeSlide.title}
           initial={{ opacity: 0, scale: 1.04, x: direction * 36 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           exit={{ opacity: 0, scale: 1.02, x: direction * -36 }}
@@ -145,7 +127,7 @@ export function Gallery() {
             type="button"
             onClick={goPrevious}
             className="flex h-11 w-11 items-center justify-center border border-white/35 bg-black/25 text-white shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-primary hover:bg-primary sm:h-12 sm:w-12"
-            aria-label="Previous marble floor image"
+            aria-label="Previous gallery image"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -154,7 +136,7 @@ export function Gallery() {
             type="button"
             onClick={goNext}
             className="flex h-11 w-11 items-center justify-center border border-white/35 bg-black/25 text-white shadow-[0_10px_28px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-primary hover:bg-primary sm:h-12 sm:w-12"
-            aria-label="Next marble floor image"
+            aria-label="Next gallery image"
           >
             <ChevronRight className="h-5 w-5" />
           </button>

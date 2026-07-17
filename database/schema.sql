@@ -139,6 +139,49 @@ CREATE TABLE IF NOT EXISTS social_reels (
   KEY social_reels_is_published_index (is_published)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS gallery_images (
+  id VARCHAR(80) NOT NULL,
+  title VARCHAR(190) NOT NULL,
+  location VARCHAR(190) NOT NULL DEFAULT '',
+  image_url VARCHAR(500) NOT NULL,
+  alt_text VARCHAR(255) NOT NULL DEFAULT '',
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  is_featured TINYINT(1) NOT NULL DEFAULT 0,
+  is_hero TINYINT(1) NOT NULL DEFAULT 0,
+  is_published TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY gallery_images_sort_order_index (sort_order),
+  KEY gallery_images_is_published_index (is_published),
+  KEY gallery_images_is_featured_index (is_featured),
+  KEY gallery_images_is_hero_index (is_hero)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS visitor_sessions (
+  visitor_id VARCHAR(80) NOT NULL,
+  last_path VARCHAR(500) NOT NULL DEFAULT '/',
+  user_agent_hash CHAR(64) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (visitor_id),
+  KEY visitor_sessions_last_seen_index (last_seen_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS testimonials (
+  id VARCHAR(80) NOT NULL,
+  quote_text TEXT NOT NULL,
+  client_name VARCHAR(190) NOT NULL,
+  rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
+  sort_order INT UNSIGNED NOT NULL DEFAULT 0,
+  is_published TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY testimonials_sort_order_index (sort_order),
+  KEY testimonials_is_published_index (is_published)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO users (email, password_hash, role)
 VALUES
   ('admin@technoshineph.com', '$2y$10$N2MdrOgWsrOHtvhy57nDG.NwfKSq8A4SSNBMGyptPmUQgJBwYhhhq', 'admin')
@@ -194,6 +237,7 @@ ON DUPLICATE KEY UPDATE
 INSERT INTO content_sections (section_key, title, body_json, body_text)
 VALUES
   ('homepage.hero', 'Homepage Hero', JSON_OBJECT('headline', 'Stone care and marble restoration', 'subheadline', 'Professional surface care for hotels, homes, and commercial spaces.'), 'Stone care and marble restoration for hotels, homes, and commercial spaces.'),
+  ('homepage.hero.background', 'Homepage Hero Background', JSON_OBJECT('imageUrl', 'images/hero-marble-floor-stair.jpg'), 'images/hero-marble-floor-stair.jpg'),
   ('services.summary', 'Services Summary', JSON_OBJECT('services', JSON_ARRAY('Cleaning', 'Polishing', 'Sealing', 'Restoration')), 'Cleaning, polishing, sealing, restoration, and maintenance for marble, granite, terrazzo, and tile.'),
   ('contact.quote', 'Contact / Quote Info', JSON_OBJECT('phone', '0917 824 1220', 'email', 'contactus@technoshineph.com'), 'For service quotes, call 0917 824 1220 or email contactus@technoshineph.com.')
 ON DUPLICATE KEY UPDATE
@@ -251,6 +295,59 @@ VALUES
 ON DUPLICATE KEY UPDATE
   title = VALUES(title),
   href = VALUES(href),
+  sort_order = VALUES(sort_order),
+  is_published = VALUES(is_published);
+
+INSERT INTO gallery_images (
+  id,
+  title,
+  location,
+  image_url,
+  alt_text,
+  sort_order,
+  is_featured,
+  is_hero,
+  is_published
+)
+VALUES
+  ('gallery-1', 'Marble Floor Polish', 'Polished stone surface', 'images/client-images/gallery-1.jpg', 'Marble Floor Polish', 1, 1, 0, 1),
+  ('gallery-2', 'Commercial Hallway', 'High-traffic stone care', 'images/client-images/gallery-2.jpg', 'Commercial Hallway', 2, 1, 1, 1),
+  ('gallery-3', 'Hotel Lobby Restoration', 'Premium floor finish', 'images/client-images/gallery-3.jpg', 'Hotel Lobby Restoration', 3, 1, 1, 1),
+  ('gallery-9', 'Interior Floor Care', 'Detail cleaning', 'images/client-images/gallery-9.jpg', 'Interior Floor Care', 4, 0, 1, 1),
+  ('gallery-10', 'Detail Cleaning', 'Natural stone polishing', 'images/client-images/gallery-10.jpg', 'Detail Cleaning', 5, 0, 0, 1),
+  ('gallery-11', 'Natural Stone Polishing', 'Premium floor finish', 'images/client-images/gallery-11.jpg', 'Natural Stone Polishing', 6, 0, 0, 1),
+  ('gallery-12', 'Premium Floor Finish', 'Restored stone shine', 'images/client-images/gallery-12.jpg', 'Premium Floor Finish', 7, 0, 0, 1),
+  ('gallery-13', 'Gloss Recovery', 'Surface refinishing', 'images/client-images/gallery-13.jpg', 'Gloss Recovery', 8, 0, 0, 1),
+  ('gallery-14', 'Surface Refinishing', 'Protected polished floor', 'images/client-images/gallery-14.jpg', 'Surface Refinishing', 9, 0, 0, 1),
+  ('gallery-15', 'Protected Finish', 'Polished stone surface', 'images/client-images/gallery-15.jpg', 'Protected Finish', 10, 0, 0, 1)
+ON DUPLICATE KEY UPDATE
+  title = VALUES(title),
+  location = VALUES(location),
+  image_url = VALUES(image_url),
+  alt_text = VALUES(alt_text),
+  sort_order = VALUES(sort_order),
+  is_featured = VALUES(is_featured),
+  is_hero = VALUES(is_hero),
+  is_published = VALUES(is_published);
+
+INSERT INTO testimonials (
+  id,
+  quote_text,
+  client_name,
+  rating,
+  sort_order,
+  is_published
+)
+VALUES
+  ('hotel-lobby-client', 'The lobby floor looked dull before the service. After polishing, the shine came back and the space looked ready for guests again.', 'Hotel Lobby Client', 5, 1, 1),
+  ('marble-restoration-client', 'Technoshine explained the process clearly, protected the area, and finished the marble restoration with a clean glossy result.', 'Marble Restoration Client', 5, 2, 1),
+  ('commercial-tile-client', 'Our tiles had heavy stains from daily traffic. The team cleaned the surface well and made the floor much easier to maintain.', 'Commercial Tile Client', 5, 3, 1),
+  ('granite-care-client', 'The granite counters looked newer after treatment. We appreciated the careful work and the simple maintenance advice after the job.', 'Granite Care Client', 5, 4, 1),
+  ('property-admin-client', 'The before and after difference was easy to see. We would recommend Technoshine for clients who need professional stone care.', 'Property Admin Client', 5, 5, 1)
+ON DUPLICATE KEY UPDATE
+  quote_text = VALUES(quote_text),
+  client_name = VALUES(client_name),
+  rating = VALUES(rating),
   sort_order = VALUES(sort_order),
   is_published = VALUES(is_published);
 

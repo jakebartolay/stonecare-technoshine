@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, Building2 } from "lucide-react";
+import { ArrowRight, Building2, FileText } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { clientItems } from "@/lib/site-content";
 
@@ -73,13 +73,21 @@ export default function ClientsPage() {
             ))}
           </div>
 
-          <div className="mt-12">
+          <div className="mt-12 flex flex-wrap gap-3">
             <Link
               href="/contact"
               className="inline-flex min-h-11 items-center justify-center gap-2 border border-primary bg-primary px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-white transition-colors hover:bg-foreground"
             >
               Request Assessment
               <ArrowRight className="h-4 w-4" />
+            </Link>
+
+            <Link
+              href="/company/company-client"
+              className="inline-flex min-h-11 items-center justify-center gap-2 border border-foreground/20 px-5 py-3 font-display text-sm font-bold uppercase tracking-wider text-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Client Profile
+              <FileText className="h-4 w-4" />
             </Link>
           </div>
         </div>

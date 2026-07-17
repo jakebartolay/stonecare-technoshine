@@ -35,7 +35,6 @@ interface CardProps {
   badge?: BadgeProp;
   photo?: string;
   size?: CardSize;
-  aosDelay?: number;
   isExiting?: boolean;
 }
 
@@ -279,7 +278,6 @@ function Card({
   badge,
   photo,
   size = "md",
-  aosDelay = 0,
   isExiting = false,
 }: CardProps) {
   const [hovered, setHovered] = useState(false);
@@ -289,12 +287,6 @@ function Card({
 
   return (
     <div
-      data-aos="fade-up"
-      data-aos-delay={aosDelay}
-      data-aos-duration="500"
-      data-aos-once="true"
-      data-aos-offset="0"
-      data-aos-anchor-placement="top-bottom"
       style={{
         width: cardWidth,
         flexShrink: 0,
@@ -524,13 +516,11 @@ function EmployeeCard({
   employee,
   tier,
   size = "md",
-  aosDelay,
   isExiting,
 }: {
   employee: EmployeeRecord;
   tier: TierType;
   size?: CardSize;
-  aosDelay: number;
   isExiting: boolean;
 }) {
   return (
@@ -542,7 +532,6 @@ function EmployeeCard({
       badge={badgeForEmployee(employee)}
       photo={employeeAssetPath(employee.photoUrl)}
       size={size}
-      aosDelay={aosDelay}
       isExiting={isExiting}
     />
   );
@@ -551,12 +540,10 @@ function EmployeeCard({
 function ReportingNodeView({
   node,
   depth,
-  siblingIndex,
   exitingTiers,
 }: {
   node: ReportingNode;
   depth: number;
-  siblingIndex: number;
   exitingTiers: TierVisibility;
 }) {
   const width = reportingNodeWidth(node, depth);
@@ -581,7 +568,6 @@ function ReportingNodeView({
         employee={node.employee}
         tier={node.employee.orgGroup}
         size={depth === 0 ? "md" : "sm"}
-        aosDelay={500 + depth * 180 + siblingIndex * 60}
         isExiting={exitingTiers[node.employee.orgGroup]}
       />
 
@@ -596,7 +582,6 @@ function ReportingNodeView({
               <ReportingNodeView
                 node={node.children[0]}
                 depth={depth + 1}
-                siblingIndex={0}
                 exitingTiers={exitingTiers}
               />
             </li>
@@ -646,7 +631,7 @@ function ReportingNodeView({
               padding: 0,
             }}
           >
-            {node.children.map((child, index) => (
+            {node.children.map((child) => (
               <li
                 key={child.employee.id}
                 style={{ position: "relative", display: "flex", justifyContent: "center" }}
@@ -665,7 +650,6 @@ function ReportingNodeView({
                 <ReportingNodeView
                   node={child}
                   depth={depth + 1}
-                  siblingIndex={index}
                   exitingTiers={exitingTiers}
                 />
               </li>
@@ -728,7 +712,7 @@ function ReportingTree({
           padding: 0,
         }}
       >
-        {nodes.map((node, index) => (
+        {nodes.map((node) => (
           <li
             key={node.employee.id}
             style={{ position: "relative", display: "flex", justifyContent: "center" }}
@@ -749,7 +733,6 @@ function ReportingTree({
             <ReportingNodeView
               node={node}
               depth={0}
-              siblingIndex={index}
               exitingTiers={exitingTiers}
             />
           </li>
@@ -759,14 +742,8 @@ function ReportingTree({
   );
 }
 
-export default function OrgChart({
-  visibleTiers,
-  exitingTiers,
-  employees = [],
-}: OrgChartProps) {
-  const showBoard = visibleTiers.board;
-  const showLeadership = visibleTiers.leadership;
-  const { boardEmployees, leadershipEmployees, reportingForest, executiveManager } = useMemo(() => {
+function useOrgChartData(employees: EmployeeRecord[] = []) {
+  return useMemo(() => {
     const activeEmployees = employees.filter(
       (employee) => employee.isPublished && !employee.deletedAt,
     );
@@ -790,6 +767,250 @@ export default function OrgChart({
       ),
     };
   }, [employees]);
+}
+
+function InlineAvatar({
+  employee,
+  size = 46,
+}: {
+  employee: EmployeeRecord;
+  size?: number;
+}) {
+  const style = AVATAR_STYLES[avatarColorForEmployee(employee)] || AVATAR_STYLES.gray;
+  const photo = employeeAssetPath(employee.photoUrl);
+
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 text-xs font-semibold"
+      style={{
+        width: size,
+        height: size,
+        ...style,
+      }}
+    >
+      {photo ? (
+        <img
+          src={photo}
+          alt={employee.name}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        getInitials(employee.name)
+      )}
+    </div>
+  );
+}
+
+function MobileEmployeeCard({
+  employee,
+  tier,
+  isExiting,
+  compact = false,
+}: {
+  employee: EmployeeRecord;
+  tier: TierType;
+  isExiting: boolean;
+  compact?: boolean;
+}) {
+  const badge = badgeForEmployee(employee);
+  const badgeStyle = BADGE_STYLES[badge.type] || BADGE_STYLES.admin;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          aria-label={`View details for ${employee.name}`}
+          className="flex min-h-[74px] w-full items-center gap-3 rounded-md border border-black/10 bg-white/95 p-3 text-left shadow-sm transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          style={{
+            borderLeft: `4px solid ${TIER_COLORS[tier]}`,
+            ...(isExiting
+              ? {
+                  opacity: 0,
+                  transform: "translateY(10px) scale(0.98)",
+                  transition: "opacity 220ms ease, transform 220ms ease",
+                }
+              : {}),
+          }}
+        >
+          <InlineAvatar employee={employee} size={compact ? 40 : 48} />
+          <span className="min-w-0 flex-1">
+            <span className="block break-words font-display text-[15px] font-bold uppercase leading-tight tracking-normal text-neutral-950">
+              {employee.name}
+            </span>
+            <span className="mt-1 block break-words text-[11px] font-semibold uppercase leading-snug tracking-wide text-neutral-600">
+              {displayRoleForEmployee(employee)}
+            </span>
+            <span
+              className="mt-2 inline-flex max-w-full rounded-sm px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.08em]"
+              style={badgeStyle}
+            >
+              <span className="truncate">{badge.label}</span>
+            </span>
+          </span>
+        </button>
+      </DialogTrigger>
+      <ProfileDialogContent
+        name={employee.name}
+        role={displayRoleForEmployee(employee)}
+        tier={tier}
+        avatarColor={avatarColorForEmployee(employee)}
+        badge={badge}
+        photo={employeeAssetPath(employee.photoUrl)}
+      />
+    </Dialog>
+  );
+}
+
+function MobileSection({
+  title,
+  color,
+  children,
+}: {
+  title: string;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: color }}
+        />
+        <h2 className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-600">
+          {title}
+        </h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MobileReportingNode({
+  node,
+  exitingTiers,
+  depth = 0,
+}: {
+  node: ReportingNode;
+  exitingTiers: TierVisibility;
+  depth?: number;
+}) {
+  return (
+    <li className="relative">
+      <MobileEmployeeCard
+        employee={node.employee}
+        tier={node.employee.orgGroup}
+        isExiting={exitingTiers[node.employee.orgGroup]}
+        compact={depth > 0}
+      />
+
+      {node.children.length > 0 ? (
+        <ul className="ml-4 mt-2 space-y-2 border-l border-black/10 pl-3">
+          {node.children.map((child) => (
+            <MobileReportingNode
+              key={child.employee.id}
+              node={child}
+              depth={depth + 1}
+              exitingTiers={exitingTiers}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+export function MobileOrgChart({
+  visibleTiers,
+  exitingTiers,
+  employees = [],
+}: OrgChartProps) {
+  const showBoard = visibleTiers.board;
+  const showLeadership = visibleTiers.leadership;
+  const {
+    boardEmployees,
+    leadershipEmployees,
+    reportingForest,
+  } = useOrgChartData(employees);
+  const visibleReportingNodes = useMemo(
+    () => filterVisibleReportingNodes(reportingForest, visibleTiers),
+    [reportingForest, visibleTiers],
+  );
+  const hasVisibleEmployees =
+    (showBoard && boardEmployees.length > 0) ||
+    (showLeadership && leadershipEmployees.length > 0) ||
+    visibleReportingNodes.length > 0;
+
+  if (!hasVisibleEmployees) {
+    return (
+      <div className="rounded-md border border-dashed border-black/15 bg-white/90 p-5 text-center text-sm font-semibold text-neutral-600 shadow-sm">
+        No visible team members.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-md space-y-4">
+      {showBoard && boardEmployees.length > 0 ? (
+        <MobileSection title="Board / Executive" color={TIER_COLORS.board}>
+          <div className="space-y-2">
+            {boardEmployees.map((employee) => (
+              <MobileEmployeeCard
+                key={employee.id}
+                employee={employee}
+                tier="board"
+                isExiting={exitingTiers.board}
+              />
+            ))}
+          </div>
+        </MobileSection>
+      ) : null}
+
+      {showLeadership && leadershipEmployees.length > 0 ? (
+        <MobileSection title="Leadership" color={TIER_COLORS.leadership}>
+          <div className="space-y-2">
+            {leadershipEmployees.map((employee) => (
+              <MobileEmployeeCard
+                key={employee.id}
+                employee={employee}
+                tier="leadership"
+                isExiting={exitingTiers.leadership}
+              />
+            ))}
+          </div>
+        </MobileSection>
+      ) : null}
+
+      {visibleReportingNodes.length > 0 ? (
+        <MobileSection title="Departments / Staff" color={TIER_COLORS.dept}>
+          <ul className="space-y-2">
+            {visibleReportingNodes.map((node) => (
+              <MobileReportingNode
+                key={node.employee.id}
+                node={node}
+                exitingTiers={exitingTiers}
+              />
+            ))}
+          </ul>
+        </MobileSection>
+      ) : null}
+    </div>
+  );
+}
+
+export default function OrgChart({
+  visibleTiers,
+  exitingTiers,
+  employees = [],
+}: OrgChartProps) {
+  const showBoard = visibleTiers.board;
+  const showLeadership = visibleTiers.leadership;
+  const { boardEmployees, leadershipEmployees, reportingForest, executiveManager } =
+    useOrgChartData(employees);
   const visibleReportingNodes = useMemo(
     () => filterVisibleReportingNodes(reportingForest, visibleTiers),
     [reportingForest, visibleTiers],
@@ -812,12 +1033,11 @@ export default function OrgChart({
         <>
           <SectionLabel>Managing Director / COO</SectionLabel>
           <Row>
-            {boardEmployees.map((employee, index) => (
+            {boardEmployees.map((employee) => (
               <EmployeeCard
                 key={employee.id}
                 employee={employee}
                 tier="board"
-                aosDelay={index * 100}
                 isExiting={exitingTiers.board}
               />
             ))}
@@ -839,7 +1059,6 @@ export default function OrgChart({
                 <EmployeeCard
                   employee={employee}
                   tier="leadership"
-                  aosDelay={200 + index * 100}
                   isExiting={exitingTiers.leadership}
                 />
               </div>

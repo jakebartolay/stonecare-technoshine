@@ -6,8 +6,8 @@ import {
 } from "react";
 import { Download, Eye, EyeOff, Home, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
-import AOS from "aos";
 import OrgChart, {
+  MobileOrgChart,
   type TierType,
   type TierVisibility,
 } from "@/components/OrgChart";
@@ -58,19 +58,12 @@ export default function OrganizationChart() {
     if (!viewport || !chart) return;
 
     const frame = window.requestAnimationFrame(() => {
-      viewport.scrollLeft = Math.max(0, (chart.scrollWidth - viewport.clientWidth) / 2);
+      viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
+      viewport.scrollTop = 0;
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      AOS.refreshHard();
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [visibleTiers]);
+  }, [employees.length]);
 
   useEffect(() => {
     return () => {
@@ -116,14 +109,14 @@ export default function OrganizationChart() {
   };
 
   return (
-    <main className="relative flex h-screen h-[100dvh] flex-col overflow-hidden bg-white text-foreground">
+    <main className="relative flex h-screen h-[100dvh] flex-col overflow-hidden bg-[#f7f6f2] text-foreground">
       <img
         src={ORGANIZATION_BG}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover object-center"
+        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-left-top"
         aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-white/50" />
+      <div className="absolute inset-0 bg-white/20" />
 
       <aside
         aria-label="Organization chart filters"
@@ -193,14 +186,15 @@ export default function OrganizationChart() {
       >
         <div
           ref={viewportRef}
-          className="absolute inset-x-0 bottom-[220px] top-0 overflow-auto overscroll-contain sm:bottom-0 sm:right-[196px]"
+          className="org-chart-viewport absolute inset-x-0 top-0 hidden overflow-x-auto overflow-y-scroll overscroll-contain sm:bottom-0 sm:block"
         >
-          <div className="flex min-h-full min-w-max items-start justify-center px-4 py-4 sm:px-6 sm:py-6">
+          <div className="flex min-h-full min-w-max items-start justify-center px-4 pb-40 pt-4 sm:pb-32 sm:pl-6 sm:pr-[220px] sm:pt-6">
             <div
               ref={chartRef}
               style={{
                 width: CHART_WIDTH,
                 flexShrink: 0,
+                paddingBottom: 48,
               }}
             >
               <OrgChart
@@ -210,6 +204,14 @@ export default function OrganizationChart() {
               />
             </div>
           </div>
+        </div>
+
+        <div className="org-chart-viewport absolute inset-x-0 bottom-[220px] top-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-5 pt-36 sm:hidden">
+          <MobileOrgChart
+            employees={employees}
+            visibleTiers={visibleTiers}
+            exitingTiers={exitingTiers}
+          />
         </div>
       </section>
     </main>

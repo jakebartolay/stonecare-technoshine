@@ -1,3 +1,5 @@
 node_modules
 public/company-profile/*.pdf
 dist/company-profile/*.pdf
+public/videos/technoshine-gallery.mp4
+dist/videos/technoshine-gallery.mp4

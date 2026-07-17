@@ -24,13 +24,13 @@ type AdminDashboardChartProps = {
   lastUpdatedAt: number | null;
 };
 
-const collectionLabels = ["Employees", "Services", "Reels", "Products", "Content"];
+const collectionLabels = ["Employees", "Services", "Gallery", "Reels", "Reviews", "Products", "Content"];
 const barYAxis = [{ scaleType: "band" as const, data: collectionLabels, width: 86 }];
 const barXAxis = [{ min: 0, tickMinStep: 1 }];
 const barGrid = { vertical: true };
 const barMargin = { left: 8, right: 24, top: 10, bottom: 30 };
 const pieMargin = { left: 8, right: 8, top: 8, bottom: 8 };
-const chartColors = ["#ff6b00", "#171717", "#f59e0b", "#0ea5e9", "#10b981"];
+const chartColors = ["#ff6b00", "#171717", "#14b8a6", "#f59e0b", "#a855f7", "#0ea5e9", "#10b981"];
 const productStatusColors = ["#ff6b00", "#d4d4d4"];
 const numberFormatter = new Intl.NumberFormat("en-PH");
 const timeFormatter = new Intl.DateTimeFormat("en-PH", {
@@ -144,7 +144,9 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
     const collectionValues = [
       counts.employees,
       counts.services,
+      counts.galleryImages,
       counts.reels,
+      counts.testimonials,
       counts.products,
       counts.contentSections,
     ];
@@ -196,9 +198,11 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
   }, [
     counts.contentSections,
     counts.employees,
+    counts.galleryImages,
     counts.products,
     counts.publishedProducts,
     counts.reels,
+    counts.testimonials,
     counts.services,
   ]);
   const snapshotUnavailable = hasError && !hasData;
@@ -279,7 +283,7 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
               <figure className="mt-6 min-w-0" aria-label="Admin records by collection">
                 <BarChart
                   title="Admin records by collection"
-                  desc="Horizontal bars comparing employees, services, reels, products, and content records."
+                  desc="Horizontal bars comparing employees, services, gallery, reels, reviews, products, and content records."
                   height={304}
                   layout="horizontal"
                   xAxis={barXAxis}
@@ -329,12 +333,27 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
             <div className="mt-7 border-b border-white/10 pb-6">
               <p className="text-sm text-white/55">Managed records</p>
               <p className="mt-2 font-display text-5xl font-bold leading-none text-white" aria-live="polite">
-                {hasData ? numberFormatter.format(summary.totalRecords) : "—"}
+                {hasData ? numberFormatter.format(summary.totalRecords) : "--"}
               </p>
               <p className="mt-3 text-xs leading-5 text-white/45">
                 {hasData
-                  ? "Across employees, services, reels, products, and content."
+                  ? "Across employees, services, gallery, reels, reviews, products, and content."
                   : "No database snapshot has been received yet."}
+              </p>
+            </div>
+
+            <div className="border-b border-white/10 py-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Live viewers
+                </div>
+                <span className="font-mono text-sm font-bold text-primary">
+                  {hasData ? numberFormatter.format(counts.liveVisitors) : "--"}
+                </span>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-white/45">
+                Visitors seen on public pages during the last two minutes.
               </p>
             </div>
 
@@ -345,7 +364,7 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
                   Product visibility
                 </div>
                 <span className="font-mono text-sm font-bold text-primary">
-                  {hasData ? `${summary.publishingRate}%` : "—"}
+                  {hasData ? `${summary.publishingRate}%` : "--"}
                 </span>
               </div>
               {hasData ? (
@@ -366,8 +385,8 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
                 <div className="mt-4 h-2 rounded-full bg-white/10" aria-hidden="true" />
               )}
               <div className="mt-3 flex justify-between gap-4 text-xs text-white/50">
-                <span>{hasData ? `${summary.publishedProducts} published` : "— published"}</span>
-                <span>{hasData ? `${summary.unpublishedProducts} draft` : "— draft"}</span>
+                <span>{hasData ? `${summary.publishedProducts} published` : "-- published"}</span>
+                <span>{hasData ? `${summary.unpublishedProducts} draft` : "-- draft"}</span>
               </div>
             </div>
 
@@ -393,7 +412,7 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
                 <dd className="font-mono text-sm font-bold text-primary">
                   {hasData && summary.totalRecords > 0
                     ? numberFormatter.format(summary.largestCollection.records)
-                    : "—"}
+                    : "--"}
                 </dd>
               </div>
             </dl>
@@ -462,13 +481,13 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
             id="collection-footprint-chart-title"
             eyebrow="Radar chart"
             title="Collection footprint"
-            description="A profile of record volume across the five main admin collections."
+            description="A profile of record volume across the main admin collections."
           >
             {hasData && summary.totalRecords > 0 ? (
               <figure aria-labelledby="collection-footprint-chart-title">
                 <RadarChart
                   title="Admin collection footprint"
-                  desc="Radar chart comparing employees, services, reels, products, and content records."
+                  desc="Radar chart comparing employees, services, gallery, reels, reviews, products, and content records."
                   height={270}
                   hideLegend
                   colors={["#ff6b00"]}
@@ -495,7 +514,7 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
             id="populated-collections-chart-title"
             eyebrow="Gauge chart"
             title="Populated collections"
-            description="How many main admin collections currently contain at least one record."
+            description="How many admin collections currently contain at least one record."
           >
             {hasData ? (
               <figure aria-labelledby="populated-collections-chart-title">
@@ -503,15 +522,15 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
                   height={240}
                   value={summary.populatedCollections}
                   valueMin={0}
-                  valueMax={5}
+                  valueMax={7}
                   startAngle={-110}
                   endAngle={110}
                   innerRadius="72%"
                   outerRadius="94%"
                   cornerRadius="50%"
-                  text={({ value }) => `${value}/5`}
+                  text={({ value }) => `${value}/7`}
                   aria-labelledby="populated-collections-chart-title"
-                  aria-valuetext={`${summary.populatedCollections} of 5 collections populated`}
+                  aria-valuetext={`${summary.populatedCollections} of 7 collections populated`}
                   sx={gaugeSx}
                 />
                 <figcaption className="text-center text-xs leading-5 text-neutral-600">

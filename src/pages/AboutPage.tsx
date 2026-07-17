@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, Building2, Network } from "lucide-react";
+import { ArrowRight, Building2, FileText, Network } from "lucide-react";
 import { About } from "@/components/About";
 import { SiteLayout } from "@/components/SiteLayout";
 
@@ -23,7 +23,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             <Link
               href="/company/company-profile"
               className="group rounded-md border border-border bg-card p-6 shadow-sm transition-colors hover:border-primary"
@@ -37,6 +37,23 @@ export default function AboutPage() {
               </p>
               <span className="mt-5 inline-flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wider text-primary">
                 Open Profile
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+
+            <Link
+              href="/company/company-client"
+              className="group rounded-md border border-border bg-card p-6 shadow-sm transition-colors hover:border-primary"
+            >
+              <FileText className="mb-5 h-7 w-7 text-primary" />
+              <h2 className="font-display text-2xl font-bold uppercase tracking-normal text-foreground">
+                Client Profile
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Open the client-ready company profile presentation.
+              </p>
+              <span className="mt-5 inline-flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wider text-primary">
+                Open Client Page
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </span>
             </Link>

@@ -185,93 +185,116 @@ function Slider({
 
 export function BeforeAfter() {
   const [active, setActive] = useState(0);
+  const previousProject = () => {
+    setActive((current) => (current - 1 + projects.length) % projects.length);
+  };
+  const nextProject = () => {
+    setActive((current) => (current + 1) % projects.length);
+  };
 
   return (
     <section id="before-after" className="relative flex min-h-screen items-center bg-background py-20">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[360px_1fr] lg:items-start">
-        {/* Header */}
-        <div data-aos="fade-up">
-          <h2 className="text-primary font-mono text-sm tracking-[0.2em] mb-3 uppercase">
+        <div className="mx-auto max-w-3xl text-center" data-aos="fade-up">
+          <h2 className="mb-3 font-mono text-sm uppercase tracking-[0.2em] text-primary">
             The Difference
           </h2>
-          <h3 className="text-3xl md:text-5xl font-display text-foreground mb-4">
+          <h3 className="mb-4 font-display text-3xl text-foreground md:text-5xl">
             BEFORE <span className="text-primary">&</span> AFTER
           </h3>
-          <p className="text-muted-foreground max-w-xl text-sm">
+          <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Drag the slider left or right to reveal the transformation. See exactly what our restoration process achieves.
           </p>
-
-          {/* Project selector */}
-          <div className="mt-8 flex flex-col gap-3" data-aos="fade-left" data-aos-delay="120">
-            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
-              Select Project
-            </p>
-            {projects.map((p, i) => (
-              <button
-                key={`${p.title}-${p.before}`}
-                onClick={() => setActive(i)}
-                className={`home-accent-card group relative flex items-center gap-4 p-4 border transition-all duration-200 text-left ${
-                  i === active
-                    ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(255,107,0,0.1)]"
-                    : "border-border hover:border-primary/50 bg-background"
-                }`}
-              >
-                <div className="relative w-16 h-16 shrink-0 overflow-hidden border border-border">
-                  <img
-                    src={`${import.meta.env.BASE_URL}images/${p.after}`}
-                    alt={p.label}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                  {i === active && (
-                    <div className="absolute inset-0 border-2 border-primary" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-black text-xs font-mono uppercase tracking-[0.18em]">
-                    {p.title}
-                  </p>
-                  <p
-                    className={`font-display text-sm uppercase tracking-wide ${
-                      i === active ? "text-primary" : "text-foreground"
-                    }`}
-                  >
-                    {p.label}
-                  </p>
-                  <p className="text-muted-foreground text-xs mt-0.5 font-mono">
-                    Project {i + 1} of {projects.length}
-                  </p>
-                </div>
-                {i === active && (
-                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />
-                )}
-              </button>
-            ))}
-          </div>
         </div>
 
-        <div>
-          {/* Slider */}
-          <div data-aos="zoom-in-right">
-            <motion.div
-              key={active}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Slider
-                before={projects[active].before}
-                after={projects[active].after}
-                title={projects[active].title}
-              />
-              <p className="mt-3 text-center font-display text-foreground text-lg uppercase tracking-wider">
+        <div className="mx-auto mt-12 max-w-5xl" data-aos="zoom-in">
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Slider
+              before={projects[active].before}
+              after={projects[active].after}
+              title={projects[active].title}
+            />
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+              <p className="font-display text-lg uppercase tracking-wider text-foreground">
                 {projects[active].label}
               </p>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
+
+        <div className="mt-8" data-aos="fade-up" data-aos-delay="120">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">
+              Select Project
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={previousProject}
+              aria-label="Previous project"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            <div className="flex min-w-0 max-w-full gap-3 overflow-hidden">
+              {[-1, 0, 1].map((offset) => {
+                const index = (active + offset + projects.length) % projects.length;
+                const p = projects[index];
+                const isActive = offset === 0;
+
+                return (
+                  <button
+                    key={`${p.title}-${p.before}`}
+                    onClick={() => setActive(index)}
+                    className={`group hidden min-w-0 items-center gap-3 rounded-md border p-3 text-left transition-all duration-200 sm:flex sm:w-[230px] ${
+                      isActive
+                        ? "border-primary bg-primary/5 shadow-[0_0_15px_rgba(255,107,0,0.1)]"
+                        : "border-border bg-background hover:border-primary/50"
+                    } ${isActive ? "flex w-[min(68vw,260px)]" : ""}`}
+                  >
+                    <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-sm border border-border">
+                      <img
+                        src={`${import.meta.env.BASE_URL}images/${p.after}`}
+                        alt={p.label}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                        {p.title}
+                      </p>
+                      <p
+                        className={`truncate font-display text-xs uppercase tracking-wide ${
+                          isActive ? "text-primary" : "text-foreground"
+                        }`}
+                      >
+                        {p.label}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={nextProject}
+              aria-label="Next project"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-white"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </section>
