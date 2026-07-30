@@ -6,7 +6,18 @@ export interface ShopProduct {
   brand: string;
   name: string;
   category: string;
-  size: "250ml" | "350ml" | "500ml" | "1L" | "500g" | "1kg";
+  size:
+    | "250ml"
+    | "350ml"
+    | "500ml"
+    | "1L"
+    | "500g"
+    | "1kg"
+    | "145g"
+    | "1L-2L"
+    | "3.5kg"
+    | "5L"
+    | "5kg";
   useFor: Array<"Floors" | "Countertops" | "Bathroom" | "Tables">;
   usesLine: string;
   price: number;
@@ -242,7 +253,19 @@ export const shopProducts: ShopProduct[] = [
 ];
 
 export const shopCategories = ["All", ...Array.from(new Set(shopProducts.map((product) => product.category)))];
-export const shopSizes = ["250ml", "350ml", "500ml", "1L", "500g", "1kg"] as const;
+export const shopSizes = [
+  "250ml",
+  "350ml",
+  "500ml",
+  "1L",
+  "500g",
+  "1kg",
+  "145g",
+  "1L-2L",
+  "3.5kg",
+  "5L",
+  "5kg",
+] as const;
 export const shopUseFor = ["Floors", "Countertops", "Bathroom", "Tables"] as const;
 
 export function getShopProduct(slug: string) {

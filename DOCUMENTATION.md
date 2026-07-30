@@ -125,7 +125,7 @@ Single PHP endpoint, action-based: `GET/POST /api/admin.php?action=...`
 
 **DB config via env vars** (with local defaults): `TECHNOSHINE_DB_HOST`, `TECHNOSHINE_DB_NAME`, `TECHNOSHINE_DB_USER`, `TECHNOSHINE_DB_PASS`.
 
-**Contact form:** `public/contact-submit.php` — POST JSON `{name, email, company, message}`; emails assessment requests to `jake.bartolay@technoshineph.com` from `contactus@technoshineph.com`.
+**Contact form:** `public/contact-submit.php` — POST JSON `{name, email, company, message}`; emails assessment requests to `erwin.torrefiel@technoshineph.com` from `contactus@technoshineph.com`.
 
 ---
 

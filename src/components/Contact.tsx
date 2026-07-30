@@ -7,7 +7,7 @@ import { useState } from "react";
 import { transactionToast } from "@/lib/transaction-toast";
 
 const CONTACT_ENDPOINT = `${import.meta.env.BASE_URL}contact-submit.php`;
-const PRIMARY_EMAIL = "jake.bartolay@technoshineph.com";
+const PRIMARY_EMAIL = "erwin.torrefiel@technoshineph.com";
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, "Name is required"),
@@ -137,7 +137,7 @@ export function Contact() {
         error instanceof Error && error.message.includes("endpoint")
           ? new Error("Email sending needs the PHP hosting server. On localhost, please test after deployment.")
           : error,
-        "Something went wrong. Please email Jake directly instead.",
+        "Something went wrong. Please email us directly instead.",
       );
     } finally {
       setIsSending(false);

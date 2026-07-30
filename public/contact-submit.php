@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-const RECIPIENT_EMAIL = 'jake.bartolay@technoshineph.com';
+const RECIPIENT_EMAIL = 'erwin.torrefiel@technoshineph.com';
 const FROM_EMAIL = 'contactus@technoshineph.com';
 const FROM_NAME = 'Technoshine Website';
 const INQUIRY_TYPE = 'Assessment Request';

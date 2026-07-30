@@ -4717,9 +4717,9 @@ export function AdminContent() {
   }
 
   async function compressHomepageBackground(file: File) {
-    const targetBytes = 7 * 1024 * 1024;
+    const targetBytes = 1536 * 1024;
     const maxInputBytes = 200 * 1024 * 1024;
-    const maxDimension = 2400;
+    const maxDimension = 2200;
 
     if (file.size <= targetBytes) return file;
     if (file.size > maxInputBytes) {
@@ -4741,14 +4741,13 @@ export function AdminContent() {
         throw new Error("Image compression is unavailable in this browser.");
       }
 
-      let baseScale = Math.min(1, maxDimension / Math.max(image.width, image.height));
-      let quality = 0.86;
+      let scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      let quality = 0.84;
       let lastBlob: Blob | null = null;
 
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const attemptScale = baseScale * Math.pow(0.88, attempt);
-        canvas.width = Math.max(1, Math.round(image.width * attemptScale));
-        canvas.height = Math.max(1, Math.round(image.height * attemptScale));
+      for (let attempt = 0; attempt < 14; attempt += 1) {
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
@@ -4762,11 +4761,20 @@ export function AdminContent() {
 
         lastBlob = blob;
         if (blob.size <= targetBytes) break;
-        quality = Math.max(0.56, quality - 0.08);
+
+        if (quality > 0.58) {
+          quality = Math.max(0.58, quality - 0.08);
+        } else {
+          quality = 0.74;
+          scale = Math.max(0.35, scale * 0.82);
+        }
       }
 
       if (!lastBlob) {
         throw new Error("Image compression failed.");
+      }
+      if (lastBlob.size > targetBytes) {
+        throw new Error("Image is still too large after optimization. Please choose a smaller background image.");
       }
 
       return new File(
@@ -4785,7 +4793,7 @@ export function AdminContent() {
     setIsUploadingHeroBackground(true);
     try {
       let uploadFile = file;
-      if (file.size > 8 * 1024 * 1024) {
+      if (file.size > 1536 * 1024) {
         transactionToast.info("Compressing background", "Reducing image size before upload.");
         uploadFile = await compressHomepageBackground(file);
       }

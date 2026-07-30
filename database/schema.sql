@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS content_sections (
 
 CREATE TABLE IF NOT EXISTS products (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code VARCHAR(20) NULL,
   slug VARCHAR(190) NOT NULL,
   name VARCHAR(190) NOT NULL,
   brand VARCHAR(120) NOT NULL DEFAULT 'TECHNOSHINE',
@@ -91,9 +92,28 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY products_slug_unique (slug),
+  UNIQUE KEY products_code_unique (code),
   KEY products_category_index (category),
   KEY products_is_published_index (is_published),
   KEY products_stock_index (stock)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS product_help_info (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  product_code VARCHAR(20) NOT NULL,
+  surface VARCHAR(190) NOT NULL DEFAULT '',
+  headline VARCHAR(255) NOT NULL DEFAULT '',
+  how_to_use_image_url VARCHAR(500) NULL,
+  how_to_use_image_caption VARCHAR(255) NULL,
+  how_to_use JSON NULL,
+  safety_notes JSON NULL,
+  is_published TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY product_help_info_product_code_unique (product_code),
+  CONSTRAINT product_help_info_product_code_fk
+    FOREIGN KEY (product_code) REFERENCES products (code) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS service_pages (

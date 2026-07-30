@@ -113,10 +113,10 @@ export default function OrganizationChart() {
       <img
         src={ORGANIZATION_BG}
         alt=""
-        className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover object-left-top"
+        className="pointer-events-none absolute inset-0 h-full w-full select-none object-fill"
         aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-white/20" />
+      <div className="absolute inset-0 bg-white/10" />
 
       <aside
         aria-label="Organization chart filters"
