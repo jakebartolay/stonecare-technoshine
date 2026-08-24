@@ -2,6 +2,7 @@ export type ProductBadge = "Best Seller" | "New Arrival" | "Pro Grade";
 
 export interface ShopProduct {
   id?: string;
+  code?: string;
   slug: string;
   brand: string;
   name: string;

@@ -135,6 +135,7 @@ function productFromRow(array $row): array
 
     return [
         'id' => (string)$row['id'],
+        'code' => (string)($row['code'] ?? ''),
         'slug' => (string)$row['slug'],
         'brand' => (string)$row['brand'],
         'name' => (string)$row['name'],
@@ -158,6 +159,82 @@ function productFromRow(array $row): array
         'isPublished' => (bool)$row['is_published'],
         'createdAt' => (string)$row['created_at'],
         'updatedAt' => (string)$row['updated_at'],
+    ];
+}
+
+function jsonArrayField(mixed $value): array
+{
+    $decoded = json_decode((string)($value ?? '[]'), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function cleanStringArray(mixed $value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+
+    $items = [];
+    foreach ($value as $item) {
+        $text = trim((string)$item);
+        if ($text !== '') {
+            $items[] = $text;
+        }
+    }
+
+    return array_values(array_unique($items));
+}
+
+function cleanHighlightsArray(mixed $value): array
+{
+    if (!is_array($value)) {
+        return [];
+    }
+
+    $items = [];
+    foreach ($value as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $title = trim((string)($item['title'] ?? ''));
+        $text = trim((string)($item['text'] ?? ''));
+        if ($title !== '' && $text !== '') {
+            $items[] = ['title' => $title, 'text' => $text];
+        }
+    }
+
+    return $items;
+}
+
+function helpProductFromRow(array $row): array
+{
+    $highlights = jsonArrayField($row['highlights'] ?? '[]');
+    $legacyIds = jsonArrayField($row['legacy_ids'] ?? '[]');
+    $howToUse = jsonArrayField($row['how_to_use'] ?? '[]');
+    $safetyNotes = jsonArrayField($row['safety_notes'] ?? '[]');
+    $productCode = (string)($row['product_code'] ?? '');
+
+    return [
+        'productCode' => $productCode,
+        'slug' => (string)($row['slug'] ?? ''),
+        'legacyIds' => $legacyIds,
+        'brand' => (string)($row['brand'] ?? 'TECHNOSHINE'),
+        'name' => (string)($row['name'] ?? $productCode),
+        'surface' => (string)($row['surface'] ?? ''),
+        'headline' => (string)($row['headline'] ?? ''),
+        'description' => (string)($row['description'] ?? ''),
+        'highlights' => $highlights,
+        'howToUseImage' => [
+            'src' => (string)($row['how_to_use_image_url'] ?? ''),
+            'alt' => (string)($row['how_to_use_image_alt'] ?? ''),
+            'caption' => (string)($row['how_to_use_image_caption'] ?? ''),
+        ],
+        'howToUse' => $howToUse,
+        'safetyNotes' => $safetyNotes,
+        'isPublished' => (bool)($row['is_published'] ?? false),
+        'createdAt' => (string)($row['created_at'] ?? ''),
+        'updatedAt' => (string)($row['updated_at'] ?? ''),
     ];
 }
 
@@ -375,6 +452,60 @@ function ensureVisitorSessionsTable(PDO $pdo): void
           KEY visitor_sessions_last_seen_index (last_seen_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+}
+
+function ensureVisitorEventsTable(PDO $pdo): void
+{
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS visitor_events (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          visitor_id VARCHAR(80) NOT NULL,
+          visit_id VARCHAR(80) NOT NULL,
+          event_type ENUM('page_view', 'heartbeat') NOT NULL DEFAULT 'page_view',
+          path VARCHAR(500) NOT NULL DEFAULT '/',
+          device_type ENUM('desktop', 'mobile', 'tablet', 'unknown') NOT NULL DEFAULT 'unknown',
+          user_agent_hash CHAR(64) NULL,
+          occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          KEY visitor_events_occurred_at_index (occurred_at),
+          KEY visitor_events_visit_id_index (visit_id),
+          KEY visitor_events_event_type_index (event_type),
+          KEY visitor_events_device_type_index (device_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+}
+
+function sanitizeTrackingToken(string $value): string
+{
+    return substr((string)preg_replace('/[^a-zA-Z0-9_-]/', '', $value), 0, 80);
+}
+
+function normalizeTrackingEventType(string $eventType): string
+{
+    return $eventType === 'page_view' ? 'page_view' : 'heartbeat';
+}
+
+function normalizeVisitorDeviceType(string $deviceType, string $userAgent): string
+{
+    $deviceType = strtolower(trim($deviceType));
+    if (in_array($deviceType, ['desktop', 'mobile', 'tablet', 'unknown'], true)) {
+        return $deviceType;
+    }
+
+    $userAgent = strtolower($userAgent);
+    if ($userAgent === '') {
+        return 'unknown';
+    }
+
+    if (preg_match('/ipad|tablet|kindle|playbook|silk|android(?!.*mobile)/i', $userAgent)) {
+        return 'tablet';
+    }
+
+    if (preg_match('/mobi|iphone|ipod|android|blackberry|phone|opera mini|windows phone/i', $userAgent)) {
+        return 'mobile';
+    }
+
+    return 'desktop';
 }
 
 function ensureTestimonialsTable(PDO $pdo): void
@@ -717,6 +848,96 @@ function deleteManagedContentImage(string $siteRoot, string $path): void
     }
 }
 
+function databaseName(PDO $pdo): string
+{
+    return (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+}
+
+function tableColumnExists(PDO $pdo, string $table, string $column): bool
+{
+    $statement = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = :database
+           AND TABLE_NAME = :table
+           AND COLUMN_NAME = :column"
+    );
+    $statement->execute([
+        'database' => databaseName($pdo),
+        'table' => $table,
+        'column' => $column,
+    ]);
+
+    return (int)$statement->fetchColumn() > 0;
+}
+
+function tableIndexExists(PDO $pdo, string $table, string $indexName): bool
+{
+    $statement = $pdo->prepare(
+        "SELECT COUNT(*)
+         FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = :database
+           AND TABLE_NAME = :table
+           AND INDEX_NAME = :index_name"
+    );
+    $statement->execute([
+        'database' => databaseName($pdo),
+        'table' => $table,
+        'index_name' => $indexName,
+    ]);
+
+    return (int)$statement->fetchColumn() > 0;
+}
+
+function ensureProductsCodeColumn(PDO $pdo): void
+{
+    if (!tableColumnExists($pdo, 'products', 'code')) {
+        $pdo->exec("ALTER TABLE products ADD COLUMN code VARCHAR(20) NULL AFTER id");
+    }
+
+    if (!tableIndexExists($pdo, 'products', 'products_code_unique')) {
+        $pdo->exec("CREATE UNIQUE INDEX products_code_unique ON products (code)");
+    }
+}
+
+function ensureProductHelpInfoTable(PDO $pdo): void
+{
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS product_help_info (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          product_code VARCHAR(20) NOT NULL,
+          surface VARCHAR(190) NOT NULL DEFAULT '',
+          headline VARCHAR(255) NOT NULL DEFAULT '',
+          highlights JSON NULL,
+          legacy_ids JSON NULL,
+          how_to_use_image_url VARCHAR(500) NULL,
+          how_to_use_image_alt VARCHAR(255) NULL,
+          how_to_use_image_caption VARCHAR(255) NULL,
+          how_to_use JSON NULL,
+          safety_notes JSON NULL,
+          is_published TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (id),
+          UNIQUE KEY product_help_info_product_code_unique (product_code),
+          CONSTRAINT product_help_info_product_code_fk
+            FOREIGN KEY (product_code) REFERENCES products (code) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    );
+
+    $columns = [
+        'highlights' => "ALTER TABLE product_help_info ADD COLUMN highlights JSON NULL AFTER headline",
+        'legacy_ids' => "ALTER TABLE product_help_info ADD COLUMN legacy_ids JSON NULL AFTER highlights",
+        'how_to_use_image_alt' => "ALTER TABLE product_help_info ADD COLUMN how_to_use_image_alt VARCHAR(255) NULL AFTER how_to_use_image_url",
+    ];
+
+    foreach ($columns as $column => $sql) {
+        if (!tableColumnExists($pdo, 'product_help_info', $column)) {
+            $pdo->exec($sql);
+        }
+    }
+}
+
 function ensureDefaultContentSections(PDO $pdo): void
 {
     $statement = $pdo->prepare(
@@ -767,10 +988,13 @@ try {
     $pdo = db();
     ensureEmployeeOrgGroupColumn($pdo);
     migrateEmployeeHierarchy($pdo);
+    ensureProductsCodeColumn($pdo);
+    ensureProductHelpInfoTable($pdo);
     ensureDefaultContentSections($pdo);
     ensureSocialReelsTable($pdo);
     ensureGalleryImagesTable($pdo);
     ensureVisitorSessionsTable($pdo);
+    ensureVisitorEventsTable($pdo);
     ensureTestimonialsTable($pdo);
     $action = (string)($_GET['action'] ?? '');
     $method = $_SERVER['REQUEST_METHOD'];
@@ -853,22 +1077,25 @@ try {
 
     if ($action === 'visitors.track' && $method === 'POST') {
         $payload = body();
-        $visitorId = trim((string)($payload['visitorId'] ?? ''));
+        $visitorId = sanitizeTrackingToken(trim((string)($payload['visitorId'] ?? '')));
         if ($visitorId === '') {
             $visitorId = bin2hex(random_bytes(16));
         }
 
-        $visitorId = substr((string)preg_replace('/[^a-zA-Z0-9_-]/', '', $visitorId), 0, 80);
-        if ($visitorId === '') {
-            $visitorId = bin2hex(random_bytes(16));
+        $visitId = sanitizeTrackingToken(trim((string)($payload['visitId'] ?? '')));
+        if ($visitId === '') {
+            $visitId = $visitorId;
         }
 
+        $eventType = normalizeTrackingEventType((string)($payload['eventType'] ?? 'heartbeat'));
         $path = trim((string)($payload['path'] ?? '/'));
         if ($path === '') {
             $path = '/';
         }
         $path = substr($path, 0, 500);
         $userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $userAgentHash = $userAgent !== '' ? hash('sha256', $userAgent) : null;
+        $deviceType = normalizeVisitorDeviceType((string)($payload['deviceType'] ?? ''), $userAgent);
 
         $pdo->exec("DELETE FROM visitor_sessions WHERE last_seen_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)");
         $statement = $pdo->prepare(
@@ -882,14 +1109,34 @@ try {
         $statement->execute([
             'visitor_id' => $visitorId,
             'last_path' => $path,
-            'user_agent_hash' => $userAgent !== '' ? hash('sha256', $userAgent) : null,
+            'user_agent_hash' => $userAgentHash,
         ]);
+
+        if ($eventType === 'page_view') {
+            $eventStatement = $pdo->prepare(
+                'INSERT INTO visitor_events (visitor_id, visit_id, event_type, path, device_type, user_agent_hash)
+                 VALUES (:visitor_id, :visit_id, :event_type, :path, :device_type, :user_agent_hash)'
+            );
+            $eventStatement->execute([
+                'visitor_id' => $visitorId,
+                'visit_id' => $visitId,
+                'event_type' => $eventType,
+                'path' => $path,
+                'device_type' => $deviceType,
+                'user_agent_hash' => $userAgentHash,
+            ]);
+        }
 
         $activeVisitors = (int)$pdo->query(
             "SELECT COUNT(*) FROM visitor_sessions WHERE last_seen_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 MINUTE)"
         )->fetchColumn();
 
-        respond(200, ['ok' => true, 'visitorId' => $visitorId, 'activeVisitors' => $activeVisitors]);
+        respond(200, [
+            'ok' => true,
+            'visitorId' => $visitorId,
+            'visitId' => $visitId,
+            'activeVisitors' => $activeVisitors,
+        ]);
     }
 
     if ($action === 'products' && $method === 'GET') {
@@ -906,6 +1153,7 @@ try {
     if ($action === 'products.save' && $method === 'POST') {
         requireUser($pdo);
         $product = body();
+        $code = trim((string)($product['code'] ?? ''));
         $slug = trim((string)($product['slug'] ?? ''));
         if ($slug === '') {
             $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', (string)$product['name']), '-'));
@@ -913,25 +1161,30 @@ try {
 
         $statement = $pdo->prepare(
             'INSERT INTO products
-              (slug, name, brand, category, size, usage_short, use_for, price, stock, badge, image_url, shopee_url, description, how_to_use, visual, is_published)
+              (code, slug, name, brand, category, size, usage_short, use_for, price, stock, badge, image_url, shopee_url, description, how_to_use, visual, is_published)
              VALUES
-              (:slug, :name, :brand, :category, :size, :usage_short, :use_for, :price, :stock, :badge, :image_url, :shopee_url, :description, :how_to_use, :visual, :is_published)
+              (:code, :slug, :name, :brand, :category, :size, :usage_short, :use_for, :price, :stock, :badge, :image_url, :shopee_url, :description, :how_to_use, :visual, :is_published)
              ON DUPLICATE KEY UPDATE
+              code = VALUES(code),
               name = VALUES(name),
               brand = VALUES(brand),
               category = VALUES(category),
               size = VALUES(size),
               usage_short = VALUES(usage_short),
+              use_for = VALUES(use_for),
               price = VALUES(price),
               stock = VALUES(stock),
               badge = VALUES(badge),
               image_url = VALUES(image_url),
               shopee_url = VALUES(shopee_url),
               description = VALUES(description),
+              how_to_use = VALUES(how_to_use),
+              visual = VALUES(visual),
               is_published = VALUES(is_published),
               updated_at = CURRENT_TIMESTAMP'
         );
         $statement->execute([
+            'code' => $code !== '' ? $code : null,
             'slug' => $slug,
             'name' => trim((string)$product['name']),
             'brand' => trim((string)($product['brand'] ?? 'TECHNOSHINE')),
@@ -957,6 +1210,149 @@ try {
         $payload = body();
         $statement = $pdo->prepare('DELETE FROM products WHERE id = :id');
         $statement->execute(['id' => (int)($payload['id'] ?? 0)]);
+        respond(200, ['ok' => true]);
+    }
+
+    if (($action === 'help-products' || $action === 'help-products.public') && $method === 'GET') {
+        if ($action === 'help-products') {
+            requireUser($pdo);
+        }
+
+        $rows = $pdo->query(
+            'SELECT
+                product_help_info.*,
+                products.code AS product_code,
+                products.slug,
+                products.brand,
+                products.name,
+                products.description
+             FROM product_help_info
+             INNER JOIN products ON products.code = product_help_info.product_code
+             ORDER BY product_help_info.updated_at DESC, product_help_info.product_code ASC'
+        )->fetchAll();
+
+        $products = [];
+        $hiddenProductIds = [];
+        foreach ($rows as $row) {
+            $record = helpProductFromRow($row);
+            if ($action === 'help-products.public' && !$record['isPublished']) {
+                $hiddenProductIds[] = (string)$record['productCode'];
+                $hiddenProductIds[] = (string)$record['slug'];
+                foreach ($record['legacyIds'] as $legacyId) {
+                    $hiddenProductIds[] = (string)$legacyId;
+                }
+                continue;
+            }
+
+            $products[] = $record;
+        }
+
+        respond(200, [
+            'ok' => true,
+            'products' => $products,
+            'hiddenProductIds' => $action === 'help-products.public' ? array_values(array_unique(array_filter($hiddenProductIds))) : [],
+        ]);
+    }
+
+    if ($action === 'help-products.save' && $method === 'POST') {
+        requireUser($pdo);
+        $product = body();
+        $productCode = strtoupper(trim((string)($product['productCode'] ?? '')));
+        $originalProductCode = strtoupper(trim((string)($product['originalProductCode'] ?? '')));
+        $name = trim((string)($product['name'] ?? ''));
+        $brand = trim((string)($product['brand'] ?? 'TECHNOSHINE')) ?: 'TECHNOSHINE';
+        $slug = trim((string)($product['slug'] ?? ''));
+        if ($slug === '') {
+            $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $name !== '' ? $name : $productCode), '-'));
+        }
+
+        if ($productCode === '' || $name === '' || $slug === '') {
+            respond(400, ['ok' => false, 'message' => 'Help product needs a product code, slug, and name.']);
+        }
+
+        $pdo->beginTransaction();
+
+        if ($originalProductCode !== '' && $originalProductCode !== $productCode) {
+            $deleteOld = $pdo->prepare('DELETE FROM product_help_info WHERE product_code = :product_code');
+            $deleteOld->execute(['product_code' => $originalProductCode]);
+        }
+
+        $productStatement = $pdo->prepare(
+            'INSERT INTO products
+              (code, slug, name, brand, category, size, usage_short, use_for, price, stock, badge, image_url, shopee_url, description, how_to_use, visual, is_published)
+             VALUES
+              (:code, :slug, :name, :brand, :category, :size, :usage_short, :use_for, 0, 0, NULL, NULL, NULL, :description, :how_to_use, :visual, 0)
+             ON DUPLICATE KEY UPDATE
+              slug = VALUES(slug),
+              name = VALUES(name),
+              brand = VALUES(brand),
+              usage_short = VALUES(usage_short),
+              description = VALUES(description),
+              how_to_use = VALUES(how_to_use),
+              visual = VALUES(visual),
+              updated_at = CURRENT_TIMESTAMP'
+        );
+        $productStatement->execute([
+            'code' => $productCode,
+            'slug' => $slug,
+            'name' => $name,
+            'brand' => $brand,
+            'category' => 'Professional Care',
+            'size' => '5L',
+            'usage_short' => trim((string)($product['headline'] ?? '')),
+            'use_for' => json_encode(['Floors']),
+            'description' => trim((string)($product['description'] ?? '')),
+            'how_to_use' => json_encode(cleanStringArray($product['howToUse'] ?? [])),
+            'visual' => json_encode(['accent' => '#FF6B00', 'surface' => '#FFF8F2', 'label' => $productCode]),
+        ]);
+
+        $image = is_array($product['howToUseImage'] ?? null) ? $product['howToUseImage'] : [];
+        $helpStatement = $pdo->prepare(
+            'INSERT INTO product_help_info
+              (product_code, surface, headline, highlights, legacy_ids, how_to_use_image_url, how_to_use_image_alt, how_to_use_image_caption, how_to_use, safety_notes, is_published)
+             VALUES
+              (:product_code, :surface, :headline, :highlights, :legacy_ids, :how_to_use_image_url, :how_to_use_image_alt, :how_to_use_image_caption, :how_to_use, :safety_notes, :is_published)
+             ON DUPLICATE KEY UPDATE
+              surface = VALUES(surface),
+              headline = VALUES(headline),
+              highlights = VALUES(highlights),
+              legacy_ids = VALUES(legacy_ids),
+              how_to_use_image_url = VALUES(how_to_use_image_url),
+              how_to_use_image_alt = VALUES(how_to_use_image_alt),
+              how_to_use_image_caption = VALUES(how_to_use_image_caption),
+              how_to_use = VALUES(how_to_use),
+              safety_notes = VALUES(safety_notes),
+              is_published = VALUES(is_published),
+              updated_at = CURRENT_TIMESTAMP'
+        );
+        $helpStatement->execute([
+            'product_code' => $productCode,
+            'surface' => trim((string)($product['surface'] ?? '')),
+            'headline' => trim((string)($product['headline'] ?? '')),
+            'highlights' => json_encode(cleanHighlightsArray($product['highlights'] ?? [])),
+            'legacy_ids' => json_encode(cleanStringArray($product['legacyIds'] ?? [])),
+            'how_to_use_image_url' => trim((string)($image['src'] ?? '')) ?: null,
+            'how_to_use_image_alt' => trim((string)($image['alt'] ?? '')) ?: null,
+            'how_to_use_image_caption' => trim((string)($image['caption'] ?? '')) ?: null,
+            'how_to_use' => json_encode(cleanStringArray($product['howToUse'] ?? [])),
+            'safety_notes' => json_encode(cleanStringArray($product['safetyNotes'] ?? [])),
+            'is_published' => !empty($product['isPublished']) ? 1 : 0,
+        ]);
+
+        $pdo->commit();
+        respond(200, ['ok' => true]);
+    }
+
+    if ($action === 'help-products.delete' && $method === 'POST') {
+        requireUser($pdo);
+        $payload = body();
+        $productCode = strtoupper(trim((string)($payload['productCode'] ?? '')));
+        if ($productCode === '') {
+            respond(400, ['ok' => false, 'message' => 'Product code is required.']);
+        }
+
+        $statement = $pdo->prepare('DELETE FROM product_help_info WHERE product_code = :product_code');
+        $statement->execute(['product_code' => $productCode]);
         respond(200, ['ok' => true]);
     }
 
@@ -1563,6 +1959,31 @@ try {
                     COALESCE(SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END), 0) AS published
              FROM products'
         )->fetch();
+        $pageViews = (int)$pdo->query(
+            "SELECT COUNT(*) FROM visitor_events WHERE event_type = 'page_view'"
+        )->fetchColumn();
+        $totalVisits = (int)$pdo->query(
+            "SELECT COUNT(DISTINCT visit_id) FROM visitor_events WHERE event_type = 'page_view'"
+        )->fetchColumn();
+        $deviceVisits = [
+            'desktop' => 0,
+            'mobile' => 0,
+            'tablet' => 0,
+            'unknown' => 0,
+        ];
+        $deviceRows = $pdo->query(
+            "SELECT device_type, COUNT(DISTINCT visit_id) AS total
+             FROM visitor_events
+             WHERE event_type = 'page_view'
+             GROUP BY device_type"
+        )->fetchAll();
+        foreach ($deviceRows as $deviceRow) {
+            $deviceType = (string)($deviceRow['device_type'] ?? 'unknown');
+            if (!array_key_exists($deviceType, $deviceVisits)) {
+                $deviceType = 'unknown';
+            }
+            $deviceVisits[$deviceType] = (int)($deviceRow['total'] ?? 0);
+        }
         $counts = [
             'employees' => (int)$pdo->query(
                 "SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL AND status = 'active'"
@@ -1577,6 +1998,12 @@ try {
             'liveVisitors' => (int)$pdo->query(
                 "SELECT COUNT(*) FROM visitor_sessions WHERE last_seen_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 2 MINUTE)"
             )->fetchColumn(),
+            'totalVisits' => $totalVisits,
+            'pageViews' => $pageViews,
+            'desktopVisits' => $deviceVisits['desktop'],
+            'mobileVisits' => $deviceVisits['mobile'],
+            'tabletVisits' => $deviceVisits['tablet'],
+            'unknownDeviceVisits' => $deviceVisits['unknown'],
         ];
         respond(200, ['ok' => true, 'counts' => $counts]);
     }

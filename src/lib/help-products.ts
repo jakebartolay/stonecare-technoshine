@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
+
 export interface HelpProductInfo {
+  productCode?: string;
   slug: string;
   legacyIds: string[];
   brand: string;
@@ -17,6 +20,9 @@ export interface HelpProductInfo {
   };
   howToUse: string[];
   safetyNotes: string[];
+  isPublished?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const helpProducts: HelpProductInfo[] = [
@@ -739,6 +745,72 @@ export const helpProducts: HelpProductInfo[] = [
     safetyNotes: ["PLACEHOLDER — replace with the actual safety warnings from the product label/SDS before publishing."],
   },
   {
+    slug: "technoshine-t-rc1-product-info",
+    legacyIds: ["T-RC1"],
+    brand: "TECHNOSHINE",
+    name: "T-RC1 Product Information",
+    surface: "Details to be added",
+    headline: "QR-linked product information page for T-RC1",
+    description:
+      "Details for this product are not available yet. Update this help product record in the admin panel when the product copy, instructions, and safety notes are ready.",
+    highlights: [
+      { title: "Product code", text: "Connected to QR links using the T-RC1 product code." },
+      { title: "Ready for editing", text: "Use the Help Products admin page to replace this placeholder copy." },
+      { title: "Details pending", text: "Product surface, instructions, and safety notes still need final content." },
+    ],
+    howToUseImage: {
+      src: "images/client-images/gallery-1.jpg",
+      alt: "Temporary instruction manual image for T-RC1",
+      caption: "PLACEHOLDER - replace with the real how-to-use manual image/artwork for this product.",
+    },
+    howToUse: ["PLACEHOLDER - replace with the actual application steps from the product label/data sheet before publishing."],
+    safetyNotes: ["PLACEHOLDER - replace with the actual safety warnings from the product label/SDS before publishing."],
+  },
+  {
+    slug: "technoshine-t-rc2-product-info",
+    legacyIds: ["T-RC2"],
+    brand: "TECHNOSHINE",
+    name: "T-RC2 Product Information",
+    surface: "Details to be added",
+    headline: "QR-linked product information page for T-RC2",
+    description:
+      "Details for this product are not available yet. Update this help product record in the admin panel when the product copy, instructions, and safety notes are ready.",
+    highlights: [
+      { title: "Product code", text: "Connected to QR links using the T-RC2 product code." },
+      { title: "Ready for editing", text: "Use the Help Products admin page to replace this placeholder copy." },
+      { title: "Details pending", text: "Product surface, instructions, and safety notes still need final content." },
+    ],
+    howToUseImage: {
+      src: "images/client-images/gallery-1.jpg",
+      alt: "Temporary instruction manual image for T-RC2",
+      caption: "PLACEHOLDER - replace with the real how-to-use manual image/artwork for this product.",
+    },
+    howToUse: ["PLACEHOLDER - replace with the actual application steps from the product label/data sheet before publishing."],
+    safetyNotes: ["PLACEHOLDER - replace with the actual safety warnings from the product label/SDS before publishing."],
+  },
+  {
+    slug: "technoshine-t-rc3-product-info",
+    legacyIds: ["T-RC3"],
+    brand: "TECHNOSHINE",
+    name: "T-RC3 Product Information",
+    surface: "Details to be added",
+    headline: "QR-linked product information page for T-RC3",
+    description:
+      "Details for this product are not available yet. Update this help product record in the admin panel when the product copy, instructions, and safety notes are ready.",
+    highlights: [
+      { title: "Product code", text: "Connected to QR links using the T-RC3 product code." },
+      { title: "Ready for editing", text: "Use the Help Products admin page to replace this placeholder copy." },
+      { title: "Details pending", text: "Product surface, instructions, and safety notes still need final content." },
+    ],
+    howToUseImage: {
+      src: "images/client-images/gallery-1.jpg",
+      alt: "Temporary instruction manual image for T-RC3",
+      caption: "PLACEHOLDER - replace with the real how-to-use manual image/artwork for this product.",
+    },
+    howToUse: ["PLACEHOLDER - replace with the actual application steps from the product label/data sheet before publishing."],
+    safetyNotes: ["PLACEHOLDER - replace with the actual safety warnings from the product label/SDS before publishing."],
+  },
+  {
     slug: "riviva-marble-formula-t-pp1",
     legacyIds: ["T-PP1"],
     brand: "Riviva",
@@ -806,11 +878,123 @@ export const helpProducts: HelpProductInfo[] = [
   },
 ];
 
-export function getHelpProductInfo(productId: string) {
-  const normalized = productId.trim().toLowerCase();
-  return helpProducts.find(
-    (product) =>
-      product.slug.toLowerCase() === normalized ||
-      product.legacyIds.some((id) => id.toLowerCase() === normalized),
+const helpProductsApiPath = `${import.meta.env.BASE_URL}api/admin.php`;
+
+function normalizeHelpProductKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+export function getHelpProductCode(product: HelpProductInfo) {
+  return product.productCode || product.legacyIds.find((id) => /[a-z]/i.test(id)) || product.legacyIds[0] || product.slug;
+}
+
+export function getHelpProductKeys(product: HelpProductInfo) {
+  return [product.slug, product.productCode ?? "", ...product.legacyIds]
+    .map(normalizeHelpProductKey)
+    .filter(Boolean);
+}
+
+export function helpProductMatchesId(product: HelpProductInfo, productId: string) {
+  const normalized = normalizeHelpProductKey(productId);
+  return getHelpProductKeys(product).includes(normalized);
+}
+
+export function getHelpProductInfoFromList(productId: string, products: HelpProductInfo[]) {
+  return products.find((product) => helpProductMatchesId(product, productId));
+}
+
+export function mergeHelpProducts(
+  databaseProducts: HelpProductInfo[],
+  fallbackProducts: HelpProductInfo[] = helpProducts,
+  hiddenProductIds: string[] = [],
+) {
+  const hiddenKeys = new Set(hiddenProductIds.map(normalizeHelpProductKey).filter(Boolean));
+  const merged = fallbackProducts.filter(
+    (product) => !getHelpProductKeys(product).some((key) => hiddenKeys.has(key)),
   );
+  const keyToIndex = new Map<string, number>();
+
+  merged.forEach((product, index) => {
+    getHelpProductKeys(product).forEach((key) => keyToIndex.set(key, index));
+  });
+
+  databaseProducts.forEach((product) => {
+    const keys = getHelpProductKeys(product);
+    const existingIndex = keys.map((key) => keyToIndex.get(key)).find((index) => index !== undefined);
+
+    if (existingIndex === undefined) {
+      const nextIndex = merged.length;
+      merged.push(product);
+      keys.forEach((key) => keyToIndex.set(key, nextIndex));
+      return;
+    }
+
+    merged[existingIndex] = product;
+    keys.forEach((key) => keyToIndex.set(key, existingIndex));
+  });
+
+  return merged;
+}
+
+export async function fetchPublicHelpProducts() {
+  const searchParams = new URLSearchParams({
+    action: "help-products.public",
+    _cb: `${Date.now()}`,
+  });
+  const response = await fetch(`${helpProductsApiPath}?${searchParams.toString()}`, {
+    cache: "no-store",
+    credentials: "include",
+  });
+  const payload = (await response.json()) as {
+    ok?: boolean;
+    products?: HelpProductInfo[];
+    hiddenProductIds?: string[];
+  };
+
+  if (!response.ok || !payload.ok || !Array.isArray(payload.products)) {
+    throw new Error("Unable to load help products.");
+  }
+
+  return mergeHelpProducts(payload.products, helpProducts, payload.hiddenProductIds ?? []).filter(
+    (product) => product.isPublished !== false,
+  );
+}
+
+export function usePublicHelpProductsState() {
+  const [products, setProducts] = useState<HelpProductInfo[]>(helpProducts);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function refresh() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const nextProducts = await fetchPublicHelpProducts();
+        if (isActive) setProducts(nextProducts);
+      } catch (loadError) {
+        if (isActive) {
+          setError(loadError);
+          setProducts(helpProducts);
+        }
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    }
+
+    void refresh();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  return { products, isLoading, error };
+}
+
+export function getHelpProductInfo(productId: string) {
+  return getHelpProductInfoFromList(productId, helpProducts);
 }

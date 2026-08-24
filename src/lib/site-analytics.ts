@@ -1,7 +1,11 @@
 const visitorStorageKey = "technoshine-site-visitor-id-v1";
+const visitStorageKey = "technoshine-site-visit-id-v1";
 const heartbeatIntervalMs = 30_000;
 
-function canUseStorage() {
+type VisitorTrackingEvent = "page_view" | "heartbeat";
+type VisitorDeviceType = "desktop" | "mobile" | "tablet" | "unknown";
+
+function canUseLocalStorage() {
   if (typeof window === "undefined") return false;
 
   try {
@@ -20,7 +24,7 @@ function createVisitorId() {
 }
 
 function getVisitorId() {
-  if (!canUseStorage()) return createVisitorId();
+  if (!canUseLocalStorage()) return createVisitorId();
 
   const storedId = window.localStorage.getItem(visitorStorageKey);
   if (storedId) return storedId;
@@ -28,6 +32,21 @@ function getVisitorId() {
   const nextId = createVisitorId();
   window.localStorage.setItem(visitorStorageKey, nextId);
   return nextId;
+}
+
+function getVisitId() {
+  if (typeof window === "undefined") return createVisitorId();
+
+  try {
+    const storedId = window.sessionStorage.getItem(visitStorageKey);
+    if (storedId) return storedId;
+
+    const nextId = createVisitorId();
+    window.sessionStorage.setItem(visitStorageKey, nextId);
+    return nextId;
+  } catch {
+    return getVisitorId();
+  }
 }
 
 function getTrackingPath() {
@@ -39,7 +58,21 @@ function isAdminPath(path: string) {
   return path.startsWith("/company/admin");
 }
 
-export function trackSiteVisitor() {
+function getDeviceType(): VisitorDeviceType {
+  if (typeof navigator === "undefined") return "unknown";
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  if (!userAgent) return "unknown";
+  if (/ipad|tablet|kindle|playbook|silk/.test(userAgent)) return "tablet";
+  if (/android/.test(userAgent) && !/mobile/.test(userAgent)) return "tablet";
+  if (/mobi|iphone|ipod|android|blackberry|phone|opera mini|windows phone/.test(userAgent)) {
+    return "mobile";
+  }
+
+  return "desktop";
+}
+
+export function trackSiteVisitor(eventType: VisitorTrackingEvent = "heartbeat") {
   if (typeof window === "undefined") return;
 
   const path = getTrackingPath();
@@ -54,11 +87,18 @@ export function trackSiteVisitor() {
     },
     body: JSON.stringify({
       visitorId: getVisitorId(),
+      visitId: getVisitId(),
+      eventType,
+      deviceType: getDeviceType(),
       path,
     }),
   }).catch(() => {
     // Visitor analytics should never interrupt the public website.
   });
+}
+
+export function trackSitePageView() {
+  trackSiteVisitor("page_view");
 }
 
 export { heartbeatIntervalMs };

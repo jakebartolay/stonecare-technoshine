@@ -11,13 +11,18 @@ import {
   ChevronRight,
   Download,
   Edit3,
+  Eye,
+  ExternalLink,
   FileText,
   ImageOff,
   Images,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   MessageSquareQuote,
   Menu,
+  Monitor,
+  MousePointerClick,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -27,6 +32,7 @@ import {
   ServerCrash,
   ShieldCheck,
   ShoppingBag,
+  Smartphone,
   Trash2,
   Upload,
   Users,
@@ -57,12 +63,15 @@ import { Label } from "@/components/ui/label";
 import {
   adminProductCategories,
   createBlankProduct,
+  createBlankHelpProduct,
   deleteEmployee,
   deleteGalleryImage,
+  deleteHelpProduct,
   deleteProduct,
   deleteTestimonial,
   defaultHomepageHeroBackground,
   formDataToProduct,
+  formDataToHelpProduct,
   getContentSectionBody,
   homepageHeroBackgroundContentKey,
   logoutAdmin,
@@ -78,8 +87,10 @@ import {
   uploadContentImageFile,
   uploadGalleryImageFile,
   uploadServiceImage,
+  upsertHelpProduct,
   upsertProduct,
   useAdminCountsState,
+  useAdminHelpProductsState,
   useAdminProducts,
   useAdminSession,
   useContentSections,
@@ -89,11 +100,16 @@ import {
   useSocialReels,
   useTestimonialsState,
   validateProduct,
+  validateHelpProduct,
+  helpProductToFormData,
   type AdminProduct,
+  type AdminHelpProduct,
   type ContentSection,
   type EmployeeRecord,
   type GalleryImageRecord,
   type ProductFormData,
+  type HelpProductFormData,
+  type HelpProductValidationErrors,
   type ProductValidationErrors,
   type ServiceImageRecord,
   type ServicePageRecord,
@@ -172,6 +188,7 @@ const navItems = [
   { label: "Reels", href: "/company/admin/reels", icon: Video },
   { label: "Reviews", href: "/company/admin/reviews", icon: MessageSquareQuote },
   { label: "Products", href: "/company/admin/products", icon: ShoppingBag },
+  { label: "Help Products", href: "/company/admin/help-products", icon: LifeBuoy },
   { label: "Employees", href: "/company/admin/employees", icon: Users },
   { label: "Content", href: "/company/admin/content", icon: FileText },
 ];
@@ -509,6 +526,8 @@ function AdminLayout({ children, title, eyebrow, actions }: AdminPageProps) {
   );
 }
 
+const adminNumberFormatter = new Intl.NumberFormat("en-PH");
+
 function MetricCard({
   href,
   label,
@@ -545,7 +564,9 @@ function MetricCard({
               {value === null && loading ? (
                 <span className="mt-3 block h-9 w-14 motion-safe:animate-pulse rounded bg-neutral-200" />
               ) : (
-                <p className="mt-2 font-display text-4xl font-bold text-neutral-950">{value ?? "--"}</p>
+                <p className="mt-2 font-display text-4xl font-bold text-neutral-950">
+                  {value === null ? "--" : adminNumberFormatter.format(value)}
+                </p>
               )}
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-neutral-950">
@@ -595,8 +616,8 @@ function AdminDashboardChartSkeleton() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
-        {[0, 1, 2].map((item) => (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-hidden="true">
+        {[0, 1, 2, 3].map((item) => (
           <div key={item} className="min-h-[23rem] rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
             <div className="h-2 w-24 rounded bg-primary/15" />
             <div className="mt-4 h-6 w-40 rounded bg-neutral-200" />
@@ -658,6 +679,34 @@ export function AdminDashboard() {
           loading={isLoading}
           value={metricCounts?.liveVisitors ?? null}
           icon={Activity}
+        />
+        <MetricCard
+          href="/company/admin/dashboard"
+          label="Total Visits"
+          loading={isLoading}
+          value={metricCounts?.totalVisits ?? null}
+          icon={MousePointerClick}
+        />
+        <MetricCard
+          href="/company/admin/dashboard"
+          label="Page Views"
+          loading={isLoading}
+          value={metricCounts?.pageViews ?? null}
+          icon={Eye}
+        />
+        <MetricCard
+          href="/company/admin/dashboard"
+          label="Mobile Visits"
+          loading={isLoading}
+          value={metricCounts?.mobileVisits ?? null}
+          icon={Smartphone}
+        />
+        <MetricCard
+          href="/company/admin/dashboard"
+          label="Desktop Visits"
+          loading={isLoading}
+          value={metricCounts?.desktopVisits ?? null}
+          icon={Monitor}
         />
         <MetricCard
           href="/company/admin/employees"
@@ -830,7 +879,7 @@ function AdminProductMediaCard({
 function productMatches(product: AdminProduct, query: string) {
   const search = query.trim().toLowerCase();
   if (!search) return true;
-  return [product.name, product.category, product.brand, product.usesLine]
+  return [product.code ?? "", product.name, product.category, product.brand, product.usesLine]
     .join(" ")
     .toLowerCase()
     .includes(search);
@@ -3621,6 +3670,8 @@ export function AdminProducts() {
   const [page, setPage] = useState(1);
   const [isProductEditorOpen, setIsProductEditorOpen] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [productPendingDelete, setProductPendingDelete] = useState<AdminProduct | null>(null);
+  const [productDeleteConfirmation, setProductDeleteConfirmation] = useState("");
 
   const visibleProducts = useMemo(() => {
     const filtered = products.filter((product) => {
@@ -3638,6 +3689,11 @@ export function AdminProducts() {
   const paginatedProducts = visibleProducts.slice(
     productPagination.startIndex,
     productPagination.endIndex,
+  );
+  const productDeleteToken =
+    productPendingDelete?.code || productPendingDelete?.slug || productPendingDelete?.name || "";
+  const isProductDeleteConfirmed = Boolean(
+    productPendingDelete && productDeleteConfirmation === productDeleteToken,
   );
 
   useEffect(() => {
@@ -3735,12 +3791,28 @@ export function AdminProducts() {
     }
   }
 
-  async function handleDeleteProduct(product: AdminProduct) {
+  function openDeleteProduct(product: AdminProduct) {
+    setProductDeleteConfirmation("");
+    setProductPendingDelete(product);
+  }
+
+  function closeDeleteProduct() {
+    setProductDeleteConfirmation("");
+    setProductPendingDelete(null);
+  }
+
+  async function handleDeleteProduct() {
+    if (!productPendingDelete || !isProductDeleteConfirmed) return;
+
+    setIsSavingProduct(true);
     try {
-      await deleteProduct(product.id);
-      transactionToast.deleted("Product deleted", product.name);
+      await deleteProduct(productPendingDelete.id);
+      transactionToast.deleted("Product deleted", productPendingDelete.name);
+      closeDeleteProduct();
     } catch (error) {
       transactionToast.error("Product delete failed", error);
+    } finally {
+      setIsSavingProduct(false);
     }
   }
 
@@ -3802,7 +3874,7 @@ export function AdminProducts() {
                 <AdminProductMediaCard
                   key={product.id}
                   product={product}
-                  onDelete={handleDeleteProduct}
+                  onDelete={openDeleteProduct}
                   onEdit={openEditProductEditor}
                   onTogglePublish={togglePublish}
                 />
@@ -3832,7 +3904,9 @@ export function AdminProducts() {
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-bold text-neutral-950">{product.name}</p>
-                          <p className="text-xs text-neutral-500">{product.usesLine}</p>
+                          <p className="text-xs text-neutral-500">
+                            {product.code ? `Code: ${product.code} | ${product.usesLine}` : product.usesLine}
+                          </p>
                         </td>
                         <td className="px-4 py-3">{product.category}</td>
                         <td className="px-4 py-3 font-bold text-primary">{product.priceLabel}</td>
@@ -3871,7 +3945,7 @@ export function AdminProducts() {
                               size="sm"
                               variant="destructive"
                               className={adminActionButtonStyles.delete}
-                              onClick={() => void handleDeleteProduct(product)}
+                              onClick={() => openDeleteProduct(product)}
                             >
                               <Trash2 className="h-4 w-4" />
                               Delete
@@ -3932,6 +4006,15 @@ export function AdminProducts() {
                   {errors.name ? (
                     <p id="product-name-error" className="text-xs font-semibold text-red-700">{errors.name}</p>
                   ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product-code">Product Code</Label>
+                  <Input
+                    id="product-code"
+                    value={form.code}
+                    placeholder="T-MG3"
+                    onChange={(event) => updateForm("code", event.currentTarget.value)}
+                  />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -4060,6 +4143,69 @@ export function AdminProducts() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog
+          open={Boolean(productPendingDelete)}
+          onOpenChange={(open) => {
+            if (!open && !isSavingProduct) closeDeleteProduct();
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <div>
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+                Delete Product
+              </p>
+              <DialogTitle className="mt-2 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+                Confirm delete
+              </DialogTitle>
+              <DialogDescription className="mt-3 leading-6">
+                This will permanently delete <strong className="text-neutral-950">{productPendingDelete?.name}</strong> from the shop products list.
+              </DialogDescription>
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleDeleteProduct();
+              }}
+              className="space-y-4"
+            >
+              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+                <p className="text-sm text-neutral-700">Type this code or slug to confirm:</p>
+                <code className="mt-2 block select-all font-mono text-sm font-bold text-neutral-950">
+                  {productDeleteToken}
+                </code>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="delete-product-confirmation">Confirmation</Label>
+                <Input
+                  id="delete-product-confirmation"
+                  value={productDeleteConfirmation}
+                  onChange={(event) => setProductDeleteConfirmation(event.currentTarget.value)}
+                  placeholder={productDeleteToken}
+                  autoComplete="off"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" disabled={isSavingProduct} onClick={closeDeleteProduct}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  className={adminActionButtonStyles.delete}
+                  disabled={!isProductDeleteConfirmed || isSavingProduct}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isSavingProduct ? "Deleting" : "Confirm Delete"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </>
     </AdminLayout>
   );
@@ -4086,6 +4232,629 @@ function exportEmployees(employees: EmployeeRecord[]) {
   anchor.download = "technoshine-employee-id-list.csv";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function helpProductMatches(product: AdminHelpProduct, query: string) {
+  const search = query.trim().toLowerCase();
+  if (!search) return true;
+
+  return [
+    product.productCode,
+    product.slug,
+    product.brand,
+    product.name,
+    product.surface,
+    product.headline,
+    product.description,
+    ...product.legacyIds,
+  ]
+    .join(" ")
+    .toLowerCase()
+    .includes(search);
+}
+
+export function AdminHelpProducts() {
+  const { products } = useAdminHelpProductsState();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("All");
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState<HelpProductFormData>(() => createBlankHelpProduct());
+  const [errors, setErrors] = useState<HelpProductValidationErrors>({});
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [helpProductPendingDelete, setHelpProductPendingDelete] = useState<AdminHelpProduct | null>(null);
+  const [helpProductDeleteConfirmation, setHelpProductDeleteConfirmation] = useState("");
+
+  const visibleProducts = useMemo(() => {
+    return products
+      .filter((product) => {
+        const matchesStatus =
+          status === "All" ||
+          (status === "Published" && product.isPublished) ||
+          (status === "Draft" && !product.isPublished);
+        return matchesStatus && helpProductMatches(product, query);
+      })
+      .sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
+  }, [products, query, status]);
+
+  const helpProductPagination = getTablePagination(visibleProducts.length, page);
+  const paginatedHelpProducts = visibleProducts.slice(
+    helpProductPagination.startIndex,
+    helpProductPagination.endIndex,
+  );
+  const previewProduct = formDataToHelpProduct(
+    form,
+    products.find((product) => product.productCode === form.originalProductCode),
+  );
+  const helpProductDeleteToken = helpProductPendingDelete?.productCode ?? "";
+  const isHelpProductDeleteConfirmed = Boolean(
+    helpProductPendingDelete && helpProductDeleteConfirmation === helpProductDeleteToken,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, status]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, helpProductPagination.pageCount));
+  }, [helpProductPagination.pageCount]);
+
+  function resetForm() {
+    setForm(createBlankHelpProduct());
+    setErrors({});
+  }
+
+  function updateForm<K extends keyof HelpProductFormData>(key: K, value: HelpProductFormData[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+    setErrors({});
+  }
+
+  function openNewHelpProductEditor() {
+    resetForm();
+    setIsEditorOpen(true);
+  }
+
+  function openEditHelpProductEditor(product: AdminHelpProduct) {
+    setForm(helpProductToFormData(product));
+    setErrors({});
+    setIsEditorOpen(true);
+  }
+
+  function handleEditorOpenChange(open: boolean) {
+    if (!open && isSaving) return;
+
+    setIsEditorOpen(open);
+    if (!open) resetForm();
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextErrors = validateHelpProduct(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      transactionToast.warning("Help product needs details", Object.values(nextErrors)[0]);
+      return;
+    }
+
+    const normalizedCode = form.productCode.trim().toUpperCase();
+    const originalCode = form.originalProductCode?.trim().toUpperCase() ?? "";
+    const hasDuplicateCode = products.some(
+      (product) =>
+        product.productCode.toUpperCase() === normalizedCode &&
+        product.productCode.toUpperCase() !== originalCode,
+    );
+    if (hasDuplicateCode) {
+      transactionToast.warning("Product code already exists", normalizedCode);
+      return;
+    }
+
+    const isEditing = Boolean(form.originalProductCode);
+    setIsSaving(true);
+    try {
+      const savedProduct = await upsertHelpProduct(form);
+      setIsEditorOpen(false);
+      resetForm();
+      if (savedProduct.isPublished) {
+        transactionToast.success(
+          isEditing ? "Help product updated" : "Help product created",
+          `${savedProduct.productCode} was saved successfully.`,
+        );
+      } else {
+        transactionToast.draft("Help product saved as draft", `${savedProduct.productCode} stays hidden.`);
+      }
+    } catch (error) {
+      transactionToast.error("Help product save failed", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function toggleHelpProductPublish(product: AdminHelpProduct) {
+    const nextForm = {
+      ...helpProductToFormData(product),
+      isPublished: !product.isPublished,
+    };
+
+    setIsSaving(true);
+    try {
+      const savedProduct = await upsertHelpProduct(nextForm);
+      if (savedProduct.isPublished) {
+        transactionToast.success("Help product published", savedProduct.productCode);
+      } else {
+        transactionToast.draft("Help product moved to draft", savedProduct.productCode);
+      }
+    } catch (error) {
+      transactionToast.error("Publish update failed", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function openDeleteHelpProduct(product: AdminHelpProduct) {
+    setHelpProductDeleteConfirmation("");
+    setHelpProductPendingDelete(product);
+  }
+
+  function closeDeleteHelpProduct() {
+    setHelpProductDeleteConfirmation("");
+    setHelpProductPendingDelete(null);
+  }
+
+  async function handleDeleteHelpProduct() {
+    if (!helpProductPendingDelete || !isHelpProductDeleteConfirmed) return;
+
+    setIsSaving(true);
+    try {
+      await deleteHelpProduct(helpProductPendingDelete.productCode);
+      transactionToast.deleted("Help product deleted", helpProductPendingDelete.productCode);
+      closeDeleteHelpProduct();
+    } catch (error) {
+      transactionToast.error("Help product delete failed", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <AdminLayout
+      title="Help Product List"
+      eyebrow="QR Product Help"
+      actions={
+        <Button type="button" onClick={openNewHelpProductEditor}>
+          <Plus className="h-4 w-4" />
+          Add Help Product
+        </Button>
+      }
+    >
+      <div className="grid gap-4">
+        <section className="min-w-0">
+          <div className="mb-4 grid gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto]">
+            <label className="flex min-h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3">
+              <Search className="h-4 w-4 text-primary" />
+              <span className="sr-only">Search help products</span>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                placeholder="Search by code, slug, name, or surface"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              />
+            </label>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.currentTarget.value)}
+              className="min-h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold"
+            >
+              <option>All</option>
+              <option>Published</option>
+              <option>Draft</option>
+            </select>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-md shadow-neutral-200/60">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[960px] text-left text-sm">
+                <caption className="sr-only">Help product code and QR article list</caption>
+                <thead className="bg-neutral-950 text-white">
+                  <tr>
+                    <th scope="col" className="w-16 px-4 py-3">No.</th>
+                    <th scope="col" className="px-4 py-3">Code</th>
+                    <th scope="col" className="px-4 py-3">Product</th>
+                    <th scope="col" className="px-4 py-3">Slug</th>
+                    <th scope="col" className="px-4 py-3">Status</th>
+                    <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedHelpProducts.map((product, index) => (
+                    <tr key={product.productCode} className="border-t border-neutral-200 transition-colors hover:bg-orange-50/50">
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-neutral-500">
+                        {helpProductPagination.startIndex + index + 1}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-mono text-sm font-black text-neutral-950">{product.productCode}</p>
+                        {product.legacyIds.length > 0 ? (
+                          <p className="mt-1 max-w-48 truncate text-xs text-neutral-500">
+                            Aliases: {product.legacyIds.join(", ")}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-neutral-950">{product.name}</p>
+                        <p className="text-xs text-neutral-500">{product.surface || product.headline}</p>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-neutral-600">{product.slug}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => void toggleHelpProductPublish(product)}
+                          className={`rounded-full border px-3 py-1 text-xs font-bold uppercase transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+                            product.isPublished
+                              ? "border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 focus-visible:ring-emerald-500"
+                              : "border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-500"
+                          }`}
+                        >
+                          {product.isPublished ? "Published" : "Draft"}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Button asChild type="button" size="sm" variant="outline">
+                            <Link href={`/help/product-info/${product.slug}`}>
+                              <ExternalLink className="h-4 w-4" />
+                              View
+                            </Link>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className={adminActionButtonStyles.edit}
+                            onClick={() => openEditHelpProductEditor(product)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className={adminActionButtonStyles.delete}
+                            disabled={isSaving}
+                            onClick={() => openDeleteHelpProduct(product)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {visibleProducts.length === 0 ? (
+              <div className="p-8 text-center text-sm text-neutral-600">No help products found.</div>
+            ) : null}
+
+            <PaginationControls
+              currentPage={helpProductPagination.currentPage}
+              firstItem={helpProductPagination.firstItem}
+              itemLabel="help products"
+              lastItem={helpProductPagination.lastItem}
+              onPageChange={setPage}
+              pageCount={helpProductPagination.pageCount}
+              totalItems={visibleProducts.length}
+            />
+          </div>
+        </section>
+      </div>
+
+      <Dialog open={isEditorOpen} onOpenChange={handleEditorOpenChange}>
+        <DialogContent className="max-h-[92vh] max-w-[min(76rem,96vw)] overflow-y-auto p-0 sm:rounded-lg">
+          <div className="border-b border-neutral-200 px-5 py-4 pr-14">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+              Help Product Editor
+            </p>
+            <DialogTitle className="mt-1 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              {form.originalProductCode ? "Edit Help Product" : "Add Help Product"}
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm leading-6 text-neutral-600">
+              Product code, slug, article copy, how-to-use steps, and safety notes for QR-linked help pages.
+            </DialogDescription>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-code">Product Code</Label>
+                  <Input
+                    id="help-product-code"
+                    value={form.productCode}
+                    placeholder="T-MG3"
+                    onChange={(event) => updateForm("productCode", event.currentTarget.value)}
+                    aria-invalid={Boolean(errors.productCode)}
+                    aria-describedby={errors.productCode ? "help-product-code-error" : undefined}
+                    autoFocus
+                  />
+                  {errors.productCode ? (
+                    <p id="help-product-code-error" className="text-xs font-semibold text-red-700">
+                      {errors.productCode}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-slug">URL Slug</Label>
+                  <Input
+                    id="help-product-slug"
+                    value={form.slug}
+                    placeholder="marble-glazer-t-mg3-synthetic-stone"
+                    onChange={(event) => updateForm("slug", event.currentTarget.value)}
+                    aria-invalid={Boolean(errors.slug)}
+                    aria-describedby={errors.slug ? "help-product-slug-error" : undefined}
+                  />
+                  {errors.slug ? (
+                    <p id="help-product-slug-error" className="text-xs font-semibold text-red-700">
+                      {errors.slug}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-brand">Brand</Label>
+                  <Input
+                    id="help-product-brand"
+                    value={form.brand}
+                    onChange={(event) => updateForm("brand", event.currentTarget.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-name">Product Name</Label>
+                  <Input
+                    id="help-product-name"
+                    value={form.name}
+                    onChange={(event) => updateForm("name", event.currentTarget.value)}
+                    aria-invalid={Boolean(errors.name)}
+                    aria-describedby={errors.name ? "help-product-name-error" : undefined}
+                  />
+                  {errors.name ? (
+                    <p id="help-product-name-error" className="text-xs font-semibold text-red-700">
+                      {errors.name}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="help-product-surface">Surface</Label>
+                <Input
+                  id="help-product-surface"
+                  value={form.surface}
+                  onChange={(event) => updateForm("surface", event.currentTarget.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="help-product-headline">Headline</Label>
+                <Input
+                  id="help-product-headline"
+                  value={form.headline}
+                  onChange={(event) => updateForm("headline", event.currentTarget.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="help-product-description">Description</Label>
+                <textarea
+                  id="help-product-description"
+                  value={form.description}
+                  onChange={(event) => updateForm("description", event.currentTarget.value)}
+                  className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-aliases">Code Aliases</Label>
+                  <textarea
+                    id="help-product-aliases"
+                    value={form.legacyIdsText}
+                    placeholder="T-MG3-5L, MG3"
+                    onChange={(event) => updateForm("legacyIdsText", event.currentTarget.value)}
+                    className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-highlights">Highlights</Label>
+                  <textarea
+                    id="help-product-highlights"
+                    value={form.highlightsText}
+                    placeholder="Mirror-like brightness: Boosts density and shine"
+                    onChange={(event) => updateForm("highlightsText", event.currentTarget.value)}
+                    className="min-h-24 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="help-product-image">How-to-use Image URL</Label>
+                  <Input
+                    id="help-product-image"
+                    value={form.howToUseImageSrc}
+                    onChange={(event) => updateForm("howToUseImageSrc", event.currentTarget.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-image-alt">Image Alt</Label>
+                  <Input
+                    id="help-product-image-alt"
+                    value={form.howToUseImageAlt}
+                    onChange={(event) => updateForm("howToUseImageAlt", event.currentTarget.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="help-product-image-caption">Image Caption</Label>
+                <Input
+                  id="help-product-image-caption"
+                  value={form.howToUseImageCaption}
+                  onChange={(event) => updateForm("howToUseImageCaption", event.currentTarget.value)}
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-steps">How to Use Steps</Label>
+                  <textarea
+                    id="help-product-steps"
+                    value={form.howToUseText}
+                    onChange={(event) => updateForm("howToUseText", event.currentTarget.value)}
+                    className="min-h-36 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="help-product-safety">Safety Notes</Label>
+                  <textarea
+                    id="help-product-safety"
+                    value={form.safetyNotesText}
+                    onChange={(event) => updateForm("safetyNotesText", event.currentTarget.value)}
+                    className="min-h-36 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <Label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.isPublished}
+                  onChange={(event) => updateForm("isPublished", event.currentTarget.checked)}
+                  className="h-4 w-4 accent-primary"
+                />
+                Publish on public help center
+              </Label>
+            </div>
+
+            <aside className="self-start rounded-md border border-neutral-200 bg-neutral-50 p-3 lg:sticky lg:top-0">
+              <p className="mb-3 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                Article Preview
+              </p>
+              <div className="space-y-3 rounded-md border border-neutral-200 bg-white p-4">
+                <code className="inline-flex rounded-md bg-orange-50 px-2 py-1 font-mono text-xs font-bold text-orange-800">
+                  {previewProduct.productCode || "CODE"}
+                </code>
+                <div>
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+                    {previewProduct.brand || "TECHNOSHINE"}
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold uppercase leading-tight tracking-normal text-neutral-950">
+                    {previewProduct.name || "Product Name"}
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-neutral-600">
+                    {previewProduct.headline || "Product headline"}
+                  </p>
+                </div>
+                {previewProduct.howToUseImage.src ? (
+                  <div className="aspect-[4/3] overflow-hidden rounded-md border border-neutral-200 bg-neutral-50">
+                    <img
+                      src={adminAssetPath(previewProduct.howToUseImage.src)}
+                      alt={previewProduct.howToUseImage.alt}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : null}
+                <Link
+                  href={`/help/product-info/${previewProduct.slug}`}
+                  className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-neutral-200 bg-white px-3 text-xs font-bold uppercase tracking-wide text-neutral-900 transition hover:border-primary hover:text-primary"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Open Article
+                </Link>
+              </div>
+            </aside>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-neutral-200 pt-4 sm:flex-row sm:justify-end lg:col-span-2">
+              <Button type="button" variant="outline" disabled={isSaving} onClick={() => handleEditorOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving Help Product" : form.originalProductCode ? "Update Help Product" : "Add Help Product"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(helpProductPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !isSaving) closeDeleteHelpProduct();
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <div>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+              Delete Help Product
+            </p>
+            <DialogTitle className="mt-2 font-display text-2xl font-bold uppercase tracking-normal text-neutral-950">
+              Confirm delete
+            </DialogTitle>
+            <DialogDescription className="mt-3 leading-6">
+              This removes <strong className="text-neutral-950">{helpProductPendingDelete?.productCode}</strong> from custom help product records.
+            </DialogDescription>
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleDeleteHelpProduct();
+            }}
+            className="space-y-4"
+          >
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+              <p className="text-sm text-neutral-700">Type this product code to confirm:</p>
+              <code className="mt-2 block select-all font-mono text-sm font-bold text-neutral-950">
+                {helpProductDeleteToken}
+              </code>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-help-product-confirmation">Confirmation</Label>
+              <Input
+                id="delete-help-product-confirmation"
+                value={helpProductDeleteConfirmation}
+                onChange={(event) => setHelpProductDeleteConfirmation(event.currentTarget.value)}
+                placeholder={helpProductDeleteToken}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" disabled={isSaving} onClick={closeDeleteHelpProduct}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                className={adminActionButtonStyles.delete}
+                disabled={!isHelpProductDeleteConfirmed || isSaving}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isSaving ? "Deleting" : "Confirm Delete"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
 }
 
 export function AdminEmployees() {

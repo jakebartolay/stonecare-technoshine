@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
+import {
+  getHelpProductCode,
+  helpProducts,
+  mergeHelpProducts,
+  type HelpProductInfo,
+} from "@/lib/help-products";
 import { shopProducts, type ProductBadge, type ShopProduct } from "@/lib/shop-products";
 import { serviceItems } from "@/lib/site-content";
 
@@ -13,6 +19,7 @@ const serviceStorageKey = "technoshine-admin-services";
 const socialReelStorageKey = "technoshine-admin-social-reels";
 const galleryImageStorageKey = "technoshine-admin-gallery-images";
 const testimonialStorageKey = "technoshine-admin-testimonials";
+const helpProductStorageKey = "technoshine-admin-help-products";
 const sessionStorageKey = "technoshine-admin-session";
 const loginPreferenceStorageKey = "technoshine-admin-login-preferences-v1";
 let hasVerifiedAdminSession = false;
@@ -58,10 +65,17 @@ export interface AdminCounts {
   galleryImages: number;
   testimonials: number;
   liveVisitors: number;
+  totalVisits: number;
+  pageViews: number;
+  desktopVisits: number;
+  mobileVisits: number;
+  tabletVisits: number;
+  unknownDeviceVisits: number;
 }
 
 export interface AdminProduct extends ShopProduct {
   id: string;
+  code?: string;
   category: AdminProductCategory;
   badge?: ProductBadge;
   imageUrl?: string;
@@ -156,6 +170,7 @@ export interface ProductValidationErrors {
 
 export interface ProductFormData {
   id?: string;
+  code: string;
   slug?: string;
   brand: string;
   name: string;
@@ -169,6 +184,39 @@ export interface ProductFormData {
   shopeeUrl: string;
   isPublished: boolean;
   description: string;
+}
+
+export interface AdminHelpProduct extends HelpProductInfo {
+  productCode: string;
+  legacyIds: string[];
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HelpProductFormData {
+  originalProductCode?: string;
+  productCode: string;
+  slug: string;
+  legacyIdsText: string;
+  brand: string;
+  name: string;
+  surface: string;
+  headline: string;
+  description: string;
+  highlightsText: string;
+  howToUseImageSrc: string;
+  howToUseImageAlt: string;
+  howToUseImageCaption: string;
+  howToUseText: string;
+  safetyNotesText: string;
+  isPublished: boolean;
+}
+
+export interface HelpProductValidationErrors {
+  productCode?: string;
+  slug?: string;
+  name?: string;
 }
 
 function canUseStorage() {
@@ -489,6 +537,7 @@ function normalizeProduct(product: ShopProduct, index: number): AdminProduct {
   return {
     ...product,
     id: product.id ?? product.slug,
+    code: product.code ?? "",
     slug: product.slug || slugifyProductName(product.name),
     brand: product.brand || "TECHNOSHINE",
     category: normalizeCategory(product.category),
@@ -546,6 +595,7 @@ export function validateProduct(product: ProductFormData) {
 
 export function createBlankProduct(): ProductFormData {
   return {
+    code: "",
     brand: "TECHNOSHINE",
     name: "",
     category: "Cleaners",
@@ -564,6 +614,7 @@ export function createBlankProduct(): ProductFormData {
 export function productToFormData(product: AdminProduct): ProductFormData {
   return {
     id: product.id,
+    code: product.code ?? "",
     slug: product.slug,
     brand: product.brand,
     name: product.name,
@@ -590,6 +641,7 @@ export function formDataToProduct(formData: ProductFormData, existing?: AdminPro
 
   return {
     id,
+    code: formData.code.trim(),
     slug,
     brand: formData.brand.trim() || "TECHNOSHINE",
     name: formData.name.trim(),
@@ -642,6 +694,258 @@ export async function deleteProduct(productId: string) {
     body: JSON.stringify({ id: productId }),
   });
   saveAdminProducts(getAdminProducts().filter((product) => product.id !== productId));
+}
+
+function uniqueTextValues(values: string[]) {
+  const seen = new Set<string>();
+  return values
+    .map((value) => value.trim())
+    .filter((value) => {
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function splitCommaOrLineList(value: string) {
+  return uniqueTextValues(value.split(/[\n,]+/));
+}
+
+function splitLineList(value: string) {
+  return uniqueTextValues(value.split(/\r?\n/));
+}
+
+function normalizeProductCode(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function formatHighlightsText(highlights: HelpProductInfo["highlights"]) {
+  return highlights.map((highlight) => `${highlight.title}: ${highlight.text}`).join("\n");
+}
+
+function parseHighlightsText(value: string): HelpProductInfo["highlights"] {
+  return splitLineList(value).map((line) => {
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex === -1) {
+      return { title: "Detail", text: line };
+    }
+
+    const title = line.slice(0, separatorIndex).trim() || "Detail";
+    const text = line.slice(separatorIndex + 1).trim() || title;
+    return { title, text };
+  });
+}
+
+export function helpProductCodeList(product: Pick<AdminHelpProduct, "productCode" | "legacyIds">) {
+  return uniqueTextValues([product.productCode, ...product.legacyIds]);
+}
+
+function normalizeHelpProduct(product: HelpProductInfo, index: number): AdminHelpProduct {
+  const timestamp = product.createdAt ?? new Date(2026, 0, index + 1).toISOString();
+  const productCode = normalizeProductCode(getHelpProductCode(product));
+  const legacyIds = uniqueTextValues(product.legacyIds ?? []);
+
+  return {
+    ...product,
+    productCode,
+    slug: product.slug || slugifyProductName(product.name || productCode),
+    legacyIds,
+    brand: product.brand || "TECHNOSHINE",
+    name: product.name || productCode,
+    surface: product.surface || "",
+    headline: product.headline || "",
+    description: product.description || "",
+    highlights: Array.isArray(product.highlights) ? product.highlights : [],
+    howToUseImage: {
+      src: product.howToUseImage?.src ?? "",
+      alt: product.howToUseImage?.alt ?? "",
+      caption: product.howToUseImage?.caption ?? "",
+    },
+    howToUse: Array.isArray(product.howToUse) ? product.howToUse : [],
+    safetyNotes: Array.isArray(product.safetyNotes) ? product.safetyNotes : [],
+    isPublished: product.isPublished ?? true,
+    createdAt: timestamp,
+    updatedAt: product.updatedAt ?? timestamp,
+  };
+}
+
+export function getAdminHelpProducts() {
+  return readJson<AdminHelpProduct[]>(
+    helpProductStorageKey,
+    helpProducts.map((product, index) => normalizeHelpProduct(product, index)),
+  ).map((product, index) => normalizeHelpProduct(product, index));
+}
+
+export function saveAdminHelpProducts(products: AdminHelpProduct[]) {
+  writeJson(helpProductStorageKey, products.map((product, index) => normalizeHelpProduct(product, index)));
+}
+
+async function loadAdminHelpProducts() {
+  const payload = await apiRequest<{ ok: boolean; products: HelpProductInfo[] }>("help-products");
+  const products = mergeHelpProducts(payload.products ?? [], helpProducts).map((product, index) =>
+    normalizeHelpProduct(product, index),
+  );
+  saveAdminHelpProducts(products);
+  return products;
+}
+
+export function createBlankHelpProduct(): HelpProductFormData {
+  return {
+    productCode: "",
+    slug: "",
+    legacyIdsText: "",
+    brand: "TECHNOSHINE",
+    name: "",
+    surface: "",
+    headline: "",
+    description: "",
+    highlightsText: "",
+    howToUseImageSrc: "images/client-images/gallery-1.jpg",
+    howToUseImageAlt: "",
+    howToUseImageCaption: "",
+    howToUseText: "",
+    safetyNotesText: "",
+    isPublished: false,
+  };
+}
+
+export function helpProductToFormData(product: AdminHelpProduct): HelpProductFormData {
+  const productCode = normalizeProductCode(product.productCode);
+  return {
+    originalProductCode: productCode,
+    productCode,
+    slug: product.slug,
+    legacyIdsText: product.legacyIds
+      .filter((legacyId) => legacyId.toLowerCase() !== productCode.toLowerCase())
+      .join(", "),
+    brand: product.brand,
+    name: product.name,
+    surface: product.surface,
+    headline: product.headline,
+    description: product.description,
+    highlightsText: formatHighlightsText(product.highlights),
+    howToUseImageSrc: product.howToUseImage.src,
+    howToUseImageAlt: product.howToUseImage.alt,
+    howToUseImageCaption: product.howToUseImage.caption,
+    howToUseText: product.howToUse.join("\n"),
+    safetyNotesText: product.safetyNotes.join("\n"),
+    isPublished: product.isPublished,
+  };
+}
+
+export function formDataToHelpProduct(formData: HelpProductFormData, existing?: AdminHelpProduct): AdminHelpProduct {
+  const timestamp = now();
+  const productCode = normalizeProductCode(formData.productCode);
+  const slug = formData.slug.trim() || slugifyProductName(formData.name || productCode);
+  const legacyIds = splitCommaOrLineList(formData.legacyIdsText).filter(
+    (legacyId) => legacyId.toLowerCase() !== productCode.toLowerCase(),
+  );
+
+  return {
+    productCode,
+    slug,
+    legacyIds,
+    brand: formData.brand.trim() || "TECHNOSHINE",
+    name: formData.name.trim(),
+    surface: formData.surface.trim(),
+    headline: formData.headline.trim(),
+    description: formData.description.trim(),
+    highlights: parseHighlightsText(formData.highlightsText),
+    howToUseImage: {
+      src: formData.howToUseImageSrc.trim(),
+      alt: formData.howToUseImageAlt.trim() || `${formData.name.trim()} instruction image`,
+      caption: formData.howToUseImageCaption.trim(),
+    },
+    howToUse: splitLineList(formData.howToUseText),
+    safetyNotes: splitLineList(formData.safetyNotesText),
+    isPublished: formData.isPublished,
+    createdAt: existing?.createdAt ?? timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export function validateHelpProduct(product: HelpProductFormData): HelpProductValidationErrors {
+  const errors: HelpProductValidationErrors = {};
+  if (!product.productCode.trim()) errors.productCode = "Product code is required.";
+  if (!product.slug.trim() && !product.name.trim()) errors.slug = "Add a URL slug or product name.";
+  if (!product.name.trim()) errors.name = "Product name is required.";
+  return errors;
+}
+
+export async function upsertHelpProduct(formData: HelpProductFormData) {
+  const products = getAdminHelpProducts();
+  const existing = products.find(
+    (product) =>
+      product.productCode.toLowerCase() === (formData.originalProductCode ?? formData.productCode).toLowerCase(),
+  );
+  const nextProduct = formDataToHelpProduct(formData, existing);
+
+  await apiRequest("help-products.save", {
+    method: "POST",
+    body: JSON.stringify({
+      ...nextProduct,
+      originalProductCode: formData.originalProductCode,
+    }),
+  });
+
+  const nextProducts = products.some((product) => product.productCode === existing?.productCode)
+    ? products.map((product) => (product.productCode === existing?.productCode ? nextProduct : product))
+    : [nextProduct, ...products];
+
+  saveAdminHelpProducts(nextProducts);
+  return nextProduct;
+}
+
+export async function deleteHelpProduct(productCode: string) {
+  await apiRequest("help-products.delete", {
+    method: "POST",
+    body: JSON.stringify({ productCode }),
+  });
+  saveAdminHelpProducts(
+    getAdminHelpProducts().filter((product) => product.productCode.toLowerCase() !== productCode.toLowerCase()),
+  );
+}
+
+export function useAdminHelpProductsState() {
+  const [products, setProducts] = useState(() => getAdminHelpProducts());
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    const refresh = () => setProducts(getAdminHelpProducts());
+    const refreshFromApi = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const nextProducts = await loadAdminHelpProducts();
+        if (isActive) setProducts(nextProducts);
+      } catch (loadError) {
+        if (!isActive) return;
+        setError(loadError);
+        refresh();
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    };
+
+    void refreshFromApi();
+    window.addEventListener(adminStoreEvent, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(adminStoreEvent, refresh);
+      window.removeEventListener("storage", refresh);
+      isActive = false;
+    };
+  }, []);
+
+  return { products, isLoading, error };
+}
+
+export function useAdminHelpProducts() {
+  return useAdminHelpProductsState().products;
 }
 
 export async function loginAdmin(email: string, password: string, remember: boolean) {
@@ -1844,6 +2148,12 @@ const emptyAdminCounts: AdminCounts = {
   galleryImages: 0,
   testimonials: 0,
   liveVisitors: 0,
+  totalVisits: 0,
+  pageViews: 0,
+  desktopVisits: 0,
+  mobileVisits: 0,
+  tabletVisits: 0,
+  unknownDeviceVisits: 0,
 };
 const adminCountStorageKeys = new Set([
   productStorageKey,
@@ -1853,6 +2163,7 @@ const adminCountStorageKeys = new Set([
   socialReelStorageKey,
   galleryImageStorageKey,
   testimonialStorageKey,
+  helpProductStorageKey,
 ]);
 
 function normalizeAdminCount(value: unknown, field: string) {
@@ -1883,6 +2194,12 @@ async function loadAdminCounts(signal?: AbortSignal): Promise<AdminCounts> {
     galleryImages: normalizeAdminCount(payload.counts.galleryImages, "galleryImages"),
     testimonials: normalizeAdminCount(payload.counts.testimonials, "testimonials"),
     liveVisitors: normalizeAdminCount(payload.counts.liveVisitors, "liveVisitors"),
+    totalVisits: normalizeAdminCount(payload.counts.totalVisits, "totalVisits"),
+    pageViews: normalizeAdminCount(payload.counts.pageViews, "pageViews"),
+    desktopVisits: normalizeAdminCount(payload.counts.desktopVisits, "desktopVisits"),
+    mobileVisits: normalizeAdminCount(payload.counts.mobileVisits, "mobileVisits"),
+    tabletVisits: normalizeAdminCount(payload.counts.tabletVisits, "tabletVisits"),
+    unknownDeviceVisits: normalizeAdminCount(payload.counts.unknownDeviceVisits, "unknownDeviceVisits"),
   };
 }
 

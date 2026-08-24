@@ -32,6 +32,7 @@ const barMargin = { left: 8, right: 24, top: 10, bottom: 30 };
 const pieMargin = { left: 8, right: 8, top: 8, bottom: 8 };
 const chartColors = ["#ff6b00", "#171717", "#14b8a6", "#f59e0b", "#a855f7", "#0ea5e9", "#10b981"];
 const productStatusColors = ["#ff6b00", "#d4d4d4"];
+const deviceVisitColors = ["#ff6b00", "#171717", "#0ea5e9", "#a3a3a3"];
 const numberFormatter = new Intl.NumberFormat("en-PH");
 const timeFormatter = new Intl.DateTimeFormat("en-PH", {
   hour: "numeric",
@@ -164,6 +165,20 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
     const publishingRate = counts.products
       ? Math.round((publishedProducts / counts.products) * 100)
       : 0;
+    const deviceVisitData = [
+      { id: "mobile", label: "Mobile", value: counts.mobileVisits },
+      { id: "desktop", label: "Desktop", value: counts.desktopVisits },
+      { id: "tablet", label: "Tablet", value: counts.tabletVisits },
+      { id: "unknown", label: "Unknown", value: counts.unknownDeviceVisits },
+    ];
+    const deviceVisitTotal = deviceVisitData.reduce((total, item) => total + item.value, 0);
+    const deviceLeader = deviceVisitData.reduce(
+      (leader, item) => (item.value > leader.value ? item : leader),
+      deviceVisitData[0],
+    );
+    const pageViewsPerVisit = counts.totalVisits > 0
+      ? (counts.pageViews / counts.totalVisits).toFixed(1)
+      : "0.0";
 
     return {
       barSeries: [
@@ -175,8 +190,12 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
         },
       ],
       collectionValues,
+      deviceLeader,
+      deviceVisitData,
+      deviceVisitTotal,
       largestCollection,
       maxCollection: Math.max(1, ...collectionValues),
+      pageViewsPerVisit,
       populatedCollections: collectionValues.filter((value) => value > 0).length,
       productStatusData: [
         { id: "published", label: "Published", value: publishedProducts },
@@ -197,12 +216,18 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
     };
   }, [
     counts.contentSections,
+    counts.desktopVisits,
     counts.employees,
     counts.galleryImages,
+    counts.mobileVisits,
+    counts.pageViews,
     counts.products,
     counts.publishedProducts,
     counts.reels,
     counts.testimonials,
+    counts.tabletVisits,
+    counts.totalVisits,
+    counts.unknownDeviceVisits,
     counts.services,
   ]);
   const snapshotUnavailable = hasError && !hasData;
@@ -357,6 +382,26 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
               </p>
             </div>
 
+            <div className="grid grid-cols-2 gap-4 border-b border-white/10 py-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-white/45">Total visits</p>
+                <p className="mt-2 font-display text-2xl font-bold text-white">
+                  {hasData ? numberFormatter.format(counts.totalVisits) : "--"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.12em] text-white/45">Page views</p>
+                <p className="mt-2 font-display text-2xl font-bold text-white">
+                  {hasData ? numberFormatter.format(counts.pageViews) : "--"}
+                </p>
+              </div>
+              <p className="col-span-2 text-xs leading-5 text-white/45">
+                {hasData
+                  ? `${summary.pageViewsPerVisit} page views per visit on average.`
+                  : "Page-view history appears after public pages are opened."}
+              </p>
+            </div>
+
             <div className="py-6">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-bold">
@@ -415,6 +460,12 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
                     : "--"}
                 </dd>
               </div>
+              <div className="mt-3 flex items-center justify-between gap-4">
+                <dt className="text-xs uppercase tracking-[0.12em] text-white/45">Top device</dt>
+                <dd className="text-sm font-bold text-white">
+                  {hasData && summary.deviceVisitTotal > 0 ? summary.deviceLeader.label : "Unavailable"}
+                </dd>
+              </div>
             </dl>
           </aside>
         </div>
@@ -430,7 +481,53 @@ const AdminDashboardChart = memo(function AdminDashboardChart({
           </h2>
         </div>
 
-        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <InsightCard
+            id="device-visits-chart-title"
+            eyebrow="Traffic devices"
+            title="Desktop vs mobile"
+            description="Website visits grouped by the visitor device detected from public page views."
+          >
+            {hasData && summary.deviceVisitTotal > 0 ? (
+              <figure aria-labelledby="device-visits-chart-title">
+                <PieChart
+                  title="Visits by device"
+                  desc={`${counts.mobileVisits} mobile visits, ${counts.desktopVisits} desktop visits, ${counts.tabletVisits} tablet visits, and ${counts.unknownDeviceVisits} unknown visits.`}
+                  height={240}
+                  hideLegend
+                  colors={deviceVisitColors}
+                  margin={pieMargin}
+                  series={[
+                    {
+                      data: summary.deviceVisitData.filter((item) => item.value > 0),
+                      innerRadius: "56%",
+                      outerRadius: "88%",
+                      paddingAngle: 3,
+                      cornerRadius: 5,
+                      arcLabel: (item) => numberFormatter.format(item.value),
+                      arcLabelMinAngle: 28,
+                    },
+                  ]}
+                />
+                <figcaption className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-neutral-600">
+                  {summary.deviceVisitData.map((item) => (
+                    <span key={item.id} className="inline-flex items-center gap-2">
+                      <span className="font-mono font-bold text-neutral-950">
+                        {numberFormatter.format(item.value)}
+                      </span>
+                      {item.label}
+                    </span>
+                  ))}
+                </figcaption>
+              </figure>
+            ) : (
+              <EmptyChartState
+                title={snapshotUnavailable ? "Device data unavailable" : "No device visits yet"}
+                description="Open public pages after this update to start collecting desktop and mobile visit totals."
+              />
+            )}
+          </InsightCard>
+
           <InsightCard
             id="product-status-chart-title"
             eyebrow="Donut chart"

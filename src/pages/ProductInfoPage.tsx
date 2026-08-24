@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { HelpFooter } from "@/components/help/HelpFooter";
-import { getHelpProductInfo } from "@/lib/help-products";
+import { getHelpProductInfoFromList, usePublicHelpProductsState } from "@/lib/help-products";
 import { useSeo } from "@/lib/use-seo";
 
 const iconClassName = "h-5 w-5";
@@ -45,7 +45,8 @@ export default function ProductInfoPage() {
   const [, params] = useRoute<{ productId: string }>("/help/product-info/:productId");
   const [, trailingParams] = useRoute<{ productId: string }>("/help/product-info/:productId/");
   const productId = params?.productId ?? trailingParams?.productId ?? "";
-  const product = getHelpProductInfo(productId);
+  const { products } = usePublicHelpProductsState();
+  const product = getHelpProductInfoFromList(productId, products);
 
   useSeo({
     title: product

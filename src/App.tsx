@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, useRoute } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { useEffect } from "react";
@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import EmployeesList from "@/pages/EmployeesList";
 import AdminLogin from "@/pages/AdminLogin";
-import { AdminContent, AdminDashboard, AdminEmployees, AdminGallery, AdminProducts, AdminReels, AdminReviews, AdminServices } from "@/pages/AdminPanel";
+import { AdminContent, AdminDashboard, AdminEmployees, AdminGallery, AdminHelpProducts, AdminProducts, AdminReels, AdminReviews, AdminServices } from "@/pages/AdminPanel";
 import BadRequest from "@/pages/errors/BadRequest";
 import AdminUrlError from "@/pages/errors/AdminUrlError";
 import Unauthorized from "@/pages/errors/Unauthorized";
@@ -29,7 +29,8 @@ import HelpPage from "@/pages/HelpPage";
 import ProductInfoPage from "@/pages/ProductInfoPage";
 import StoneCareProductPage from "@/pages/StoneCareProductPage";
 import StoneCareShopPage from "@/pages/StoneCareShopPage";
-import { heartbeatIntervalMs, trackSiteVisitor } from "@/lib/site-analytics";
+import { getHelpProductInfoFromList, usePublicHelpProductsState } from "@/lib/help-products";
+import { heartbeatIntervalMs, trackSitePageView, trackSiteVisitor } from "@/lib/site-analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,14 +41,29 @@ const queryClient = new QueryClient({
   },
 });
 
-const tMg3ProductInfoPath = "/help/product-info/marble-glazer-t-mg3-synthetic-stone";
+function getLegacyProductHelpCode(productId: string) {
+  const code = productId
+    .trim()
+    .toLowerCase()
+    .replace(/-\d+(?:-(?:liters?|kgs?|kilograms?|g|grams?))?$/i, "");
+  return /^t-[a-z0-9]+$/i.test(code) ? code.toUpperCase() : "";
+}
 
-function LegacyTmg3ProductHelpRedirect() {
+function LegacyProductHelpRedirect() {
   const [, navigate] = useLocation();
+  const [, params] = useRoute<{ legacyProductId: string }>("/product/help/:legacyProductId");
+  const [, trailingParams] = useRoute<{ legacyProductId: string }>("/product/help/:legacyProductId/");
+  const legacyProductId = params?.legacyProductId ?? trailingParams?.legacyProductId ?? "";
+  const legacyProductCode = getLegacyProductHelpCode(legacyProductId);
+  const { products, isLoading } = usePublicHelpProductsState();
+  const product = legacyProductCode ? getHelpProductInfoFromList(legacyProductCode, products) : undefined;
+  const destinationPath = product ? `/help/product-info/${product.slug}` : "/help";
 
   useEffect(() => {
-    navigate(tMg3ProductInfoPath, { replace: true });
-  }, [navigate]);
+    if (isLoading) return;
+
+    navigate(destinationPath, { replace: true });
+  }, [destinationPath, isLoading, navigate]);
 
   return null;
 }
@@ -80,8 +96,8 @@ function Router() {
       <Route path="/help/" component={HelpPage} />
       <Route path="/help/product-info/:productId" component={ProductInfoPage} />
       <Route path="/help/product-info/:productId/" component={ProductInfoPage} />
-      <Route path="/product/help/t-mg3-5-liters" component={LegacyTmg3ProductHelpRedirect} />
-      <Route path="/product/help/t-mg3-5-liters/" component={LegacyTmg3ProductHelpRedirect} />
+      <Route path="/product/help/:legacyProductId" component={LegacyProductHelpRedirect} />
+      <Route path="/product/help/:legacyProductId/" component={LegacyProductHelpRedirect} />
 
       {/* Visible to public users: /stone-care/shops, /stone-care/shops/:slug */}
       <Route path="/stone-care/shops/:slug" component={StoneCareProductPage} />
@@ -105,6 +121,8 @@ function Router() {
       <Route path="/company/admin/reviews/" component={AdminReviews} />
       <Route path="/company/admin/products" component={AdminProducts} />
       <Route path="/company/admin/products/" component={AdminProducts} />
+      <Route path="/company/admin/help-products" component={AdminHelpProducts} />
+      <Route path="/company/admin/help-products/" component={AdminHelpProducts} />
       <Route path="/company/admin/employees" component={AdminEmployees} />
       <Route path="/company/admin/employees/" component={AdminEmployees} />
       <Route path="/company/admin/content" component={AdminContent} />
@@ -163,6 +181,10 @@ function VisitorHeartbeat() {
   const [location] = useLocation();
 
   useEffect(() => {
+    trackSitePageView();
+  }, [location]);
+
+  useEffect(() => {
     trackSiteVisitor();
 
     const intervalId = window.setInterval(trackSiteVisitor, heartbeatIntervalMs);
@@ -177,7 +199,7 @@ function VisitorHeartbeat() {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [location]);
+  }, []);
 
   return null;
 }

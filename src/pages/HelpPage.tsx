@@ -1,10 +1,12 @@
 import { ArrowLeft, ArrowRight, FileText, LifeBuoy, Search } from "lucide-react";
 import { Link } from "wouter";
 import { HelpFooter } from "@/components/help/HelpFooter";
-import { helpProducts } from "@/lib/help-products";
+import { usePublicHelpProductsState } from "@/lib/help-products";
 import { useSeo } from "@/lib/use-seo";
 
 export default function HelpPage() {
+  const { products: helpProductList } = usePublicHelpProductsState();
+
   useSeo({
     title: "Help Center | TECHNOSHINE",
     description: "Find TECHNOSHINE help articles, product information, and care instructions.",
@@ -63,7 +65,7 @@ export default function HelpPage() {
             </div>
 
             <div className="grid gap-4">
-              {helpProducts.map((product) => (
+              {helpProductList.map((product) => (
                 <Link
                   key={product.slug}
                   href={`/help/product-info/${product.slug}`}

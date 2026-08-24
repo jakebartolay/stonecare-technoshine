@@ -103,7 +103,10 @@ CREATE TABLE IF NOT EXISTS product_help_info (
   product_code VARCHAR(20) NOT NULL,
   surface VARCHAR(190) NOT NULL DEFAULT '',
   headline VARCHAR(255) NOT NULL DEFAULT '',
+  highlights JSON NULL,
+  legacy_ids JSON NULL,
   how_to_use_image_url VARCHAR(500) NULL,
+  how_to_use_image_alt VARCHAR(255) NULL,
   how_to_use_image_caption VARCHAR(255) NULL,
   how_to_use JSON NULL,
   safety_notes JSON NULL,
@@ -186,6 +189,22 @@ CREATE TABLE IF NOT EXISTS visitor_sessions (
   last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (visitor_id),
   KEY visitor_sessions_last_seen_index (last_seen_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS visitor_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  visitor_id VARCHAR(80) NOT NULL,
+  visit_id VARCHAR(80) NOT NULL,
+  event_type ENUM('page_view', 'heartbeat') NOT NULL DEFAULT 'page_view',
+  path VARCHAR(500) NOT NULL DEFAULT '/',
+  device_type ENUM('desktop', 'mobile', 'tablet', 'unknown') NOT NULL DEFAULT 'unknown',
+  user_agent_hash CHAR(64) NULL,
+  occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY visitor_events_occurred_at_index (occurred_at),
+  KEY visitor_events_visit_id_index (visit_id),
+  KEY visitor_events_event_type_index (event_type),
+  KEY visitor_events_device_type_index (device_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS testimonials (
