@@ -40,6 +40,18 @@ const queryClient = new QueryClient({
   },
 });
 
+const tMg3ProductInfoPath = "/help/product-info/marble-glazer-t-mg3-synthetic-stone";
+
+function LegacyTmg3ProductHelpRedirect() {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    navigate(tMg3ProductInfoPath, { replace: true });
+  }, [navigate]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
@@ -68,6 +80,8 @@ function Router() {
       <Route path="/help/" component={HelpPage} />
       <Route path="/help/product-info/:productId" component={ProductInfoPage} />
       <Route path="/help/product-info/:productId/" component={ProductInfoPage} />
+      <Route path="/product/help/t-mg3-5-liters" component={LegacyTmg3ProductHelpRedirect} />
+      <Route path="/product/help/t-mg3-5-liters/" component={LegacyTmg3ProductHelpRedirect} />
 
       {/* Visible to public users: /stone-care/shops, /stone-care/shops/:slug */}
       <Route path="/stone-care/shops/:slug" component={StoneCareProductPage} />

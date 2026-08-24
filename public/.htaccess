@@ -11,6 +11,8 @@ Options -Indexes
   # Keep authentication cookies and local storage on one production hostname.
   RewriteCond %{HTTP_HOST} ^technoshineph\.com$ [NC]
   RewriteRule ^ https://www.technoshineph.com%{REQUEST_URI} [R=301,L,NE]
+  # Legacy QR product link.
+  RewriteRule ^product/help/t-mg3-5-liters/?$ /help/product-info/marble-glazer-t-mg3-synthetic-stone [R=301,L,NE]
   # React route that shares a name with the PDF asset directory.
   RewriteRule ^company-profile/?$ /index.html [L]
   # If request is for a real file or directory, serve it

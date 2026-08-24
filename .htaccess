@@ -1,6 +1,7 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  RewriteRule ^product/help/t-mg3-5-liters/?$ /help/product-info/marble-glazer-t-mg3-synthetic-stone [R=301,L,NE]
   RewriteRule ^index\.html$ - [L]
   RewriteRule ^company-profile/?$ /index.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
